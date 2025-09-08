@@ -1,0 +1,10 @@
+alembic
+fastapi
+gpxpy
+itsdangerous
+jinja2
+mysql-connector-python
+pydantic
+python-multipart
+sqlalchemy
+uvicorn

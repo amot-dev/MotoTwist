@@ -1,0 +1,30 @@
+services:
+  twisties:
+    build: .
+    environment:
+      MYSQL_DATABASE: "twisties"
+      MYSQL_USER: "twisties"
+      MYSQL_PASSWORD: "changethis"
+      MYSQL_ROOT_PASSWORD: "changethis"
+    volumes:
+      - ./app:/app
+      - gpx:/gpx
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: uvicorn main:app --host 0.0.0.0 --reload
+
+  db:
+    image: mariadb:lts
+    environment:
+      MYSQL_DATABASE: "twisties"
+      MYSQL_USER: "twisties"
+      MYSQL_PASSWORD: "changethis"
+      MYSQL_ROOT_PASSWORD: "changethis"
+    volumes:
+      - mariadb:/var/lib/mysql
+
+volumes:
+  gpx:
+  mariadb:
