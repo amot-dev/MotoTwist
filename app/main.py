@@ -170,7 +170,6 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
                 request.session["flash"] = "Error: Invalid date format."
                 return RedirectResponse(url="/", status_code=303)
 
-    print(new_rating_data)
     # Check if we actually collected any ratings
     if not any(key in valid_criteria for key in new_rating_data):
         request.session["flash"] = "Error: No valid rating data submitted."

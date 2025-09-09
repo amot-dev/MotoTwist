@@ -368,6 +368,7 @@ async function setupTwistRatingsModal(modal, twistId) {
     const title = modal.querySelector('h1');
 
     title.textContent = 'Loading ratings...';
+    ratingsListContainer.innerHTML = '';
     try {
         const twistResponse = await fetch(`/twists/${twistId}`);
         if (!twistResponse.ok) throw new Error('Network response was not ok.');
