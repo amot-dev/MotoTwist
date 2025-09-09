@@ -207,11 +207,11 @@ function restoreVisibleLayers() {
 /**
  * Fetches and displays ratings for a twist.
  * @param {string} twistId - The ID of the twist.
- * @param {HTMLElement} ratingsContainer - The div to populate.
+ * @param {HTMLElement} ratingDropdown - The dropdown to populate.
  */
-async function loadRatings(twistId, ratingsContainer) {
-    if (ratingsContainer.dataset.loaded) return;
-    ratingsContainer.dataset.loaded = 'true';
+async function loadRatingDropdown(twistId, ratingDropdown) {
+    if (ratingDropdown.dataset.loaded) return;
+    ratingDropdown.dataset.loaded = 'true';
 
     try {
         const response = await fetch(`/twists/${twistId}/averages`);
@@ -229,8 +229,8 @@ async function loadRatings(twistId, ratingsContainer) {
         }).join('');
 
         // Add ratings to list
-        const ul = ratingsContainer.querySelector('ul');
-        const allRatingsLink = ratingsContainer.querySelector('a')
+        const ul = ratingDropdown.querySelector('ul');
+        const allRatingsLink = ratingDropdown.querySelector('a')
         if (avgRatingsHTML) {
             ul.innerHTML = avgRatingsHTML;
             allRatingsLink.style.display = null;
@@ -269,27 +269,25 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     if (!twistItem) return;
 
     const twistId = twistItem.dataset.twistId;
-    const isPaved = twistItem.dataset.paved === 'True';
 
-    
     if (event.target.closest('.visibility-toggle')) {
         // Clicked on the eye icon
         setLayerVisibility(twistId, !twistItem.classList.contains('is-visible'));
     } else if (event.target.closest('.twist-header')) {
         // Clicked on the twist name
-        const ratingsContainer = twistItem.querySelector('.ratings-container');
-        const isCurrentlyOpen = ratingsContainer.classList.contains('is-open');
+        const ratingDropdown = twistItem.querySelector('.rating-dropdown');
+        const isCurrentlyOpen = ratingDropdown.classList.contains('is-open');
 
-        // Hide all ratings containers
-        const allContainers = twistItem.closest('#twist-list').querySelectorAll('.ratings-container');
-        allContainers.forEach(container => {
+        // Hide all rating dropdowns
+        const allDropdowns = twistItem.closest('#twist-list').querySelectorAll('.rating-dropdown');
+        allDropdowns.forEach(container => {
             container.classList.remove('is-open');
         });
 
-        // Show current rating container if it was hidden
+        // Show current rating dropdown if it was hidden
         if (!isCurrentlyOpen) {
-            ratingsContainer.classList.add('is-open');
-            loadRatings(twistId, ratingsContainer);
+            ratingDropdown.classList.add('is-open');
+            loadRatingDropdown(twistId, ratingDropdown);
         }
 
         // Pan and zoom the map
@@ -364,11 +362,11 @@ async function setupRateTwistModal(form, twistId) {
  * @param {HTMLElement} twistId - The ID of the twist.
  */
 async function setupTwistRatingsModal(modal, twistId) {
-    const ratingsListContainer = modal.querySelector('#ratings-list-container');
+    const ratingList = modal.querySelector('#rating-list');
     const title = modal.querySelector('h1');
 
     title.textContent = 'Loading ratings...';
-    ratingsListContainer.innerHTML = '';
+    ratingList.innerHTML = '';
     try {
         const twistResponse = await fetch(`/twists/${twistId}`);
         if (!twistResponse.ok) throw new Error('Network response was not ok.');
@@ -407,8 +405,8 @@ async function setupTwistRatingsModal(modal, twistId) {
             }
 
             ratingCard.appendChild(criteriaList);
-            ratingsListContainer.appendChild(ratingCard);
-            ratingsListContainer.dataset.paved = twist.is_paved;
+            ratingList.appendChild(ratingCard);
+            ratingList.dataset.paved = twist.is_paved;
         });
 
     } catch (error) {

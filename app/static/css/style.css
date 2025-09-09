@@ -154,9 +154,9 @@ ul {
 }
 
 
-/* --- Ratings Dropdown --- */
+/* --- Rating Dropdown --- */
 
-.ratings-container {
+.rating-dropdown {
     position: relative;
     overflow: hidden;
     max-height: 0;
@@ -167,18 +167,18 @@ ul {
 
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
-.ratings-container.is-open {
+.rating-dropdown.is-open {
     max-height: 500px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
-.ratings-container h4 {
+.rating-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
     margin-bottom: var(--padding-sm);
 }
 
-.ratings-container button {
+.rating-dropdown button {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -193,18 +193,18 @@ ul {
 
     transition: background-color 0.2s ease;
 }
-.ratings-container button:hover {
+.rating-dropdown button:hover {
     background-color: var(--accent-hover);
 }
 
-.ratings-container li {
+.rating-dropdown li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
 }
 
-.ratings-container a {
+.rating-dropdown a {
     font-size: 0.8em;
     font-weight: bold;
     text-decoration: none;
@@ -212,7 +212,7 @@ ul {
 
     transition: color var(--transition-fast);
 }
-.ratings-container a:hover {
+.rating-dropdown a:hover {
     text-decoration: none;
     color: var(--accent-hover-light);
 }
@@ -353,17 +353,17 @@ ul {
 
 /* --- Twist Ratings --- */
 
-#ratings-list-container {
+#rating-list {
     overflow-y: auto;
     max-height: 60vh;
     margin-top: var(--padding-lg);
     padding-right: var(--padding-md); /* Space for scrollbar */
 }
-#ratings-list-container[data-paved="true" i] {
+#ratings-list[data-paved="true" i] {
   --accent: var(--accent-blue);
 }
 
-#ratings-list-container[data-paved="false" i] {
+#ratings-list[data-paved="false" i] {
   --accent: var(--accent-orange);
 }
 
