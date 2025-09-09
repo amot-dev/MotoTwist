@@ -1,8 +1,8 @@
 """Initial
 
-Revision ID: 4c0c52436fb4
+Revision ID: 5e760d528ebb
 Revises: 
-Create Date: 2025-09-08 00:44:09.721250
+Create Date: 2025-09-09 01:03:09.694736
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '4c0c52436fb4'
+revision: str = '5e760d528ebb'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,8 +34,11 @@ def upgrade() -> None:
     op.create_table('paved_ratings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('rating_date', sa.Date(), nullable=True),
-    sa.Column('smoothness', sa.Integer(), nullable=True),
+    sa.Column('traffic', sa.Integer(), nullable=True),
     sa.Column('scenery', sa.Integer(), nullable=True),
+    sa.Column('pavement', sa.Integer(), nullable=True),
+    sa.Column('twistyness', sa.Integer(), nullable=True),
+    sa.Column('intensity', sa.Integer(), nullable=True),
     sa.Column('twist_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['twist_id'], ['twists.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -43,6 +46,9 @@ def upgrade() -> None:
     op.create_table('unpaved_ratings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('rating_date', sa.Date(), nullable=True),
+    sa.Column('traffic', sa.Integer(), nullable=True),
+    sa.Column('scenery', sa.Integer(), nullable=True),
+    sa.Column('surface_consistency', sa.Integer(), nullable=True),
     sa.Column('technicality', sa.Integer(), nullable=True),
     sa.Column('flow', sa.Integer(), nullable=True),
     sa.Column('twist_id', sa.Integer(), nullable=True),

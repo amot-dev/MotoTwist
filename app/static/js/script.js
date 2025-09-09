@@ -303,6 +303,114 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     }
 });
 
+/**
+ * Sets up a form for rating a twist based off fetched criteria.
+ * @param {HTMLElement} form - The form in which to populate criteria.
+ * @param {HTMLElement} twistId - The ID of the twist.
+ */
+async function setupRateTwistModal(form, twistId) {
+    const actionTemplate = form.dataset.actionTemplate;
+    form.action = actionTemplate.replace('{id}', twistId);
+
+    const title = form.previousElementSibling;
+    const pavedContainer = form.querySelector('.criteria-group[data-paved="true"]');
+    const unpavedContainer = form.querySelector('.criteria-group[data-paved="false"]');
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+
+    title.textContent = 'Loading ratings...';
+    try {
+        const response = await fetch(`/twists/${twistId}`);
+        if (!response.ok) throw new Error('Network response was not ok.');
+
+        const twist = await response.json();
+
+        // Get all input elements within each container
+        const pavedInputs = pavedContainer.querySelectorAll('input');
+        const unpavedInputs = unpavedContainer.querySelectorAll('input');
+
+        title.textContent = twist.name;
+
+        if (twist.is_paved) {
+            pavedContainer.style.display = 'block';
+            unpavedContainer.style.display = 'none';
+
+            // Enable the visible inputs and disable the hidden ones
+            pavedInputs.forEach(input => input.disabled = false);
+            unpavedInputs.forEach(input => input.disabled = true);
+        } else {
+            pavedContainer.style.display = 'none';
+            unpavedContainer.style.display = 'block';
+
+            // Enable the visible inputs and disable the hidden ones
+            pavedInputs.forEach(input => input.disabled = true);
+            unpavedInputs.forEach(input => input.disabled = false);
+        }
+
+        if (submitButton) submitButton.disabled = false;
+
+    } catch (error) {
+        title.textContent = 'Error loading twist details';
+        console.error('Failed to fetch twist details:', error);
+    }
+};
+
+/**
+ * Sets up a modal to view historic ratings for a twist
+ * @param {HTMLElement} form - The form in which to populate ratings.
+ * @param {HTMLElement} twistId - The ID of the twist.
+ */
+async function setupTwistRatingsModal(modal, twistId) {
+    const ratingsListContainer = modal.querySelector('#ratings-list-container');
+    const title = modal.querySelector('h1');
+
+    title.textContent = 'Loading ratings...';
+    try {
+        const twistResponse = await fetch(`/twists/${twistId}`);
+        if (!twistResponse.ok) throw new Error('Network response was not ok.');
+
+        const twistRatingResponse = await fetch(`/twists/${twistId}/ratings`);
+        if (!twistRatingResponse.ok) throw new Error('Network response was not ok.');
+
+        const twist = await twistResponse.json()
+        const ratings = await twistRatingResponse.json();
+
+        title.textContent = twist.name;
+
+        // Create and append a card for each rating entry
+        ratings.forEach(ratingEntry => {
+            const ratingCard = document.createElement('div');
+            ratingCard.className = 'rating-card';
+
+            const dateElement = document.createElement('h3');
+            // Format date for better readability if desired
+            const date = new Date(ratingEntry.rating_date + 'T00:00:00'); // Avoid timezone issues
+            dateElement.textContent = `Date: ${date.toLocaleDateString()}`;
+            ratingCard.appendChild(dateElement);
+
+            const criteriaList = document.createElement('ul');
+
+            // Iterate over the ratings object to display each criterion
+            for (const [criteria, score] of Object.entries(ratingEntry.ratings)) {
+                const listItem = document.createElement('li');
+                // Capitalize the first letter of the criteria name
+                const capitalizedCriteria = criteria.charAt(0).toUpperCase() + criteria.slice(1);
+                listItem.textContent = `${capitalizedCriteria}: ${score}/10`;
+                criteriaList.appendChild(listItem);
+            }
+
+            ratingCard.appendChild(criteriaList);
+            ratingsListContainer.appendChild(ratingCard);
+            ratingsListContainer.dataset.paved = twist.is_paved;
+        });
+
+    } catch (error) {
+        title.textContent = 'Error loading twist ratings';
+        console.error('Failed to fetch twist ratings:', error);
+    }
+};
+
 // Modal opening/closing
 document.addEventListener('DOMContentLoaded', () => {
     const openModalTriggers = document.querySelectorAll('[data-modal-target]');
@@ -319,104 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    async function setupRateTwistModal(form, twistId) {
-        const actionTemplate = form.dataset.actionTemplate;
-        form.action = actionTemplate.replace('{id}', twistId);
-
-        const title = form.previousElementSibling;
-        const pavedContainer = form.querySelector('#paved-criteria');
-        const unpavedContainer = form.querySelector('#unpaved-criteria');
-
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (submitButton) submitButton.disabled = true;
-
-        title.textContent = 'Loading ratings...';
-        try {
-            const response = await fetch(`/twists/${twistId}`);
-            if (!response.ok) throw new Error('Network response was not ok.');
-
-            const twist = await response.json();
-
-            // Get all input elements within each container
-            const pavedInputs = pavedContainer.querySelectorAll('input');
-            const unpavedInputs = unpavedContainer.querySelectorAll('input');
-
-            title.textContent = twist.name;
-
-            if (twist.is_paved) {
-                pavedContainer.style.display = 'block';
-                unpavedContainer.style.display = 'none';
-
-                // Enable the visible inputs and disable the hidden ones
-                pavedInputs.forEach(input => input.disabled = false);
-                unpavedInputs.forEach(input => input.disabled = true);
-            } else {
-                pavedContainer.style.display = 'none';
-                unpavedContainer.style.display = 'block';
-
-                // Enable the visible inputs and disable the hidden ones
-                pavedInputs.forEach(input => input.disabled = true);
-                unpavedInputs.forEach(input => input.disabled = false);
-            }
-
-            if (submitButton) submitButton.disabled = false;
-
-        } catch (error) {
-            title.textContent = 'Error loading twist details';
-            console.error('Failed to fetch twist details:', error);
-        }
-    };
-
-    async function setupTwistRatingsModal(modal, twistId) {
-        const ratingsListContainer = modal.querySelector('#ratings-list-container');
-        const title = modal.querySelector('h1');
-
-        title.textContent = 'Loading ratings...';
-        try {
-            const twistResponse = await fetch(`/twists/${twistId}`);
-            if (!twistResponse.ok) throw new Error('Network response was not ok.');
-
-            const twistRatingResponse = await fetch(`/twists/${twistId}/ratings`);
-            if (!twistRatingResponse.ok) throw new Error('Network response was not ok.');
-
-            const twist = await twistResponse.json()
-            const ratings = await twistRatingResponse.json();
-
-            title.textContent = twist.name;
-
-            // Create and append a card for each rating entry
-            ratings.forEach(ratingEntry => {
-                const ratingCard = document.createElement('div');
-                ratingCard.className = 'rating-card';
-
-                const dateElement = document.createElement('h3');
-                // Format date for better readability if desired
-                const date = new Date(ratingEntry.rating_date + 'T00:00:00'); // Avoid timezone issues
-                dateElement.textContent = `Date: ${date.toLocaleDateString()}`;
-                ratingCard.appendChild(dateElement);
-
-                const criteriaList = document.createElement('ul');
-                
-                // Iterate over the ratings object to display each criterion
-                for (const [criteria, score] of Object.entries(ratingEntry.ratings)) {
-                    const listItem = document.createElement('li');
-                    // Capitalize the first letter of the criteria name
-                    const capitalizedCriteria = criteria.charAt(0).toUpperCase() + criteria.slice(1);
-                    listItem.textContent = `${capitalizedCriteria}: ${score}/10`;
-                    criteriaList.appendChild(listItem);
-                }
-
-                ratingCard.appendChild(criteriaList);
-                ratingsListContainer.appendChild(ratingCard);
-                ratingsListContainer.dataset.paved = twist.is_paved;
-            });
-
-        } catch (error) {
-            title.textContent = 'Error loading twist ratings';
-            console.error('Failed to fetch twist ratings:', error);
-        }
-    };
 
     const openModal = (modal, twistId) => {
         if (twistId) {

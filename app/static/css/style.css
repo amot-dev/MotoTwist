@@ -336,7 +336,21 @@ ul {
 }
 
 
-/* --- Ratings List --- */
+/* --- Rate Twist --- */
+.criteria-group[data-paved="true" i] {
+  --accent: var(--accent-blue);
+}
+
+.criteria-group[data-paved="false" i] {
+  --accent: var(--accent-orange);
+}
+
+.criteria-group input[type="range"] {
+  accent-color: var(--accent);
+}
+
+
+/* --- Twist Ratings --- */
 
 #ratings-list-container {
     overflow-y: auto;

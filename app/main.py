@@ -40,15 +40,17 @@ async def read_root(request: Request, db: Session = Depends(get_db)):
     """
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
 
-    # Get PavedRating column names using inspection
-    rating_critera_paved = [
-        col.name for col in inspect(PavedRating).columns
+    # Get PavedRating column names and descriptions using inspection
+    rating_criteria_paved = [
+        {"name": col.name, "desc": col.doc}
+        for col in inspect(PavedRating).columns
         if col.name not in RATING_EXCLUDED_COLUMNS
     ]
 
-    # Get UnpavedRating column names using inspection
-    rating_critera_unpaved = [
-        col.name for col in inspect(UnpavedRating).columns
+    # Get UnpavedRating column names and descriptions using inspection
+    rating_criteria_unpaved = [
+        {"name": col.name, "desc": col.doc}
+        for col in inspect(UnpavedRating).columns
         if col.name not in RATING_EXCLUDED_COLUMNS
     ]
 
@@ -57,8 +59,8 @@ async def read_root(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "twists": twists,
-        "rating_critera_paved": rating_critera_paved,
-        "rating_critera_unpaved": rating_critera_unpaved,
+        "rating_critera_paved": rating_criteria_paved,
+        "rating_critera_unpaved": rating_criteria_unpaved,
         "flash": flash_message,
         "new_twist": new_twist
     })

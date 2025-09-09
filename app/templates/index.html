@@ -104,25 +104,21 @@
                     <input type="date" id="rating-date" name="rating_date" required>
                 </div>
 
-                <div id="paved-criteria" class="criteria-group" style="display: none;">
-                    {% for criteria in rating_critera_paved %}
+                {% for paved, criteria_list in [(true, rating_critera_paved), (false, rating_critera_unpaved)] %}
+                <div class="criteria-group" data-paved="{{ paved | lower }}" style="display: none;">
+                    {% for criteria in criteria_list %}
                     <div class="form-group slider-group">
-                        <label for="{{ criteria }}">{{ criteria | capitalize }}</label>
-                        <input type="range" id="{{ criteria }}" name="{{ criteria }}" min="1" max="10" value="5">
-                        <span class="slider-value">5</span>
+                        <label for="{{ criteria.name }}" title="{{ criteria.desc }}">{{ criteria.name | capitalize }}</label>
+                        <input type="range"
+                            id="{{ criteria.name }}"
+                            name="{{ criteria.name }}"
+                            min="0" max="10" value="5"
+                            oninput="this.nextElementSibling.value = this.value">
+                        <output for="{{ criteria.name }}">5</output>
                     </div>
                     {% endfor %}
                 </div>
-
-                <div id="unpaved-criteria" class="criteria-group" style="display: none;">
-                    {% for criteria in rating_critera_unpaved %}
-                    <div class="form-group slider-group">
-                        <label for="{{ criteria }}">{{ criteria | capitalize }}</label>
-                        <input type="range" id="{{ criteria }}" name="{{ criteria }}" min="1" max="10" value="5">
-                        <span class="slider-value">5</span>
-                    </div>
-                    {% endfor %}
-                </div>
+                {% endfor %}
 
                 <div class="button-group">
                     <button type="button" class="cancel-button">Cancel</button>
