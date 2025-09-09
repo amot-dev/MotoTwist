@@ -30,7 +30,7 @@
     <div id="sidebar">
         <div id="twist-list-container">
             <h1>Twists</h1>
-            <button id="openCreateTwistModal" data-modal-target="#createTwistModal">Create New Twist</button>
+            <button class="open-modal-create-twist" data-modal-target="#modal-create-twist">New Twist</button>
 
             <ul id="twist-list">
                 {% for twist in twists %}
@@ -43,9 +43,9 @@
                     </div>
                     <div class="ratings-container">
                         <h4>Average Rating</h4>
-                        <button class="open-rate-twist-modal" data-modal-target="#rateTwistModal" data-twist-id="{{ twist.id }}">Rate</button>
+                        <button data-modal-target="#modal-rate-twist" data-twist-id="{{ twist.id }}">Rate</button>
                         <ul></ul>
-                        <a href="#" class="open-twist-ratings-modal" data-modal-target="#viewTwistRatingsModal" data-twist-id="{{ twist.id }}">See all</a>
+                        <a href="#" data-modal-target="#modal-view-twist-ratings" data-twist-id="{{ twist.id }}">See all</a>
                     </div>
                 </li>
                 {% endfor %}
@@ -55,10 +55,10 @@
 
     <div id="map"></div>
 
-    <div id="createTwistModal" class="modal">
+    <div id="modal-create-twist" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h1>Create a New Twist</h1>
+            <h1>New Twist</h1>
             
             <form action="/twists/create" method="post" enctype="multipart/form-data">
                 <div class="form-group">
@@ -93,15 +93,15 @@
         </div>
     </div>
 
-    <div id="rateTwistModal" class="modal">
+    <div id="modal-rate-twist" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h1>Rate Twist</h1>
             
             <form action="" method="post" data-action-template="/twists/{id}/rate">
                 <div class="form-group">
-                    <label for="rating_date">Rating Date</label>
-                    <input type="date" id="rating_date" name="rating_date" required>
+                    <label for="rating-date">Rating Date</label>
+                    <input type="date" id="rating-date" name="rating_date" required>
                 </div>
 
                 <div id="paved-criteria" class="criteria-group" style="display: none;">
@@ -132,7 +132,7 @@
         </div>
     </div>
 
-    <div id="viewTwistRatingsModal" class="modal">
+    <div id="modal-view-twist-ratings" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h1>Twist Ratings</h1>
