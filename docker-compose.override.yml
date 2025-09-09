@@ -1,0 +1,5 @@
+services:
+  mototwist:
+    volumes:
+      - ./app:/app
+    command: uvicorn main:app --host 0.0.0.0 --reload

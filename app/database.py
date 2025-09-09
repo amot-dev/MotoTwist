@@ -5,8 +5,8 @@ from sqlalchemy.orm import sessionmaker
 
 DB_HOST = os.getenv("MYSQL_HOST", "db")
 DB_PORT = os.getenv("MYSQL_PORT", "3306")
-DB_NAME = os.getenv("MYSQL_DATABASE", "twisties")
-DB_USER = os.getenv("MYSQL_USER", "twisties")
+DB_NAME = os.getenv("MYSQL_DATABASE", "mototwist")
+DB_USER = os.getenv("MYSQL_USER", "mototwist")
 DB_PASSWORD = os.getenv("MYSQL_PASSWORD", "password")
 
 SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

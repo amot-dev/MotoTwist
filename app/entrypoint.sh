@@ -8,15 +8,15 @@ WAIT_COMMAND="import socket,sys;s=socket.socket();s.settimeout(2);sys.exit(0) if
 
 echo "Waiting for database to be ready at $DB_HOST:$DB_PORT..."
 while ! python -c "$WAIT_COMMAND"; do
-  echo "Database is unavailable - sleeping for 1 second"
+  echo "Database is unavailable. Sleeping for 1s"
   sleep 1
 done
-echo "Database is up - continuing..."
+echo "Database is up. Continuing..."
 
 cd /app
 
 echo "Applying database migrations..."
 alembic upgrade head
 
-echo "Starting Twisties..."
+echo "Starting MotoTwist..."
 exec "$@"
