@@ -221,9 +221,11 @@ async function loadRatings(twistId, ratingsContainer) {
 
         // Display both paved and unpaved ratings dynamically
         const avgRatingsHTML = Object.entries(avgRatings).map(([key, value]) => {
-            // Capitalize the first letter of the key for display
-            const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
-            return `<li>${formattedKey}: ${value}/10</li>`;
+            const capitalizedCriteria = key
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            return `<li>${capitalizedCriteria}: ${value}/10</li>`;
         }).join('');
 
         // Add ratings to list
@@ -385,8 +387,8 @@ async function setupTwistRatingsModal(modal, twistId) {
 
             const dateElement = document.createElement('h3');
             // Format date for better readability if desired
-            const date = new Date(ratingEntry.rating_date + 'T00:00:00'); // Avoid timezone issues
-            dateElement.textContent = `Date: ${date.toLocaleDateString()}`;
+            const date = new Date(ratingEntry.rating_date + 'T00:00:00');
+            dateElement.textContent = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
             ratingCard.appendChild(dateElement);
 
             const criteriaList = document.createElement('ul');
@@ -395,7 +397,10 @@ async function setupTwistRatingsModal(modal, twistId) {
             for (const [criteria, score] of Object.entries(ratingEntry.ratings)) {
                 const listItem = document.createElement('li');
                 // Capitalize the first letter of the criteria name
-                const capitalizedCriteria = criteria.charAt(0).toUpperCase() + criteria.slice(1);
+                const capitalizedCriteria = criteria
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
                 listItem.textContent = `${capitalizedCriteria}: ${score}/10`;
                 criteriaList.appendChild(listItem);
             }
@@ -437,6 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 setupTwistRatingsModal(modal, twistId)
             }
         }
+
+        const dateInput = modal.querySelector('input[type="date"]');
+        if (dateInput) {
+            today = new Date();
+            dateInput.valueAsDate = today;
+        }
+
         modal.style.display = 'flex';
     };
 

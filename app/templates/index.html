@@ -108,7 +108,7 @@
                 <div class="criteria-group" data-paved="{{ paved | lower }}" style="display: none;">
                     {% for criteria in criteria_list %}
                     <div class="form-group slider-group">
-                        <label for="{{ criteria.name }}" title="{{ criteria.desc }}">{{ criteria.name | capitalize }}</label>
+                        <label for="{{ criteria.name }}" title="{{ criteria.desc }}">{{ criteria.name.replace('_', ' ') | title }}</label>
                         <input type="range"
                             id="{{ criteria.name }}"
                             name="{{ criteria.name }}"

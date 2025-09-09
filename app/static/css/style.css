@@ -282,7 +282,8 @@ ul {
 }
 
 .modal-content input[type="text"],
-.modal-content input[type="file"] {
+.modal-content input[type="file"],
+.modal-content input[type="date"] {
     width: 100%;
     border: var(--border-default);
     border-radius: var(--radius-sm);
