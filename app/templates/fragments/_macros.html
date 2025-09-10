@@ -1,0 +1,24 @@
+{# Macro for rendering modal content with a consistent header and close button #}
+{% macro render_modal_content(title) %}
+<div class="modal-content">
+    <a href="#" class="close-button">&times;</a>
+    <h1>{{ title }}</h1>
+
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# Macro for rendering a consistent form button group #}
+{% macro render_form_buttons(submit_text='Submit') %}
+<div class="button-group">
+    <a href="#" class="button cancel-button">Cancel</a>
+    <button class="button" type="submit">{{ submit_text }}</button>
+</div>
+{% endmacro %}
+
+
+{# Macro for rendering a single rating #}
+{% macro render_rating(criteria, score) %}
+<li>{{ criteria.replace('_', ' ') | title }}: {{ score }}/10</li>
+{% endmacro %}

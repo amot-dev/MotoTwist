@@ -166,37 +166,23 @@ function setLayerVisibility(twistId, makeVisible) {
     }
 
     // Update the saved state
-    updateVisibleTwistsInStorage();
-}
-
-/**
- * Saves the list of currently visible twist IDs to localStorage.
- * (This function remains unchanged as it serves a distinct purpose).
- */
-function updateVisibleTwistsInStorage() {
     const visibleItems = document.querySelectorAll('.twist-item.is-visible');
     const visibleIds = Array.from(visibleItems).map(item => item.dataset.twistId);
     localStorage.setItem('visibleTwists', JSON.stringify(visibleIds));
 }
 
 /**
- * On page load, reads localStorage and sets the visibility for ALL layers.
- * Explicitly hides layers that are not in the saved list.
+ * Iterates over twists in the list and sets their visibility
+ * based on what's saved in localStorage.
  */
-function restoreVisibleLayers() {
+function applyVisibilityFromStorage() {
+    const twistList = document.getElementById('twist-list');
+    if (!twistList) return;
+
     const visibleIdsFromStorage = JSON.parse(localStorage.getItem('visibleTwists')) || [];
-    // Using a Set provides a fast O(1) lookup
     const visibleIdSet = new Set(visibleIdsFromStorage);
 
-    const newTwistId = document.body.dataset.newTwist;
-    if (newTwistId && !visibleIdSet.has(newTwistId)) {
-        // If there's a new ID, ensure it gets added to the visible set and saved
-        visibleIdSet.add(newTwistId);
-        localStorage.setItem('visibleTwists', JSON.stringify(Array.from(visibleIdSet)));
-    }
-    
-    // Iterate over ALL twist items to explicitly set their initial state.
-    const allTwistItems = document.querySelectorAll('.twist-item');
+    const allTwistItems = twistList.querySelectorAll('.twist-item');
     allTwistItems.forEach(item => {
         const twistId = item.dataset.twistId;
         const shouldBeVisible = visibleIdSet.has(twistId);
@@ -204,64 +190,19 @@ function restoreVisibleLayers() {
     });
 }
 
-/**
- * Fetches and displays ratings for a twist.
- * @param {string} twistId - The ID of the twist.
- * @param {HTMLElement} ratingDropdown - The dropdown to populate.
- */
-async function loadRatingDropdown(twistId, ratingDropdown) {
-    if (ratingDropdown.dataset.loaded) return;
-    ratingDropdown.dataset.loaded = 'true';
-
-    try {
-        const response = await fetch(`/twists/${twistId}/averages`);
-        if (!response.ok) throw new Error('Network response was not ok.');
-        
-        const avgRatings = await response.json();
-
-        // Display both paved and unpaved ratings dynamically
-        const avgRatingsHTML = Object.entries(avgRatings).map(([key, value]) => {
-            const capitalizedCriteria = key
-                    .split('_')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
-            return `<li>${capitalizedCriteria}: ${value}/10</li>`;
-        }).join('');
-
-        // Add ratings to list
-        const ul = ratingDropdown.querySelector('ul');
-        const allRatingsLink = ratingDropdown.querySelector('a')
-        if (avgRatingsHTML) {
-            ul.innerHTML = avgRatingsHTML;
-            allRatingsLink.style.display = null;
-        }
-        else {
-            ul.innerHTML = "No ratings yet!"
-            allRatingsLink.style.display = 'none';
-        }
-
-    } catch (error) {
-        ul.innerHTML = '<li>Could not load ratings.</li>';
-        console.error('Failed to fetch ratings:', error);
-    }
-}
-
-// Fade out flash message
-document.addEventListener('DOMContentLoaded', () => {
-  const flashMessage = document.querySelector('.flash-message');
-
-    if (flashMessage) {
-        setTimeout(() => {
-            flashMessage.style.opacity = '0';
-            flashMessage.addEventListener('transitionend', () => {
-                flashMessage.remove();
-            }, { once: true });
-        }, 3000);
-    }
+// Listen for the custom event sent from the server after the twist list is initially loaded
+document.body.addEventListener('twistsLoaded', () => {
+    applyVisibilityFromStorage();
 });
 
-// Restore visible map layers on page load
-document.addEventListener('DOMContentLoaded', restoreVisibleLayers);
+// Listen for the custom event sent from the server after a new twist is created
+document.body.addEventListener('twistAdded', (event) => {
+    const newTwistId = event.detail.value;
+    if (newTwistId) {
+        applyVisibilityFromStorage();
+        setLayerVisibility(newTwistId, true);
+    }
+});
 
 // Listen for clicks on twists
 document.getElementById('twist-list').addEventListener('click', function(event) {
@@ -285,10 +226,7 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
         });
 
         // Show current rating dropdown if it was hidden
-        if (!isCurrentlyOpen) {
-            ratingDropdown.classList.add('is-open');
-            loadRatingDropdown(twistId, ratingDropdown);
-        }
+        if (!isCurrentlyOpen) ratingDropdown.classList.add('is-open');
 
         // Pan and zoom the map
         const layer = mapLayers[twistId];
@@ -303,177 +241,20 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     }
 });
 
-/**
- * Sets up a form for rating a twist based off fetched criteria.
- * @param {HTMLElement} form - The form in which to populate criteria.
- * @param {HTMLElement} twistId - The ID of the twist.
- */
-async function setupRateTwistModal(form, twistId) {
-    const actionTemplate = form.dataset.actionTemplate;
-    form.action = actionTemplate.replace('{id}', twistId);
 
-    const title = form.previousElementSibling;
-    const pavedContainer = form.querySelector('.criteria-group[data-paved="true"]');
-    const unpavedContainer = form.querySelector('.criteria-group[data-paved="false"]');
+// Listen for the flashMessage event from the server
+document.body.addEventListener('flashMessage', (event) => {
+    const message = event.detail.value;
 
-    const submitButton = form.querySelector('button[type="submit"]');
-    if (submitButton) submitButton.disabled = true;
-
-    title.textContent = 'Loading ratings...';
-    try {
-        const response = await fetch(`/twists/${twistId}`);
-        if (!response.ok) throw new Error('Network response was not ok.');
-
-        const twist = await response.json();
-
-        // Get all input elements within each container
-        const pavedInputs = pavedContainer.querySelectorAll('input');
-        const unpavedInputs = unpavedContainer.querySelectorAll('input');
-
-        title.textContent = twist.name;
-
-        if (twist.is_paved) {
-            pavedContainer.style.display = 'block';
-            unpavedContainer.style.display = 'none';
-
-            // Enable the visible inputs and disable the hidden ones
-            pavedInputs.forEach(input => input.disabled = false);
-            unpavedInputs.forEach(input => input.disabled = true);
-        } else {
-            pavedContainer.style.display = 'none';
-            unpavedContainer.style.display = 'block';
-
-            // Enable the visible inputs and disable the hidden ones
-            pavedInputs.forEach(input => input.disabled = true);
-            unpavedInputs.forEach(input => input.disabled = false);
+    // Display the message for 3 seconds if it exists
+    if (message) {
+        const flashMessage = document.querySelector('.flash-message');
+        if (flashMessage) {
+            flashMessage.style.opacity = '1';
+            flashMessage.innerHTML = message;
+            setTimeout(() => {
+                flashMessage.style.opacity = '0';
+            }, 3000);
         }
-
-        if (submitButton) submitButton.disabled = false;
-
-    } catch (error) {
-        title.textContent = 'Error loading twist details';
-        console.error('Failed to fetch twist details:', error);
     }
-};
-
-/**
- * Sets up a modal to view historic ratings for a twist
- * @param {HTMLElement} form - The form in which to populate ratings.
- * @param {HTMLElement} twistId - The ID of the twist.
- */
-async function setupTwistRatingsModal(modal, twistId) {
-    const ratingList = modal.querySelector('#rating-list');
-    const title = modal.querySelector('h1');
-
-    title.textContent = 'Loading ratings...';
-    ratingList.innerHTML = '';
-    try {
-        const twistResponse = await fetch(`/twists/${twistId}`);
-        if (!twistResponse.ok) throw new Error('Network response was not ok.');
-
-        const twistRatingResponse = await fetch(`/twists/${twistId}/ratings`);
-        if (!twistRatingResponse.ok) throw new Error('Network response was not ok.');
-
-        const twist = await twistResponse.json()
-        const ratings = await twistRatingResponse.json();
-
-        title.textContent = twist.name;
-
-        // Create and append a card for each rating entry
-        ratings.forEach(ratingEntry => {
-            const ratingCard = document.createElement('div');
-            ratingCard.className = 'rating-card';
-
-            const dateElement = document.createElement('h3');
-            // Format date for better readability if desired
-            const date = new Date(ratingEntry.rating_date + 'T00:00:00');
-            dateElement.textContent = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
-            ratingCard.appendChild(dateElement);
-
-            const criteriaList = document.createElement('ul');
-
-            // Iterate over the ratings object to display each criterion
-            for (const [criteria, score] of Object.entries(ratingEntry.ratings)) {
-                const listItem = document.createElement('li');
-                // Capitalize the first letter of the criteria name
-                const capitalizedCriteria = criteria
-                    .split('_')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
-                listItem.textContent = `${capitalizedCriteria}: ${score}/10`;
-                criteriaList.appendChild(listItem);
-            }
-
-            ratingCard.appendChild(criteriaList);
-            ratingList.appendChild(ratingCard);
-            ratingList.dataset.paved = twist.is_paved;
-        });
-
-    } catch (error) {
-        title.textContent = 'Error loading twist ratings';
-        console.error('Failed to fetch twist ratings:', error);
-    }
-};
-
-// Modal opening/closing
-document.addEventListener('DOMContentLoaded', () => {
-    const openModalTriggers = document.querySelectorAll('[data-modal-target]');
-    openModalTriggers.forEach(button => {
-        button.addEventListener('click', () => {
-            const modalId = button.dataset.modalTarget;
-            if (!modalId) return;
-
-            const modal = document.querySelector(modalId);
-            if (modal) {
-                // Get the twistId if it exists
-                const twistId = button.dataset.twistId;
-                openModal(modal, twistId);
-            }
-        });
-    });
-
-    const openModal = (modal, twistId) => {
-        if (twistId) {
-            const form = modal.querySelector('form');
-            if (form && form.dataset.actionTemplate) {
-                setupRateTwistModal(form, twistId)
-            } else {
-                setupTwistRatingsModal(modal, twistId)
-            }
-        }
-
-        const dateInput = modal.querySelector('input[type="date"]');
-        if (dateInput) {
-            today = new Date();
-            dateInput.valueAsDate = today;
-        }
-
-        modal.style.display = 'flex';
-    };
-
-    const closeModal = (modal) => {
-        modal.style.display = 'none';
-        const form = modal.querySelector('form');
-        if (form) {
-            form.reset();
-        }
-    };
-
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        // Close when clicking the background overlay
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal(modal);
-            }
-        });
-
-        // Find and attach listeners to all close/cancel buttons within this modal
-        const closeButtons = modal.querySelectorAll('.close-button, .cancel-button');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                closeModal(modal);
-            });
-        });
-    });
 });

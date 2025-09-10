@@ -1,0 +1,20 @@
+{% from "fragments/_macros.html" import render_modal_content, render_rating %}
+
+{% call render_modal_content(twist.name) %}
+    <div id="rating-list" data-paved="{{ twist.is_paved | lower }}">
+        {% if ratings %}
+            {% for rating_entry in ratings %}
+                <div class="rating-card">
+                    <h3>{{ rating_entry.formatted_date }}</h3>
+                    <ul>
+                        {% for criteria, score in rating_entry.ratings.items() %}
+                            {{ render_rating(criteria, score) }}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No ratings yet</p>
+        {% endif %}
+    </div>
+{% endcall %}

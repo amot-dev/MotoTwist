@@ -1,0 +1,17 @@
+{% for twist in twists %}
+<li class="twist-item" data-twist-id="{{ twist.id }}" data-paved="{{ twist.is_paved }}">
+    <div class="twist-header"
+        hx-get="/twists/{{ twist.id }}/rating-dropdown"
+        hx-target="next .rating-dropdown"
+        hx-swap="innerHTML"
+        hx-trigger="click once">
+        <span class="twist-name">{{ twist.name }}</span>
+        <span class="visibility-toggle" title="Toggle visibility">
+            <i class="far fa-eye"></i>
+        </span>
+    </div>
+    <div class="rating-dropdown">
+        <p>Loading ratings...</p>
+    </div>
+</li>
+{% endfor %}

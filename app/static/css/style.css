@@ -92,7 +92,9 @@ ul {
     margin-bottom: var(--padding-lg);
     border: none;
     border-radius: var(--radius-sm);
+    box-sizing: border-box;
     padding: var(--padding-md);
+    font-size: inherit;
     font-weight: bold;
     text-align: center;
     text-decoration: none;
@@ -178,7 +180,7 @@ ul {
     margin-bottom: var(--padding-sm);
 }
 
-.rating-dropdown button {
+.rating-dropdown .button {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -187,13 +189,14 @@ ul {
     padding: var(--padding-sm) var(--padding-md);
     font-size: 0.8rem;
     font-weight: bold;
+    text-decoration: none;
     color: white;
     background-color: var(--accent);
     cursor: pointer;
 
     transition: background-color 0.2s ease;
 }
-.rating-dropdown button:hover {
+.rating-dropdown .button:hover {
     background-color: var(--accent-hover);
 }
 
@@ -204,7 +207,7 @@ ul {
     padding: var(--padding-xs) 0;
 }
 
-.rating-dropdown a {
+.rating-dropdown .button-ish {
     font-size: 0.8em;
     font-weight: bold;
     text-decoration: none;
@@ -212,7 +215,7 @@ ul {
 
     transition: color var(--transition-fast);
 }
-.rating-dropdown a:hover {
+.rating-dropdown .button-ish:hover {
     text-decoration: none;
     color: var(--accent-hover-light);
 }
@@ -232,6 +235,10 @@ ul {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
+}
+.modal:not(.modal-dynamic):target,
+.modal.modal-dynamic:has(.modal-content):target {
+    display: flex;
 }
 
 .modal-content {
@@ -256,12 +263,12 @@ ul {
     right: 20px;
     font-size: 28px;
     font-weight: bold;
+    text-decoration: none;
     color: #aaa;
     cursor: pointer;
 }
 .close-button:hover,
 .close-button:focus {
-    text-decoration: none;
     color: var(--text-offwhite);
 }
 
@@ -313,26 +320,27 @@ ul {
     gap: 10px;
 }
 
-.modal-content button {
+.modal-content .button {
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-md) var(--padding-lg);
     font-size: 1rem;
     font-weight: bold;
+    text-decoration: none;
     color: white;
     background-color: var(--accent-blue);
     cursor: pointer;
 
     transition: background-color var(--transition-fast);
 }
-.modal-content button:hover {
+.modal-content .button:hover {
     background-color: var(--accent-blue-hover);
 }
 
-.modal-content button.cancel-button {
+.modal-content .button.cancel-button {
     background-color: var(--button-cancel);
 }
-.modal-content button.cancel-button:hover {
+.modal-content .button.cancel-button:hover {
     background-color: var(--button-cancel-hover);
 }
 
@@ -359,11 +367,11 @@ ul {
     margin-top: var(--padding-lg);
     padding-right: var(--padding-md); /* Space for scrollbar */
 }
-#ratings-list[data-paved="true" i] {
+#rating-list[data-paved="true" i] {
   --accent: var(--accent-blue);
 }
 
-#ratings-list[data-paved="false" i] {
+#rating-list[data-paved="false" i] {
   --accent: var(--accent-orange);
 }
 
@@ -390,7 +398,7 @@ ul {
     z-index: 10000;
     top: 20px;
     left: 50%;
-    opacity: 1;
+    opacity: 0;
     transform: translateX(-50%);
     box-shadow: var(--shadow-flash);
     border: 1px solid var(--accent-blue);

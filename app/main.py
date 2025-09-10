@@ -1,69 +1,63 @@
-import datetime
+from datetime import date, timedelta
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import gpxpy
-from pathlib import Path
-from sqlalchemy import func, inspect
+import json
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 import uuid
 
-from database import SessionLocal, engine
+from config import *
 from models import Twist, PavedRating, UnpavedRating
+from utility import get_db, calculate_average_rating
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="TODO")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 templates = Jinja2Templates(directory="templates")
-
-GPX_STORAGE_PATH = Path("/gpx")
-GPX_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
-RATING_EXCLUDED_COLUMNS = {"id", "twist_id", "rating_date"}
-
-def get_db():
-    """
-    Dependency to get a database session
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, db: Session = Depends(get_db)):
     """
     This endpoint serves the main page of the application.
     """
-    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
-
-    # Get PavedRating column names and descriptions using inspection
-    rating_criteria_paved = [
-        {"name": col.name, "desc": col.doc}
-        for col in inspect(PavedRating).columns
-        if col.name not in RATING_EXCLUDED_COLUMNS
-    ]
-
-    # Get UnpavedRating column names and descriptions using inspection
-    rating_criteria_unpaved = [
-        {"name": col.name, "desc": col.doc}
-        for col in inspect(UnpavedRating).columns
-        if col.name not in RATING_EXCLUDED_COLUMNS
-    ]
 
     flash_message = request.session.pop('flash', None)
-    new_twist = request.session.pop("new_twist", None)
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "twists": twists,
-        "rating_critera_paved": rating_criteria_paved,
-        "rating_critera_unpaved": rating_criteria_unpaved,
-        "flash": flash_message,
-        "new_twist": new_twist
+        "flash": flash_message
     })
+
+@app.get("/twists", response_class=HTMLResponse)
+async def get_twists(request: Request, db: Session = Depends(get_db)):
+    """
+    Returns an HTML fragment containing the sorted list of twists.
+    """
+    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
+
+    # Set a header to trigger a client-side event after the swap
+    events = {
+        "twistsLoaded": {}
+    }
+    response = templates.TemplateResponse("fragments/twist_list.html", {
+        "request": request,
+        "twists": twists
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+@app.get("/twists/{twist_id}/gpx")
+async def get_twist(twist_id: int, db: Session = Depends(get_db)):
+    """
+    Fetches the GPX file for a given twist_id and returns its raw content.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
 
 @app.post("/twists/create")
 async def create_twist(
@@ -105,32 +99,20 @@ async def create_twist(
     db.add(twist)
     db.commit()
 
-    # Set a success flash message and redirect
-    request.session["flash"] = "Twist created successfully!"
-    request.session["new_twist"] = twist.id
-    return RedirectResponse(url="/", status_code=303)
+    # Render the twist list fragment with the new data
+    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
 
-@app.get("/twists/{twist_id}")
-async def get_twist_ratings(twist_id: int, db: Session = Depends(get_db)):
-    """
-    Fetches the name and is_paved for a given twist_id and returns them.
-    """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
-    
-    return {"name": twist.name, "is_paved": twist.is_paved}
-
-@app.get("/twists/{twist_id}/gpx")
-async def get_twist(twist_id: int, db: Session = Depends(get_db)):
-    """
-    Fetches the GPX file for a given twist_id and returns its raw content.
-    """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
-
-    return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
+    # Set a header to trigger a client-side event after the swap, passing the new twist's id and a message
+    events = {
+        "twistAdded":  str(twist.id),
+        "flashMessage": "Twist created successfully!"
+    }
+    response = templates.TemplateResponse("fragments/twist_list.html", {
+        "request": request,
+        "twists": twists
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
 
 @app.post("/twists/{twist_id}/rate")
 async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
@@ -142,12 +124,14 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Twist not found")
 
     form_data = await request.form()
-    target_model = PavedRating if twist.is_paved else UnpavedRating
 
-    valid_criteria = {
-        col.name for col in inspect(target_model).columns 
-        if col.name not in RATING_EXCLUDED_COLUMNS
-    }
+    if twist.is_paved:
+        target_model = PavedRating
+        criteria_list = RATING_CRITERIA_PAVED
+    else:
+        target_model = UnpavedRating
+        criteria_list = RATING_CRITERIA_UNPAVED
+    valid_criteria = {criteria["name"] for criteria in criteria_list}
 
     # Build the dictionary for the new rating object
     new_rating_data = {}
@@ -165,7 +149,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
         # Handle the rating date separately
         if key == 'rating_date':
             try:
-                new_rating_data['rating_date'] = datetime.date.fromisoformat(value)
+                new_rating_data['rating_date'] = date.fromisoformat(value)
             except ValueError:
                 request.session["flash"] = "Error: Invalid date format."
                 return RedirectResponse(url="/", status_code=303)
@@ -180,81 +164,91 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     db.add(new_rating)
     db.commit()
 
-    # Set a success flash message and redirect
-    request.session["flash"] = "Twist rated successfully!"
-    return RedirectResponse(url="/", status_code=303)
+    # Set a header to trigger a client-side event after the swap, passing a message
+    events = {
+        "flashMessage": "Twist rated successfully!"
+    }
+    response = templates.TemplateResponse("fragments/rating_dropdown.html", {
+        "request": request,
+        "twist_id": twist_id,
+        "average_ratings": await calculate_average_rating(db, twist, round_to=1)
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
 
-@app.get("/twists/{twist_id}/ratings")
-async def get_twist_ratings(twist_id: int, db: Session = Depends(get_db)):
+@app.get("/twists/{twist_id}/rating-dropdown")
+async def get_twist_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
-    Getches the ratings for a given twist_id and returns them.
+    Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
-    
+
+    return templates.TemplateResponse("fragments/rating_dropdown.html", {
+        "request": request,
+        "twist_id": twist_id,
+        "average_ratings": await calculate_average_rating(db, twist, round_to=1)
+    })
+
+@app.get("/twists/{twist_id}/modal-rate-twist")
+async def get_rate_twist_form(request: Request, twist_id: int, db: Session = Depends(get_db)):
+    """
+    Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    return templates.TemplateResponse("fragments/modal_rate_twist.html", {
+        "request": request,
+        "twist": twist,
+        "today": today,
+        "tomorrow": tomorrow,
+        "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED
+    })
+
+@app.get("/twists/{twist_id}/modal-view-twist-ratings")
+async def get_twist_rating_list(twist_id: int, request: Request, db: Session = Depends(get_db)):
+    """
+    Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
     if twist.is_paved:
         ratings = twist.paved_ratings
-        target_model = PavedRating
+        criteria_list = RATING_CRITERIA_PAVED
     else:
         ratings = twist.unpaved_ratings
-        target_model = UnpavedRating
-    if not ratings:
-        return []
-    
+        criteria_list = RATING_CRITERIA_UNPAVED
+    criteria_names = {criteria["name"] for criteria in criteria_list}
+
     # Sort ratings with most recent first
-    sorted_ratings = sorted(ratings, key=lambda rating: rating.rating_date, reverse=True)
+    sorted_ratings = sorted(ratings, key=lambda r: r.rating_date, reverse=True) if ratings else []
 
-    criteria_names = {
-        col.name for col in inspect(target_model).columns
-        if col.name not in RATING_EXCLUDED_COLUMNS
-    }
-
-    response_list = []
+    # Structure data for the template
+    ratings_for_template = []
     for rating in sorted_ratings:
         ratings_dict = {
             key: value for key, value in rating.__dict__.items()
             if key in criteria_names
         }
-        
-        response_list.append({
-            "rating_date": rating.rating_date,
+        # Pre-format the date for easier display in the template
+        formatted_date = rating.rating_date.strftime("%B %d, %Y") #TODO: ordinals?
+
+        ratings_for_template.append({
+            "formatted_date": formatted_date,
             "ratings": ratings_dict
         })
-        
-    return response_list
 
-@app.get("/twists/{twist_id}/averages")
-async def get_twist_ratings(twist_id: int, db: Session = Depends(get_db)):
-    """
-    Fetches the average ratings for a given twist_id and returns them.
-    """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
-    
-    # Determine which model to inspect
-    target_model = PavedRating if twist.is_paved else UnpavedRating
-
-    # Dynamically discover all columns from the model, excluding the ones we don't want
-    all_columns = inspect(target_model).columns
-    target_cols = [
-        col for col in all_columns
-        if col.name not in RATING_EXCLUDED_COLUMNS
-    ]
-
-    # Query averages for target ratings columns for this twist
-    query_expressions = [func.avg(col).label(col.key) for col in target_cols]
-    averages = db.query(*query_expressions).filter(target_model.twist_id == twist_id).first()
-
-    # Build response, excluding None values
-    if averages:
-        response_data = {
-            key: round(value, 2)
-            for key, value in averages._asdict().items()
-            if value is not None
-        }
-    else:
-        response_data = {}
-
-    return response_data
+    # Pass the request, twist, and ratings to the template
+    return templates.TemplateResponse("fragments/modal_view_twist_ratings.html", {
+        "request": request,
+        "twist": twist,
+        "ratings": ratings_for_template
+    })

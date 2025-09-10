@@ -1,0 +1,26 @@
+{% from "fragments/_macros.html" import render_rating %}
+
+{# This is the entire inner content of the dropdown #}
+<h4>Average Rating</h4>
+<a href="#modal-rate-twist" class="button"
+    hx-get="/twists/{{ twist_id }}/modal-rate-twist"
+    hx-target="#modal-rate-twist"
+    hx-swap="innerHTML">Rate</a>
+
+<ul>
+{% if average_ratings %}
+    {% for criteria, score in average_ratings.items() %}
+        {{ render_rating(criteria, score) }}
+    {% endfor %}
+{% else %}
+    <li>No ratings yet</li>
+{% endif %}
+</ul>
+
+{# Conditionally show the 'See all' link #}
+{% if average_ratings %}
+<a href="#modal-view-twist-ratings" class="button-ish"
+    hx-get="/twists/{{ twist_id }}/modal-view-twist-ratings"
+    hx-target="#modal-view-twist-ratings"
+    hx-swap="innerHTML">See all</a>
+{% endif %}
