@@ -74,7 +74,7 @@ async function loadGpxLayer(twistId, twistName, isPaved) {
                     if (!layer.options || !layer.options.icon || layer.options.title === undefined || layer === clickedMarker) {
                         return false;
                     }
-                    return layer.getLatLng().distanceTo(clickedLatLng) < 1; // Is the waypoint within 1 meter?
+                    return layer.getLatLng().distanceTo(clickedLatLng) < 5; // Is the waypoint within 5 meters?
                 });
 
                 if (waypoint && waypoint.getPopup()) {
