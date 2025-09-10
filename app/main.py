@@ -187,7 +187,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
                 new_rating_data[key] = int(value)
             except (ValueError, TypeError):
                 # Handle cases where a rating value isn't a valid number
-                raise HTTPException(status_code=422, detail="Invalid value for '{key}'")
+                raise HTTPException(status_code=422, detail=f"Invalid value for '{key.replace('_', ' ').title()}' criterion")
 
         # Handle the rating date separately
         if key == 'rating_date':
