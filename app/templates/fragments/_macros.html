@@ -1,7 +1,17 @@
+{# Render modal opening button #}
+{% macro render_modal_button(twist_id, modal_name, id=False, extra_classes="") -%}
+    <a {% if id %}id="modal-{{ modal_name }}-button"{% endif %}
+       href="#modal-{{ modal_name }}"
+       class="button {{ extra_classes | trim }}"
+       hx-get="/twists/{{ twist_id }}/modal-{{ modal_name }}"
+       hx-target="#modal-{{ modal_name }}"
+       hx-swap="innerHTML">{{ caller() }}</a>
+{%- endmacro %}
+
 {# Render modal content with a consistent header and close button #}
 {% macro render_modal_content(title) %}
 <div class="modal-content">
-    <a href="#" class="close-button">&times;</a>
+    <a href="#" class="close">&times;</a>
     <h1>{{ title }}</h1>
 
     {{ caller() }}
@@ -10,10 +20,10 @@
 
 
 {# Render a consistent form button group #}
-{% macro render_form_buttons(submit_text='Submit') %}
+{% macro render_form_buttons(submit_text="Submit", submit_extra_classes="") %}
 <div class="button-group">
-    <a href="#" class="button cancel-button">Cancel</a>
-    <button class="button" type="submit">{{ submit_text }}</button>
+    <a href="#" class="button button-cancel">Cancel</a>
+    <button class="button {{ submit_extra_classes | trim }}" type="submit">{{ submit_text }}</button>
 </div>
 {% endmacro %}
 

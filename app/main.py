@@ -1,10 +1,11 @@
 from datetime import date, timedelta
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import gpxpy
 import json
+import os
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 import uuid
@@ -48,24 +49,13 @@ async def get_twists(request: Request, db: Session = Depends(get_db)):
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.get("/twists/{twist_id}/gpx")
-async def get_twist(twist_id: int, db: Session = Depends(get_db)):
-    """
-    Fetches the GPX file for a given twist_id and returns its raw content.
-    """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
-
-    return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
-
-@app.post("/twists/create")
+@app.post("/twists")
 async def create_twist(
     request: Request,
-    db: Session = Depends(get_db),
     name: str = Form(...),
     is_paved_str: str = Form(..., alias="is_paved"),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
 ):
     """
     Handles the creation of a new Twist.
@@ -75,14 +65,12 @@ async def create_twist(
 
     try:
         gpx = gpxpy.parse(contents)
-        print(gpx.name)
         # Basic validation: ensure there's at least one track or route
         if not gpx.tracks and not gpx.routes:
-            raise ValueError("GPX file is empty or contains no tracks/routes.")
+            raise HTTPException(status_code=422, detail="GPX file contains no tracks/routes")
     except Exception as e:
         # If gpxpy.parse fails or our check fails, it's not a valid GPX file
-        request.session["flash"] = "Error: Invalid or empty GPX file."
-        return RedirectResponse(url="/", status_code=303)
+        raise HTTPException(status_code=422, detail="Invalid or empty GPX file")
 
     # Generate a unique filename to prevent overwriting files
     unique_filename = f"{uuid.uuid4().hex}.gpx"
@@ -102,7 +90,6 @@ async def create_twist(
     # Render the twist list fragment with the new data
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
 
-    # Set a header to trigger a client-side event after the swap, passing the new twist's id and a message
     events = {
         "twistAdded":  str(twist.id),
         "flashMessage": "Twist created successfully!"
@@ -113,6 +100,64 @@ async def create_twist(
     })
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
+
+@app.delete("/twists/{twist_id}")
+async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
+    """
+    Deletes a twist, its associated GPX file, and all related ratings.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    twist_id = twist.id
+    gpx_file_path = Path(twist.file_path)
+
+    # Perform GPX and twist deletion within a transactional block
+    try:
+        # Stage the DB record for deletion
+        db.delete(twist)
+
+        # Attempt to delete the file from the filesystem, if it exists
+        if gpx_file_path.is_file():
+            os.remove(gpx_file_path)
+
+        # If both prior operations succeed, commit the transaction to the database
+        db.commit()
+
+    except OSError as e:
+        # If file deletion fails (e.g., permissions), rollback
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Deletion failed due to a filesystem error.")
+    except Exception as e:
+        # Catch other potential errors and rollback
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Deletion failed due to an internal server error.")
+
+    # Render the twist list fragment with the new data
+    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
+
+    events = {
+        "twistDeleted":  str(twist_id),
+        "flashMessage": "Twist deleted successfully!"
+    }
+    response = templates.TemplateResponse("fragments/twist_list.html", {
+        "request": request,
+        "twists": twists
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+@app.get("/twists/{twist_id}/gpx")
+async def get_twist_gpx(twist_id: int, db: Session = Depends(get_db)):
+    """
+    Fetches the GPX file for a given twist_id and returns its raw content.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
 
 @app.post("/twists/{twist_id}/rate")
 async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
@@ -136,28 +181,24 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     # Build the dictionary for the new rating object
     new_rating_data = {}
     for key, value in form_data.items():
-        # If the key from the form is a valid rating name, add it to our dict
+        # If the key from the form is a valid rating name, add it to the dict
         if key in valid_criteria:
             try:
-                # Convert rating value to an integer
                 new_rating_data[key] = int(value)
             except (ValueError, TypeError):
                 # Handle cases where a rating value isn't a valid number
-                request.session["flash"] = f"Error: Invalid value for {key}."
-                return RedirectResponse(url="/", status_code=303)
+                raise HTTPException(status_code=422, detail="Invalid value for '{key}'")
 
         # Handle the rating date separately
         if key == 'rating_date':
             try:
                 new_rating_data['rating_date'] = date.fromisoformat(value)
             except ValueError:
-                request.session["flash"] = "Error: Invalid date format."
-                return RedirectResponse(url="/", status_code=303)
+                raise HTTPException(status_code=422, detail="Invalid date format")
 
     # Check if we actually collected any ratings
     if not any(key in valid_criteria for key in new_rating_data):
-        request.session["flash"] = "Error: No valid rating data submitted."
-        return RedirectResponse(url="/", status_code=303)
+        raise HTTPException(status_code=422, detail="No valid rating data submitted")
 
     # Create the new rating instance, linking it to the twist
     new_rating = target_model(**new_rating_data, twist_id=twist_id)
@@ -251,4 +292,18 @@ async def get_twist_rating_list(twist_id: int, request: Request, db: Session = D
         "request": request,
         "twist": twist,
         "ratings": ratings_for_template
+    })
+
+@app.get("/twists/{twist_id}/modal-delete-twist")
+async def get_delete_twist_modal(request: Request, twist_id: int, db: Session = Depends(get_db)):
+    """
+    Returns an HTML fragment for the twist deletion confirmation modal.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    return templates.TemplateResponse("fragments/modal_delete_twist.html", {
+        "request": request,
+        "twist": twist
     })

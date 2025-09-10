@@ -1,11 +1,10 @@
-{% from "fragments/_macros.html" import render_rating %}
+{% from "fragments/_macros.html" import render_modal_button, render_rating %}
 
 {# This is the entire inner content of the dropdown #}
 <h4>Average Rating</h4>
-<a href="#modal-rate-twist" class="button"
-    hx-get="/twists/{{ twist_id }}/modal-rate-twist"
-    hx-target="#modal-rate-twist"
-    hx-swap="innerHTML">Rate</a>
+{% call render_modal_button(twist_id, "rate-twist", id=True) %}
+    Rate
+{% endcall %}
 
 <ul>
 {% if average_ratings %}
@@ -19,8 +18,15 @@
 
 {# Conditionally show the 'See all' link #}
 {% if average_ratings %}
-<a href="#modal-view-twist-ratings" class="button-ish"
-    hx-get="/twists/{{ twist_id }}/modal-view-twist-ratings"
-    hx-target="#modal-view-twist-ratings"
-    hx-swap="innerHTML">See all</a>
+{% call render_modal_button(twist_id, "view-twist-ratings", extra_classes="button-link") %}
+    See all
+{% endcall %}
+{% else %}
+{% call render_modal_button(twist_id, "view-twist-ratings", extra_classes="button-link invisible") %}
+    See all
+{% endcall %}
 {% endif %}
+
+{% call render_modal_button(twist_id, "delete-twist", id=True, extra_classes="button-link") %}
+    <i class="fa-solid fa-trash"></i>
+{% endcall %}

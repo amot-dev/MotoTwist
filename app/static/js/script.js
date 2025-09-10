@@ -122,8 +122,8 @@ async function loadGpxLayer(twistId, twistName, isPaved) {
     
     // Wait for it to load to add to map, allows fitting bounds before showing
     gpxLayer.on('loaded', () => {
-        const listItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
-        if (listItem && listItem.classList.contains('is-visible')) {
+        const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
+        if (twistItem && twistItem.classList.contains('is-visible')) {
             gpxLayer.addTo(map);
         }
     });
@@ -136,34 +136,40 @@ async function loadGpxLayer(twistId, twistName, isPaved) {
  * @param {boolean} makeVisible - True to show the layer, false to hide it.
  */
 function setLayerVisibility(twistId, makeVisible) {
-    const listItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
-    if (!listItem) return;
-
-    const icon = listItem.querySelector('.visibility-toggle i');
-
-    // Use the second argument of classList.toggle() to set the state explicitly
-    listItem.classList.toggle('is-visible', makeVisible);
-    icon.classList.toggle('fa-eye', makeVisible);
-    icon.classList.toggle('fa-eye-slash', !makeVisible);
-
+    const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
     const layer = mapLayers[twistId];
 
+    // Unload if hiding or twist is missing
+    if (!makeVisible || !twistItem) {
+        if (layer && map.hasLayer(layer)) {
+            map.removeLayer(layer);
+        }
+
+        // Delete layer and return if twist is missing
+        if (!twistItem) {
+            delete layer;
+            return;
+        }
+    }
+
+    // Load layer
     if (makeVisible) {
         if (layer) {
             // Layer is already loaded, just add it back to the map
             layer.addTo(map);
         } else {
             // First time showing this layer, load the GPX data
-            const isPaved = listItem.dataset.paved === 'True';
-            const twistName = listItem.querySelector('.twist-name').textContent;
+            const isPaved = twistItem.dataset.paved === 'True';
+            const twistName = twistItem.querySelector('.twist-name').textContent;
             loadGpxLayer(twistId, twistName, isPaved);
         }
-    } else {
-        // Hide the layer
-        if (layer && map.hasLayer(layer)) {
-            map.removeLayer(layer);
-        }
     }
+
+    // Use the second argument of classList.toggle() to set the state explicitly
+    const icon = twistItem.querySelector('.visibility-toggle i');
+    twistItem.classList.toggle('is-visible', makeVisible);
+    icon.classList.toggle('fa-eye', makeVisible);
+    icon.classList.toggle('fa-eye-slash', !makeVisible);
 
     // Update the saved state
     const visibleItems = document.querySelectorAll('.twist-item.is-visible');
@@ -201,6 +207,15 @@ document.body.addEventListener('twistAdded', (event) => {
     if (newTwistId) {
         applyVisibilityFromStorage();
         setLayerVisibility(newTwistId, true);
+    }
+});
+
+// Listen for the custom event sent from the server after a twist is deleted
+document.body.addEventListener('twistDeleted', (event) => {
+    const deletedTwistId = event.detail.value;
+    if (deletedTwistId) {
+        applyVisibilityFromStorage();
+        setLayerVisibility(deletedTwistId, false);
     }
 });
 

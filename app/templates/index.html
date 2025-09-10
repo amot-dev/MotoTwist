@@ -11,7 +11,7 @@
     <div id="sidebar">
         <div id="twist-list-container">
             <h1>MotoTwist</h1>
-            <a href="#modal-create-twist" class="button open-modal-create-twist">New Twist</a>
+            <a id="modal-create-twist-button" href="#modal-create-twist" class="button">New Twist</a>
 
             <ul id="twist-list" hx-get="/twists" hx-trigger="load" hx-swap="innerHTML">
                 <p>Loading twists...</p>
@@ -23,7 +23,7 @@
 
     <div id="modal-create-twist" class="modal">
         {% call render_modal_content("New Twist") %}
-            <form hx-post="/twists/create"
+            <form hx-post="/twists"
                 hx-target="#twist-list"
                 hx-swap="innerHTML"
                 hx-on::after-request="location.hash = ''; this.reset()"
@@ -48,7 +48,7 @@
                     <input type="file" id="modal-file" name="file" accept=".gpx" required>
                 </div>
 
-                {{ render_form_buttons(submit_text="Submit Rating") }}
+                {{ render_form_buttons(submit_text="Create Twist") }}
             </form>
         {% endcall %}
     </div>
@@ -59,5 +59,9 @@
 
     <div id="modal-view-twist-ratings" class="modal modal-dynamic">
         <p>Loading ratings...</p>
+    </div>
+
+    <div id="modal-delete-twist" class="modal modal-dynamic">
+        <p>Loading form...</p>
     </div>
 {% endblock %}

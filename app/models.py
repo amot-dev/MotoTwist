@@ -14,6 +14,10 @@ class Twist(Base):
 
     paved_ratings = relationship("PavedRating", back_populates="twist")
     unpaved_ratings = relationship("UnpavedRating", back_populates="twist")
+
+    def __repr__(self):
+        paved = "Paved" if self.is_paved else "Unpaved"
+        return f"[{self.id}] {self.name} ({paved}) => {self.file_path}"
     
 
 class PavedRating(Base):

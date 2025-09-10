@@ -80,6 +80,10 @@ ul {
     list-style: none;
 }
 
+.invisible {
+    visibility: hidden;
+}
+
 
 /* --- Twist List --- */
 
@@ -87,7 +91,7 @@ ul {
     flex-grow: 1;
 }
 
-.open-modal-create-twist {
+#modal-create-twist-button {
     display: block;
     width: 100%;
     margin-bottom: var(--padding-lg);
@@ -105,7 +109,7 @@ ul {
 
     transition: background-color var(--transition-fast);
 }
-.open-modal-create-twist:hover {
+#modal-create-twist-button:hover {
     background-color: var(--accent-blue-hover);
 }
 
@@ -182,22 +186,25 @@ ul {
 }
 
 .rating-dropdown .button {
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.rating-dropdown #modal-rate-twist-button {
     position: absolute;
     top: var(--padding-sm);
     right: var(--padding-lg);
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-xs) var(--padding-md);
-    font-size: 0.8rem;
-    font-weight: bold;
-    text-decoration: none;
     color: white;
     background-color: var(--accent);
     cursor: pointer;
 
     transition: background-color 0.2s ease;
 }
-.rating-dropdown .button:hover {
+.rating-dropdown #modal-rate-twist-button:hover {
     background-color: var(--accent-hover);
 }
 
@@ -208,17 +215,20 @@ ul {
     padding: var(--padding-xs) 0;
 }
 
-.rating-dropdown .button-ish {
-    font-size: 0.8em;
-    font-weight: bold;
-    text-decoration: none;
+.rating-dropdown .button-link {
     color: var(--accent);
 
     transition: color var(--transition-fast);
 }
-.rating-dropdown .button-ish:hover {
+.rating-dropdown .button-link:hover {
     text-decoration: none;
     color: var(--accent-hover-light);
+}
+
+.rating-dropdown #modal-delete-twist-button {
+    position: absolute;
+    bottom: var(--padding-md);
+    right: var(--padding-lg);
 }
 
 .rating-slider-container {
@@ -319,7 +329,7 @@ ul {
     }
 }
 
-.close-button {
+.close {
     position: absolute;
     top: 10px;
     right: 20px;
@@ -329,8 +339,8 @@ ul {
     color: #aaa;
     cursor: pointer;
 }
-.close-button:hover,
-.close-button:focus {
+.close:hover,
+.close:focus {
     color: var(--text-offwhite);
 }
 
@@ -399,11 +409,18 @@ ul {
     background-color: var(--accent-blue-hover);
 }
 
-.modal-content .button.cancel-button {
+.modal-content .button-cancel {
     background-color: var(--button-cancel);
 }
-.modal-content .button.cancel-button:hover {
+.modal-content .button-cancel:hover {
     background-color: var(--button-cancel-hover);
+}
+
+.modal-content .button-delete {
+    background-color: var(--accent-orange);
+}
+.modal-content .button-delete:hover {
+    background-color: var(--accent-orange-hover);
 }
 
 
@@ -486,7 +503,7 @@ ul {
     #sidebar {
         order: 2;
         width: 100%;
-        height: 45vh;
+        height: 35vh;
         border-top: var(--border-default);
         border-right: none;
         box-sizing: border-box;
