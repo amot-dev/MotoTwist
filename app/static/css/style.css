@@ -29,6 +29,7 @@
     --padding-lg: 20px;
     --radius-sm: 4px;
     --radius-md: 8px;
+    --radius-lg: 12px;
 
     /* Transitions & Animations */
     --transition-fast: 0.2s ease;
@@ -182,11 +183,11 @@ ul {
 
 .rating-dropdown .button {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: var(--padding-sm);
+    right: var(--padding-lg);
     border: none;
     border-radius: var(--radius-sm);
-    padding: var(--padding-sm) var(--padding-md);
+    padding: var(--padding-xs) var(--padding-md);
     font-size: 0.8rem;
     font-weight: bold;
     text-decoration: none;
@@ -218,6 +219,57 @@ ul {
 .rating-dropdown .button-ish:hover {
     text-decoration: none;
     color: var(--accent-hover-light);
+}
+
+.rating-slider-container {
+    margin-bottom: var(--padding-md);
+}
+
+.rating-slider {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 2rem;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    line-height: 2rem;
+    font-weight: bold;
+    color: var(--accent);
+    background-color: var(--text-offwhite);
+}
+
+.rating-slider-fill {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    top: 0;
+    left: 0;
+    width: 100%;
+    color: var(--text-offwhite);
+
+    clip-path: inset(0 100% 0 0 round var(--radius-lg));
+    animation: clip-reveal 0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation-duration: calc(var(--value, 0) * 0.1s);
+}
+@keyframes clip-reveal {
+  to {
+    clip-path: inset(0 calc(100% - (var(--value, 0) / 10 * 100%)) 0 0 round var(--radius-lg));
+  }
+}
+
+.rating-slider-fill::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    border-radius: var(--radius-lg);
+    background-color: var(--accent);
+    width: 100%;
 }
 
 
@@ -255,6 +307,16 @@ ul {
     background-color: var(--panel-slate);
 
     animation: animatetop 0.4s;
+}
+@keyframes animatetop {
+    from {
+        top: -300px;
+        opacity: 0;
+    }
+    to {
+        top: 0;
+        opacity: 1;
+    }
 }
 
 .close-button {
@@ -346,15 +408,15 @@ ul {
 
 
 /* --- Rate Twist --- */
-.criteria-group[data-paved="true" i] {
+.rate-form[data-paved="true" i] {
   --accent: var(--accent-blue);
 }
 
-.criteria-group[data-paved="false" i] {
+.rate-form[data-paved="false" i] {
   --accent: var(--accent-orange);
 }
 
-.criteria-group input[type="range"] {
+.rate-form input[type="range"] {
   accent-color: var(--accent);
 }
 
@@ -410,17 +472,6 @@ ul {
     transition: opacity var(--transition-fade);
 }
 
-@keyframes animatetop {
-    from {
-        top: -300px;
-        opacity: 0;
-    }
-    to {
-        top: 0;
-        opacity: 1;
-    }
-}
-
 
 /* --- Mobile Design --- */
 /*
@@ -461,11 +512,6 @@ ul {
 
         animation: animatemobilemodal 0.4s;
     }
-
-    .modal-content h1 {
-        margin-top: 1.5rem; /* Don't overlap with close button */
-    }
-
     @keyframes animatemobilemodal {
         from {
             transform: translateY(30px);
@@ -475,5 +521,9 @@ ul {
             transform: translateY(0);
             opacity: 1;
         }
+    }
+
+    .modal-content h1 {
+        margin-top: 1.5rem; /* Don't overlap with close button */
     }
 }

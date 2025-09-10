@@ -7,8 +7,8 @@
                 <div class="rating-card">
                     <h3>{{ rating_entry.formatted_date }}</h3>
                     <ul>
-                        {% for criteria, score in rating_entry.ratings.items() %}
-                            {{ render_rating(criteria, score) }}
+                        {% for criteria, rating in rating_entry.ratings.items() %}
+                            {{ render_rating(criteria, rating) }}
                         {% endfor %}
                     </ul>
                 </div>

@@ -1,4 +1,4 @@
-{# Macro for rendering modal content with a consistent header and close button #}
+{# Render modal content with a consistent header and close button #}
 {% macro render_modal_content(title) %}
 <div class="modal-content">
     <a href="#" class="close-button">&times;</a>
@@ -9,7 +9,7 @@
 {% endmacro %}
 
 
-{# Macro for rendering a consistent form button group #}
+{# Render a consistent form button group #}
 {% macro render_form_buttons(submit_text='Submit') %}
 <div class="button-group">
     <a href="#" class="button cancel-button">Cancel</a>
@@ -17,8 +17,17 @@
 </div>
 {% endmacro %}
 
+{# Renders a slider to be animated with only CSS #}
+{% macro render_rating(criteria, rating, criteria_desc="") %}
+<li class="rating-slider-container">
+    <div class="rating-slider" style="--value: {{ rating }};" title="{{ criteria_desc }}">
+        <div class="rating-slider-fill">
+            <span>&nbsp; {{ criteria.replace('_', ' ') | title }}</span>
+            <span>{{ rating }}/10 &nbsp;</span>
+        </div>
 
-{# Macro for rendering a single rating #}
-{% macro render_rating(criteria, score) %}
-<li>{{ criteria.replace('_', ' ') | title }}: {{ score }}/10</li>
+        <span>&nbsp; {{ criteria.replace('_', ' ') | title }}</span>
+        <span>{{ rating }}/10 &nbsp;</span>
+    </div>
+</li>
 {% endmacro %}

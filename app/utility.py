@@ -27,12 +27,18 @@ async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> 
         criteria_list = RATING_CRITERIA_UNPAVED
     criteria_columns = [getattr(target_model, criteria["name"]) for criteria in criteria_list]
 
+    # Create a lookup dictionary for descriptions for easy access
+    descriptions = {criteria["name"]: criteria["desc"] for criteria in criteria_list}
+
     # Query averages for target ratings columns for this twist
     query_expressions = [func.avg(col).label(col.key) for col in criteria_columns]
     averages = db.query(*query_expressions).filter(target_model.twist_id == twist.id).first()
 
     return {
-        key: round(value, round_to)
+        key: {
+            "rating": round(value, round_to),
+            "desc": descriptions.get(key, "")
+        }
         for key, value in averages._asdict().items()
         if value is not None
     } if averages else {}

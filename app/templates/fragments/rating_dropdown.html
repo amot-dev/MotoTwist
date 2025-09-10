@@ -9,8 +9,8 @@
 
 <ul>
 {% if average_ratings %}
-    {% for criteria, score in average_ratings.items() %}
-        {{ render_rating(criteria, score) }}
+    {% for criteria, data in average_ratings.items() %}
+        {{ render_rating(criteria, data.rating, data.desc) }}
     {% endfor %}
 {% else %}
     <li>No ratings yet</li>
