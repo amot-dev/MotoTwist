@@ -1,5 +1,7 @@
 services:
   mototwist:
+    environment:
+      LOG_LEVEL: "DEBUG"
+      UVICORN_RELOAD: "TRUE"
     volumes:
       - ./app:/app
-    command: uvicorn main:app --host 0.0.0.0 --reload

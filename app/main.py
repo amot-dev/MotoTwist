@@ -9,8 +9,10 @@ import os
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 import uuid
+import uvicorn
 
 from config import *
+from database import apply_migrations, wait_for_db
 from models import Twist, PavedRating, UnpavedRating
 from utility import get_db, calculate_average_rating
 
@@ -60,6 +62,7 @@ async def create_twist(
     """
     Handles the creation of a new Twist.
     """
+
     is_paved = is_paved_str.lower() == "true"
     contents = await file.read()
 
@@ -75,6 +78,7 @@ async def create_twist(
     # Generate a unique filename to prevent overwriting files
     unique_filename = f"{uuid.uuid4().hex}.gpx"
     save_path = GPX_STORAGE_PATH / unique_filename
+    logger.debug(f"Saving twist GPX at {save_path}")
 
     with open(save_path, "wb") as buffer:
         buffer.write(contents)
@@ -86,6 +90,7 @@ async def create_twist(
     )
     db.add(twist)
     db.commit()
+    logger.debug(f"Created twist with id {twist.id}")
 
     # Render the twist list fragment with the new data
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
@@ -110,6 +115,7 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
 
+    logger.debug(f"Attempting to create twist: {name} (with GPX at {twist.file_path})")
     twist_id = twist.id
     gpx_file_path = Path(twist.file_path)
 
@@ -121,6 +127,8 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         # Attempt to delete the file from the filesystem, if it exists
         if gpx_file_path.is_file():
             os.remove(gpx_file_path)
+        else:
+            logger.info(f"GPX file not found at {twist.file_path}. This is unexpected, but acceptable")
 
         # If both prior operations succeed, commit the transaction to the database
         db.commit()
@@ -133,6 +141,8 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         # Catch other potential errors and rollback
         db.rollback()
         raise HTTPException(status_code=500, detail="Deletion failed due to an internal server error.")
+
+    logger.debug(f"Deleted twist with id {twist_id}")
 
     # Render the twist list fragment with the new data
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
@@ -157,6 +167,7 @@ async def get_twist_gpx(twist_id: int, db: Session = Depends(get_db)):
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
 
+    logger.debug(f"GPX file being served from {twist.file_path}")
     return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
 
 @app.post("/twists/{twist_id}/rate")
@@ -167,6 +178,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
+    logger.debug(f"Attempting to rate twist: {name}")
 
     form_data = await request.form()
 
@@ -187,12 +199,12 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
                 new_rating_data[key] = int(value)
             except (ValueError, TypeError):
                 # Handle cases where a rating value isn't a valid number
-                raise HTTPException(status_code=422, detail=f"Invalid value for '{key.replace('_', ' ').title()}' criterion")
+                raise HTTPException(status_code=422, detail=f"Invalid value for '{key.replace("_", " ").title()}' criterion")
 
         # Handle the rating date separately
-        if key == 'rating_date':
+        if key == "rating_date":
             try:
-                new_rating_data['rating_date'] = date.fromisoformat(value)
+                new_rating_data["rating_date"] = date.fromisoformat(value)
             except ValueError:
                 raise HTTPException(status_code=422, detail="Invalid date format")
 
@@ -204,6 +216,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     new_rating = target_model(**new_rating_data, twist_id=twist_id)
     db.add(new_rating)
     db.commit()
+    logger.debug(f"Created rating with id {new_rating.id}")
 
     # Set a header to trigger a client-side event after the swap, passing a message
     events = {
@@ -307,3 +320,16 @@ async def get_delete_twist_modal(request: Request, twist_id: int, db: Session = 
         "request": request,
         "twist": twist
     })
+
+
+if __name__ == "__main__":
+    wait_for_db()
+    apply_migrations()
+    logger.info("Starting MotoTwist...")
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=(os.environ.get("UVICORN_RELOAD", "FALSE").upper() == "TRUE"),
+        log_config=None # Explicitly disable Uvicorn's default logging config
+    )
