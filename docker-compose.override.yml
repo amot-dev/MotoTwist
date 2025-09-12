@@ -1,7 +1,4 @@
 services:
   mototwist:
-    environment:
-      LOG_LEVEL: "DEBUG"
-      UVICORN_RELOAD: "TRUE"
     volumes:
       - ./app:/app

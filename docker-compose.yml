@@ -1,11 +1,8 @@
 services:
   mototwist:
     build: .
-    environment:
-      MYSQL_DATABASE: "mototwist"
-      MYSQL_USER: "mototwist"
-      MYSQL_PASSWORD: "changethis"
-      MYSQL_ROOT_PASSWORD: "changethis"
+    env_file:
+      - .env
     volumes:
       - gpx:/gpx
     ports:
@@ -15,11 +12,8 @@ services:
 
   db:
     image: mariadb:lts
-    environment:
-      MYSQL_DATABASE: "mototwist"
-      MYSQL_USER: "mototwist"
-      MYSQL_PASSWORD: "changethis"
-      MYSQL_ROOT_PASSWORD: "changethis"
+    env_file:
+      - .env
     volumes:
       - mariadb:/var/lib/mysql
 
