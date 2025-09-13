@@ -242,7 +242,15 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
         });
 
         // Show current rating dropdown if it was hidden
-        if (!isCurrentlyOpen) ratingDropdown.classList.add('is-open');
+        if (!isCurrentlyOpen) {
+            ratingDropdown.classList.add('is-open');
+
+            // Load content if needed
+            if (ratingDropdown.querySelector('.loading')) {
+                const twistHeader = twistItem.querySelector('.twist-header')
+                htmx.trigger(twistHeader, 'load-ratings');
+            }
+        }
 
         // Pan and zoom the map
         const layer = mapLayers[twistId];

@@ -4,7 +4,8 @@
         hx-get="/rating-dropdown/{{ twist.id }}"
         hx-target="next .rating-dropdown"
         hx-swap="innerHTML"
-        hx-trigger="click once">
+        hx-trigger="load-ratings">
+
         <span class="twist-name">{{ twist.name }}</span>
         <span class="visibility-toggle" title="Toggle visibility">
             <i class="far fa-eye"></i>
@@ -17,7 +18,7 @@
         hx-target="this"
         hx-swap="morph:innerHTML">
 
-        <p>Loading ratings...</p>
+        <p class="loading">Loading ratings...</p>
     </div>
 </li>
 {% endfor %}
