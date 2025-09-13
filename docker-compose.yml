@@ -1,6 +1,6 @@
 services:
   mototwist:
-    build: .
+    image: ghcr.io/amot-dev/mototwist:latest
     env_file:
       - .env
     volumes:
