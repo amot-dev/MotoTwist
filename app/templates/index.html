@@ -13,7 +13,7 @@
             <h1>MotoTwist</h1>
             <a id="modal-create-twist-button" href="#modal-create-twist" class="button">New Twist</a>
 
-            <ul id="twist-list" hx-get="/twists" hx-trigger="load" hx-swap="innerHTML">
+            <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
                 <p>Loading twists...</p>
             </ul>
         </div>
@@ -23,7 +23,7 @@
 
     <div id="modal-create-twist" class="modal">
         {% call render_modal_content("New Twist") %}
-            <form hx-post="/twists"
+            <form hx-post="/twist"
                 hx-target="#twist-list"
                 hx-swap="innerHTML"
                 hx-on::after-request="location.hash = ''; this.reset()"
@@ -45,7 +45,8 @@
 
                 <div class="form-group">
                     <label for="modal-file">GPX File</label>
-                    <input type="file" id="modal-file" name="file" accept=".gpx" required>
+                    <input type="file" id="modal-file" name="file" accept=".gpx" required
+                        onchange="autofillFromFilename(this, 'modal-name')">
                 </div>
 
                 {{ render_form_buttons(submit_text="Create Twist") }}

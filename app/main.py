@@ -22,7 +22,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, db: Session = Depends(get_db)):
+async def render_index(request: Request, db: Session = Depends(get_db)):
     """
     This endpoint serves the main page of the application.
     """
@@ -33,25 +33,7 @@ async def read_root(request: Request, db: Session = Depends(get_db)):
         "flash": flash_message
     })
 
-@app.get("/twists", response_class=HTMLResponse)
-async def get_twists(request: Request, db: Session = Depends(get_db)):
-    """
-    Returns an HTML fragment containing the sorted list of twists.
-    """
-    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
-
-    # Set a header to trigger a client-side event after the swap
-    events = {
-        "twistsLoaded": {}
-    }
-    response = templates.TemplateResponse("fragments/twist_list.html", {
-        "request": request,
-        "twists": twists
-    })
-    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
-    return response
-
-@app.post("/twists")
+@app.post("/twist", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
     name: str = Form(...),
@@ -78,7 +60,7 @@ async def create_twist(
     # Generate a unique filename to prevent overwriting files
     unique_filename = f"{uuid.uuid4().hex}.gpx"
     save_path = GPX_STORAGE_PATH / unique_filename
-    logger.debug(f"Saving twist GPX at {save_path}")
+    logger.debug(f"Saving twist GPX at '{save_path}'")
 
     with open(save_path, "wb") as buffer:
         buffer.write(contents)
@@ -90,7 +72,7 @@ async def create_twist(
     )
     db.add(twist)
     db.commit()
-    logger.debug(f"Created twist with id {twist.id}")
+    logger.debug(f"Created twist with id '{twist.id}'")
 
     # Render the twist list fragment with the new data
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
@@ -106,7 +88,7 @@ async def create_twist(
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.delete("/twists/{twist_id}")
+@app.delete("/twists/{twist_id}", response_class=HTMLResponse)
 async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
     Deletes a twist, its associated GPX file, and all related ratings.
@@ -115,7 +97,7 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
 
-    logger.debug(f"Attempting to create twist: {name} (with GPX at {twist.file_path})")
+    logger.debug(f"Attempting to delete twist '{twist.name}' with GPX at '{twist.file_path}'")
     twist_id = twist.id
     gpx_file_path = Path(twist.file_path)
 
@@ -128,7 +110,7 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         if gpx_file_path.is_file():
             os.remove(gpx_file_path)
         else:
-            logger.info(f"GPX file not found at {twist.file_path}. This is unexpected, but acceptable")
+            logger.info(f"GPX file not found at '{twist.file_path}'. This is unexpected, but acceptable")
 
         # If both prior operations succeed, commit the transaction to the database
         db.commit()
@@ -142,7 +124,7 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         db.rollback()
         raise HTTPException(status_code=500, detail="Deletion failed due to an internal server error.")
 
-    logger.debug(f"Deleted twist with id {twist_id}")
+    logger.debug(f"Deleted twist with id '{twist_id}'")
 
     # Render the twist list fragment with the new data
     twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
@@ -151,14 +133,13 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         "twistDeleted":  str(twist_id),
         "flashMessage": "Twist deleted successfully!"
     }
-    response = templates.TemplateResponse("fragments/twist_list.html", {
-        "request": request,
-        "twists": twists
-    })
+
+    # Empty response to "delete" the list item
+    response = HTMLResponse(content="")
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.get("/twists/{twist_id}/gpx")
+@app.get("/twists/{twist_id}/gpx", response_class=FileResponse)
 async def get_twist_gpx(twist_id: int, db: Session = Depends(get_db)):
     """
     Fetches the GPX file for a given twist_id and returns its raw content.
@@ -167,10 +148,10 @@ async def get_twist_gpx(twist_id: int, db: Session = Depends(get_db)):
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
 
-    logger.debug(f"GPX file being served from {twist.file_path}")
+    logger.debug(f"GPX file being served from '{twist.file_path}'")
     return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
 
-@app.post("/twists/{twist_id}/rate")
+@app.post("/twists/{twist_id}/rate", response_class=HTMLResponse)
 async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
     Handles the creation of a new rating.
@@ -178,16 +159,18 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
         raise HTTPException(status_code=404, detail="Twist not found")
-    logger.debug(f"Attempting to rate twist: {name}")
+    logger.debug(f"Attempting to rate twist '{twist.name}'")
 
     form_data = await request.form()
 
     if twist.is_paved:
-        target_model = PavedRating
+        Rating = PavedRating
         criteria_list = RATING_CRITERIA_PAVED
+        paved_str = "paved"
     else:
-        target_model = UnpavedRating
+        Rating = UnpavedRating
         criteria_list = RATING_CRITERIA_UNPAVED
+        paved_str = "unpaved"
     valid_criteria = {criteria["name"] for criteria in criteria_list}
 
     # Build the dictionary for the new rating object
@@ -213,10 +196,10 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=422, detail="No valid rating data submitted")
 
     # Create the new rating instance, linking it to the twist
-    new_rating = target_model(**new_rating_data, twist_id=twist_id)
+    new_rating = Rating(**new_rating_data, twist_id=twist_id)
     db.add(new_rating)
     db.commit()
-    logger.debug(f"Created rating with id {new_rating.id}")
+    logger.debug(f"Created {paved_str} rating with id '{new_rating.id}'")
 
     # Set a header to trigger a client-side event after the swap, passing a message
     events = {
@@ -230,8 +213,66 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.get("/twists/{twist_id}/rating-dropdown")
-async def get_twist_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)):
+@app.delete("/twists/{twist_id}/ratings/{rating_id}")
+async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, db: Session = Depends(get_db)):
+    """
+    Deletes a twist rating.
+    """
+    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    if not twist:
+        raise HTTPException(status_code=404, detail="Twist not found")
+
+    if twist.is_paved:
+        Rating = PavedRating
+        paved_str = "paved"
+    else:
+        Rating = UnpavedRating
+        paved_str = "unpaved"
+
+    # Delete the rating
+    logger.debug(f"Attempting to delete {paved_str} rating '{rating_id}' from twist '{twist.name}'")
+    delete_count = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
+
+    # Undo the empty transaction if nothing was deleted
+    if delete_count == 0:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Rating not found for this twist")
+    db.commit()
+
+    # Empty response to "delete" the card
+    remaining_ratings_count = db.query(Rating).filter(Rating.twist_id == twist_id).count()
+    if remaining_ratings_count > 0:
+        response = HTMLResponse(content="")
+    else:
+        response = HTMLResponse(content="<p>No ratings yet</p>")
+
+    # Set a header to trigger a client-side event after the swap, passing a message
+    events = {
+        "flashMessage": "Rating removed successfully!"
+    }
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+@app.get("/twist-list", response_class=HTMLResponse)
+async def render_twist_list(request: Request, db: Session = Depends(get_db)):
+    """
+    Returns an HTML fragment containing the sorted list of twists.
+    """
+    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
+
+    # Set a header to trigger a client-side event after the swap
+    events = {
+        "twistsLoaded": {}
+    }
+    response = templates.TemplateResponse("fragments/twist_list.html", {
+        "request": request,
+        "twists": twists
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+@app.get("/rating-dropdown/{twist_id}", response_class=HTMLResponse)
+async def render_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
     Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
@@ -245,8 +286,8 @@ async def get_twist_rating_dropdown(request: Request, twist_id: int, db: Session
         "average_ratings": await calculate_average_rating(db, twist, round_to=1)
     })
 
-@app.get("/twists/{twist_id}/modal-rate-twist")
-async def get_rate_twist_form(request: Request, twist_id: int, db: Session = Depends(get_db)):
+@app.get("/modal-rate-twist/{twist_id}", response_class=HTMLResponse)
+async def render_modal_rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
     Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
     """
@@ -265,8 +306,8 @@ async def get_rate_twist_form(request: Request, twist_id: int, db: Session = Dep
         "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED
     })
 
-@app.get("/twists/{twist_id}/modal-view-twist-ratings")
-async def get_twist_rating_list(twist_id: int, request: Request, db: Session = Depends(get_db)):
+@app.get("/modal-view-twist-ratings/{twist_id}", response_class=HTMLResponse)
+async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: Session = Depends(get_db)):
     """
     Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
     """
@@ -296,6 +337,7 @@ async def get_twist_rating_list(twist_id: int, request: Request, db: Session = D
         formatted_date = rating.rating_date.strftime("%B %d, %Y") #TODO: ordinals?
 
         ratings_for_template.append({
+            "id": rating.id,
             "formatted_date": formatted_date,
             "ratings": ratings_dict
         })
@@ -307,8 +349,8 @@ async def get_twist_rating_list(twist_id: int, request: Request, db: Session = D
         "ratings": ratings_for_template
     })
 
-@app.get("/twists/{twist_id}/modal-delete-twist")
-async def get_delete_twist_modal(request: Request, twist_id: int, db: Session = Depends(get_db)):
+@app.get("/modal-delete-twist/{twist_id}", response_class=HTMLResponse)
+async def render_modal_delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
     Returns an HTML fragment for the twist deletion confirmation modal.
     """

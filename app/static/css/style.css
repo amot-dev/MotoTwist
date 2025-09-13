@@ -84,6 +84,54 @@ ul {
     visibility: hidden;
 }
 
+.scroll-shut-on-delete {
+  max-height: 500px;
+  overflow: hidden;
+
+  transition: max-height 0.5s ease-in-out, 
+              padding 0.5s ease-in-out, 
+              margin 0.5s ease-in-out;
+}
+.scroll-shut-on-delete.htmx-swapping {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.button {
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.button-link {
+    color: var(--accent);
+
+    transition: color var(--transition-fast);
+}
+.button-link:hover {
+    text-decoration: none;
+    color: var(--accent-hover-light);
+}
+
+.button-block {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md) var(--padding-lg);
+    font-size: 1rem;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+    background-color: var(--accent-blue);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+.button-block:hover {
+    background-color: var(--accent-blue-hover);
+}
+
 
 /* --- Twist List --- */
 
@@ -187,8 +235,6 @@ ul {
 
 .rating-dropdown .button {
     font-size: 0.8rem;
-    font-weight: bold;
-    text-decoration: none;
 }
 
 .rating-dropdown #modal-rate-twist-button {
@@ -200,7 +246,6 @@ ul {
     padding: var(--padding-xs) var(--padding-md);
     color: white;
     background-color: var(--accent);
-    cursor: pointer;
 
     transition: background-color 0.2s ease;
 }
@@ -213,16 +258,6 @@ ul {
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
-}
-
-.rating-dropdown .button-link {
-    color: var(--accent);
-
-    transition: color var(--transition-fast);
-}
-.rating-dropdown .button-link:hover {
-    text-decoration: none;
-    color: var(--accent-hover-light);
 }
 
 .rating-dropdown #modal-delete-twist-button {
@@ -260,9 +295,17 @@ ul {
     width: 100%;
     color: var(--text-offwhite);
 
+    /* Transition to use if value changes */
+    clip-path: inset(0 calc(100% - (var(--value, 0) / 10 * 100%)) 0 0 round var(--radius-lg));
+    transition: clip-path 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+@starting-style {
+  /* Animation to use for the initial load */
+  .rating-slider-fill {
     clip-path: inset(0 100% 0 0 round var(--radius-lg));
     animation: clip-reveal 0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     animation-duration: calc(var(--value, 0) * 0.1s);
+  }
 }
 @keyframes clip-reveal {
   to {
@@ -392,23 +435,6 @@ ul {
     gap: 10px;
 }
 
-.modal-content .button {
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: var(--padding-md) var(--padding-lg);
-    font-size: 1rem;
-    font-weight: bold;
-    text-decoration: none;
-    color: white;
-    background-color: var(--accent-blue);
-    cursor: pointer;
-
-    transition: background-color var(--transition-fast);
-}
-.modal-content .button:hover {
-    background-color: var(--accent-blue-hover);
-}
-
 .modal-content .button-cancel {
     background-color: var(--button-cancel);
 }
@@ -448,13 +474,16 @@ ul {
 }
 #rating-list[data-paved="true" i] {
   --accent: var(--accent-blue);
+  --accent-hover-light: var(--accent-blue-hover-light);
 }
 
 #rating-list[data-paved="false" i] {
   --accent: var(--accent-orange);
+  --accent-hover-light: var(--accent-orange-hover-light);
 }
 
 .rating-card {
+    position: relative;
     margin-bottom: var(--padding-lg);
     border: var(--border-default);
     border-radius: 6px;
@@ -467,6 +496,12 @@ ul {
     border-bottom: var(--border-default);
     padding-bottom: var(--padding-md);
     color: var(--accent);
+}
+
+.rating-card .button-link {
+    position: absolute;
+    top: var(--padding-lg);
+    right: var(--padding-lg);
 }
 
 

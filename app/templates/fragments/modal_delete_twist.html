@@ -5,8 +5,8 @@
     <p>This action cannot be undone.</p>
     
     <form hx-delete="/twists/{{ twist.id }}"
-        hx-target="#twist-list"
-        hx-swap="innerHTML"
+        hx-target=".twist-item[data-twist-id='{{ twist.id }}']"
+        hx-swap="outerHTML swap:500ms"
         hx-on::after-request="location.hash = ''; this.reset()"
         enctype="multipart/form-data">
 

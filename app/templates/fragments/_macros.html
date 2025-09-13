@@ -3,7 +3,7 @@
     <a {% if id %}id="modal-{{ modal_name }}-button"{% endif %}
        href="#modal-{{ modal_name }}"
        class="button {{ extra_classes | trim }}"
-       hx-get="/twists/{{ twist_id }}/modal-{{ modal_name }}"
+       hx-get="/modal-{{ modal_name }}/{{ twist_id }}"
        hx-target="#modal-{{ modal_name }}"
        hx-swap="innerHTML">{{ caller() }}</a>
 {%- endmacro %}
@@ -22,21 +22,21 @@
 {# Render a consistent form button group #}
 {% macro render_form_buttons(submit_text="Submit", submit_extra_classes="") %}
 <div class="button-group">
-    <a href="#" class="button button-cancel">Cancel</a>
-    <button class="button {{ submit_extra_classes | trim }}" type="submit">{{ submit_text }}</button>
+    <a href="#" class="button button-block button-cancel">Cancel</a>
+    <button class="button button-block {{ submit_extra_classes | trim }}" type="submit">{{ submit_text }}</button>
 </div>
 {% endmacro %}
 
 {# Renders a slider to be animated with only CSS #}
-{% macro render_rating(criteria, rating, criteria_desc="") %}
+{% macro render_rating(criterion, rating, criterion_desc="") %}
 <li class="rating-slider-container">
-    <div class="rating-slider" style="--value: {{ rating }};" title="{{ criteria_desc }}">
+    <div class="rating-slider" style="--value: {{ rating }};" title="{{ criterion_desc }}">
         <div class="rating-slider-fill">
-            <span>&nbsp; {{ criteria.replace('_', ' ') | title }}</span>
+            <span>&nbsp; {{ criterion.replace('_', ' ') | title }}</span>
             <span>{{ rating }}/10 &nbsp;</span>
         </div>
 
-        <span>&nbsp; {{ criteria.replace('_', ' ') | title }}</span>
+        <span>&nbsp; {{ criterion.replace('_', ' ') | title }}</span>
         <span>{{ rating }}/10 &nbsp;</span>
     </div>
 </li>
