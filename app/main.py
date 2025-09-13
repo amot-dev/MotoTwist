@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import gpxpy
+from humanize import ordinal
 import json
 import os
 from sqlalchemy.orm import Session
@@ -334,7 +335,8 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
             if key in criteria_names
         }
         # Pre-format the date for easier display in the template
-        formatted_date = rating.rating_date.strftime("%B %d, %Y") #TODO: ordinals?
+        ordinal_day = ordinal(rating.rating_date.day)
+        formatted_date = rating.rating_date.strftime(f"%B {ordinal_day}, %Y")
 
         ratings_for_template.append({
             "id": rating.id,

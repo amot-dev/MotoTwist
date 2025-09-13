@@ -1,6 +1,7 @@
 alembic
 fastapi
 gpxpy
+humanize
 itsdangerous
 jinja2
 mysql-connector-python
