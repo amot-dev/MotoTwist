@@ -543,6 +543,12 @@ ul {
     gap: 10px;
 }
 
+.modal-content form button[type="submit"]:disabled {
+    opacity: 0.6;
+    background-color: var(--accent-blue);
+    cursor: not-allowed;
+}
+
 
 /* --- Rate Twist --- */
 .rate-form[data-paved="true" i] {

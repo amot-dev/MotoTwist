@@ -250,6 +250,24 @@ let routeRequestController;
 let newRouteLine = null;
 
 /**
+ * Updates a container element with a new message paragraph.
+ * @param {HTMLElement} element The container element to update.
+ * @param {string} message The text content for the new paragraph.
+ * @param {'w' | 'a'} mode 'w' to write (overwrite), 'a' to append. Defaults to 'w'.
+ */
+function writeToStatus(element, message, mode = 'w') {
+    // If mode is 'write', clear the container first.
+    if (mode === 'w') {
+    element.innerHTML = '';
+    }
+
+    // Create a new paragraph, set its text, and append it.
+    const p = document.createElement('p');
+    p.textContent = message;
+    element.appendChild(p);
+}
+
+/**
  * Sets the visibility icon for a waypoint's hide button based on its isHidden property.
  * @param {object} waypoint The waypoint object.
  * @param {HTMLElement} hideIcon The <i> element for the icon.
@@ -400,6 +418,8 @@ async function updateRoute() {
  * and the route line from the map and resetting UI elements.
  */
 function stopTwistCreation() {
+    mapContainer.classList.remove('creating-twist');
+
     waypointMarkers.forEach(marker => map.removeLayer(marker));
     waypoints = [];
     waypointMarkers = [];
@@ -409,10 +429,12 @@ function stopTwistCreation() {
         newRouteLine = null;
     }
 
-    // Reset the status indicator
+    // Reset the status indicator and submit button
+    const submitButton = twistForm.querySelector('[type="submit"]');
     const statusIndicator = document.querySelector('#route-status-indicator');
+    submitButton.disabled = true;
     statusIndicator.classList.add('gone');
-    statusIndicator.textContent = '';
+    writeToStatus(statusIndicator, "");
 
     // Reset button visibility to the initial state
     finalizeTwistButton.classList.add('gone');
@@ -433,8 +455,6 @@ createTwistButton.addEventListener('click', () => {
 
 // Handle saving of route geometry
 finalizeTwistButton.addEventListener('click', () => {
-    mapContainer.classList.remove('creating-twist');
-
     const statusIndicator = document.querySelector('#route-status-indicator');
 
     // Check if there's a route to save
@@ -451,19 +471,39 @@ finalizeTwistButton.addEventListener('click', () => {
         const routeForJson = routeLatLngs.map(coord => ({ lat: coord.lat, lng: coord.lng }));
         document.querySelector('#route-geometry-data').value = JSON.stringify(routeForJson);
 
-        statusIndicator.textContent = `✅ Route captured with ${waypointsToSend.length} waypoints and ${routeLatLngs.length} geometry points.`;
+        // Enable submission of form
+        const submitButton = twistForm.querySelector('[type="submit"]');
+        submitButton.disabled = false;
+
+        // Write success status
+        writeToStatus(
+            statusIndicator,
+            `✅ Route captured with ${waypointsToSend.length} waypoints and ${routeLatLngs.length} geometry points.`
+        );
+
+        // Warn about unnamed waypoints on a new line
+        const unnamedCount = waypointsToSend.filter(wp => !wp.name).length;
+        if (unnamedCount > 0) {
+            const noun = unnamedCount === 1 ? "waypoint" : "waypoints";
+            const verb = unnamedCount === 1 ? "remains" : "remain";
+            const message = `⚠️ ${unnamedCount} ${noun} ${verb} unnamed.`;
+
+            writeToStatus(statusIndicator, message, "a");
+        }
         statusIndicator.classList.remove('gone');
 
     } else {
         // Handle case where user finalizes without a valid route
-        statusIndicator.textContent = '⚠️ No valid route was created.';
+        writeToStatus(
+            statusIndicator,
+            '⚠️ No valid route was created.'
+        );
         statusIndicator.classList.remove('gone');
     }
 });
 
 // Handle cancellation of route geometry recording
 cancelTwistButton.addEventListener('click', () => {
-    mapContainer.classList.remove('creating-twist');
     stopTwistCreation();
 });
 
