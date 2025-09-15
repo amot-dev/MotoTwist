@@ -32,26 +32,32 @@ To get this application running, you will need to have **Docker** and **Docker C
 
 ### Usage
 
-1.  **Create a GPX File:**
-    Twists are the name used for GPX files in MotoTwist. These are intended to be single track files, but can contain multiple tracks as well. Routes are untested but should also work. Each Twist can be rated as a single unit, which is why it's best to keep them to one track each. You may get one of these files from a GPS device, or create one yourself:
+1.  **Drawing a New Twist:**
+    When you a creating a Twist, your map cursor will be a crosshair. Waypoints can be placed, dragged, named, hidden, and deleted.
 
-    a)  **Create a route:**
-        The first step to creating your GPX is to create a route on [Google Maps](https://www.google.ca/maps). This can have as many waypoints as are needed (but limited to 10 by Google) to trace the exact track you want.
+    a)  **Placing Waypoints:**
+        Placing waypoints is as easy as clicking on the map in the desired location. Note that this should be on or close to a road. Waypoints not near roads will be snapped to a road in the final route.
 
-    b)  **Convert to GPX:**
-        A wonderful tool called [mapstogpx](https://mapstogpx.com/) can be used to convert a Google Maps link to a GPX file.
+    b)  **Dragging Waypoints:**
+        Clicking and holding a waypoint will allow you to move it around.
 
-    c)  **Clean up GPX:**
-        Next, [GPX Weaver](http://www.gpxweaver.com/) can be used to combine and edit as many GPX files as you want. At a minimum, you'll want to rename the track(s) and waypoints for display in MotoTwist. I highly recommend merging tracks if you bring in multiple GPX files.
+    c)  **Naming Waypoints:**
+        Clicking on a waypoint will reveal a number of options, including naming. I recommend naming all non-hidden waypoints.
+
+    d)  **Hiding Waypoints:**
+        Waypoints other than the first and last can be hidden. These waypoints will be used to determine the Twist's final route, but will not be part of the Twist itself. Use these as you would use dragging the route in Google Maps to achieve your desired route.
+
+    e)  **Deleting Waypoints:**
+        Finally, any waypoint can be deleted. Keep in mind that at least two waypoints are required to create a Twist.
+
+> [!WARNING]
+> Twist routes are currently limited to 1024KB, including all data. See [#14](https://github.com/amot-dev/mototwist/issues/14) for more details.
+
+2.  **Entering Twist Details:**
+    Once your route is ready, additional details can be specified for the Twist, including the name and whether it is paved or unpaved.
 
 > [!TIP]
-> If you need more than 10 waypoints, you can create multiple GPX files and combine them! Just make sure the starts and ends of each connect so you have a seamless line.
-
-2.  **Create a Twist:**
-    Once you have your GPX file, you can create a Twist. Twists should be predominantly paved or unpaved. If they're a combination of both, select whichever was "the main attraction" of the Twist, as each type has different criteria they're rated on. If both segments are fun, consider splitting the Twist!
-
-> [!TIP]
-> If you upload the GPX first, the name of the file will be used to auto-populate the name field.
+> Twists should be predominantly paved or unpaved. If they're a combination of both, select whichever was "the main attraction" of the Twist, as each type has different criteria they're rated on. If both segments are fun, consider splitting the Twist!
 
 3.  **Rating Twists:**
     From the sidebar, you can now rate your Twist! There's a number of different criteria you can rate it on, and hovering over each will give a brief description.
@@ -63,7 +69,7 @@ To get this application running, you will need to have **Docker** and **Docker C
 
     a) Twists can be shown and hidden. Clicking on a Twist will take you to it, as well as reveal rating information.
 
-    b) Waypoints and tracks on the map can be clicked to show a description.
+    b) Waypoints and tracks on the map can be clicked to show their name.
 
     c) Twists and ratings can be deleted (but not modified).
 
