@@ -20,10 +20,14 @@
 
 
 {# Render a consistent form button group #}
-{% macro render_form_buttons(submit_text="Submit", submit_extra_classes="") %}
+{% macro render_form_buttons(submit_text="Submit", submit_extra_classes="", submit_disabled=false) %}
 <div class="button-group">
     <a href="#" class="button button-block button-cancel">Cancel</a>
-    <button class="button button-block {{ submit_extra_classes | trim }}" type="submit">{{ submit_text }}</button>
+    <button class="button button-block {{ submit_extra_classes | trim }}" type="submit"
+        {% if submit_disabled %}disabled{% endif %}>
+
+        {{ submit_text }}
+    </button>
 </div>
 {% endmacro %}
 

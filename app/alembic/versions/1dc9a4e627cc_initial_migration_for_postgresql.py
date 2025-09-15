@@ -1,18 +1,18 @@
-"""Initial
+"""Initial migration for PostgreSQL
 
-Revision ID: 5e760d528ebb
+Revision ID: 1dc9a4e627cc
 Revises: 
-Create Date: 2025-09-09 01:03:09.694736
+Create Date: 2025-09-15 22:27:19.273857
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '5e760d528ebb'
+revision: str = '1dc9a4e627cc'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,10 +24,10 @@ def upgrade() -> None:
     op.create_table('twists',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('file_path', sa.String(length=255), nullable=False),
     sa.Column('is_paved', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('file_path')
+    sa.Column('waypoints', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('route_geometry', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_twists_id'), 'twists', ['id'], unique=False)
     op.create_index(op.f('ix_twists_name'), 'twists', ['name'], unique=False)

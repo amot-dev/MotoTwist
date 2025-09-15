@@ -3,20 +3,17 @@ services:
     image: ghcr.io/amot-dev/mototwist:latest
     env_file:
       - .env
-    volumes:
-      - gpx:/gpx
     ports:
       - "8000:8000"
     depends_on:
       - db
 
   db:
-    image: mariadb:lts
+    image: postgres:17.6
     env_file:
       - .env
     volumes:
-      - mariadb:/var/lib/mysql
+      - db:/var/lib/postgresql/data
 
 volumes:
-  gpx:
-  mariadb:
+  db:

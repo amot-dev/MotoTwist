@@ -11,7 +11,9 @@
     <div id="sidebar">
         <div id="twist-list-container">
             <h1>MotoTwist</h1>
-            <a id="modal-create-twist-button" href="#modal-create-twist" class="button">New Twist</a>
+            <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+            <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+            <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
 
             <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
                 <p>Loading twists...</p>
@@ -20,6 +22,20 @@
     </div>
 
     <div id="map"></div>
+
+    <template id="create-waypoint-popup-template">
+        <div class="create-waypoint-popup">
+            <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
+            <div class="popup-buttons">
+                <button class="popup-button-hide" title="Hide/Show Waypoint">
+                    <i class="far fa-eye"></i>
+                </button>
+                <button class="popup-button-delete" title="Delete Waypoint">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </template>
 
     <div id="modal-create-twist" class="modal">
         {% call render_modal_content("New Twist") %}
@@ -43,13 +59,11 @@
                     </fieldset>
                 </div>
 
-                <div class="form-group">
-                    <label for="modal-file">GPX File</label>
-                    <input type="file" id="modal-file" name="file" accept=".gpx" required
-                        onchange="autofillFromFilename(this, 'modal-name')">
-                </div>
+                <input type="hidden" name="waypoints_json" id="waypoints-data">
+                <input type="hidden" name="route_geometry_json" id="route-geometry-data">
+                <div id="route-status-indicator" class="gone"></div>
 
-                {{ render_form_buttons(submit_text="Create Twist") }}
+                {{ render_form_buttons(submit_text="Create Twist", submit_disabled=true) }}
             </form>
         {% endcall %}
     </div>

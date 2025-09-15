@@ -7,13 +7,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from time import sleep
 
-DB_HOST = getenv("MYSQL_HOST", "db")
-DB_PORT = getenv("MYSQL_PORT", "3306")
-DB_NAME = getenv("MYSQL_DATABASE", "mototwist")
-DB_USER = getenv("MYSQL_USER", "mototwist")
-DB_PASSWORD = getenv("MYSQL_PASSWORD", "password")
+DB_HOST = getenv("POSTGRES_HOST", "db")
+DB_PORT = getenv("POSTGRES_PORT", "5432")
+DB_NAME = getenv("POSTGRES_DB", "mototwist")
+DB_USER = getenv("POSTGRES_USER", "mototwist")
+DB_PASSWORD = getenv("POSTGRES_PASSWORD", "password")
 
-SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 

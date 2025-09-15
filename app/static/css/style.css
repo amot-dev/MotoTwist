@@ -66,6 +66,9 @@ body {
 #map {
     flex-grow: 1;
 }
+#map.creating-twist {
+    cursor: crosshair;
+}
 
 
 /* --- General Components --- */
@@ -80,8 +83,14 @@ ul {
     list-style: none;
 }
 
+/* Invisible but still takes up space */
 .invisible {
-    visibility: hidden;
+    visibility: hidden !important;
+}
+
+/* Takes up no space */
+.gone {
+    display: none !important;
 }
 
 .scroll-shut-on-delete {
@@ -132,6 +141,99 @@ ul {
     background-color: var(--accent-blue-hover);
 }
 
+.button-cancel {
+    background-color: var(--button-cancel);
+}
+.button-cancel:hover {
+    background-color: var(--button-cancel-hover);
+}
+
+.button-delete {
+    background-color: var(--accent-orange);
+}
+.button-delete:hover {
+    background-color: var(--accent-orange-hover);
+}
+
+/* --- Leaflet Popups --- */
+.leaflet-popup-content-wrapper {
+    box-shadow: var(--shadow-modal);
+    border: var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0;
+    color: var(--text-offwhite);
+    background-color: var(--panel-slate);
+}
+.leaflet-popup-tip {
+    background-color: var(--panel-slate);
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    padding: var(--padding-lg);
+}
+.leaflet-popup-content:has(> .create-waypoint-popup) {
+    width: auto !important; /* Override Leaflet's fixed width */
+    min-width: 280px;
+}
+
+.leaflet-popup-close-button {
+    top: 8px;
+    right: 8px;
+    color: #aaa !important; /* Override Leaflet's inline styles */
+}
+.leaflet-popup-close-button:hover {
+    color: var(--text-offwhite) !important;
+}
+
+
+.create-waypoint-popup {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-sm);
+}
+
+.create-waypoint-name-input {
+    flex-grow: 1;
+    width: 100%;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--bg-charcoal);
+}
+
+.popup-buttons {
+    display: flex;
+    gap: var(--padding-xs);
+}
+
+
+.popup-button-hide,
+.popup-button-delete {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-sm);
+    font-size: 1.1rem;
+    line-height: 1; /* Ensures icon is centered */
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.popup-button-hide:hover,
+.popup-button-delete:hover {
+    background-color: var(--panel-slate-hover);
+    color: var(--text-offwhite);
+}
+.popup-button-delete:hover {
+    color: var(--accent-orange-hover-light);
+}
+
 
 /* --- Twist List --- */
 
@@ -139,7 +241,7 @@ ul {
     flex-grow: 1;
 }
 
-#modal-create-twist-button {
+.create-twist-button {
     display: block;
     width: 100%;
     margin-bottom: var(--padding-lg);
@@ -157,8 +259,14 @@ ul {
 
     transition: background-color var(--transition-fast);
 }
-#modal-create-twist-button:hover {
+.create-twist-button.button-cancel {
+    background-color: var(--button-cancel);
+}
+.create-twist-button:hover {
     background-color: var(--accent-blue-hover);
+}
+.create-twist-button.button-cancel:hover {
+    background-color: var(--button-cancel-hover);
 }
 
 .twist-item {
@@ -435,18 +543,10 @@ ul {
     gap: 10px;
 }
 
-.modal-content .button-cancel {
-    background-color: var(--button-cancel);
-}
-.modal-content .button-cancel:hover {
-    background-color: var(--button-cancel-hover);
-}
-
-.modal-content .button-delete {
-    background-color: var(--accent-orange);
-}
-.modal-content .button-delete:hover {
-    background-color: var(--accent-orange-hover);
+.modal-content form button[type="submit"]:disabled {
+    opacity: 0.6;
+    background-color: var(--accent-blue);
+    cursor: not-allowed;
 }
 
 
