@@ -1,6 +1,5 @@
 alembic
 fastapi
-gpxpy
 humanize
 itsdangerous
 jinja2

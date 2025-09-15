@@ -1,9 +1,8 @@
 from datetime import date, timedelta
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import gpxpy
 from humanize import ordinal
 import json
 import os
@@ -15,7 +14,7 @@ import uvicorn
 from config import *
 from database import apply_migrations, wait_for_db
 from models import Twist, PavedRating, UnpavedRating
-from utility import get_db, calculate_average_rating
+from utility import *
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="TODO")
@@ -39,7 +38,8 @@ async def create_twist(
     request: Request,
     name: str = Form(...),
     is_paved_str: str = Form(..., alias="is_paved"),
-    file: UploadFile = File(...),
+    waypoints_json: str = Form(...),
+    route_geometry_json: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """
@@ -47,29 +47,24 @@ async def create_twist(
     """
 
     is_paved = is_paved_str.lower() == "true"
-    contents = await file.read()
 
     try:
-        gpx = gpxpy.parse(contents)
-        # Basic validation: ensure there's at least one track or route
-        if not gpx.tracks and not gpx.routes:
-            raise HTTPException(status_code=422, detail="GPX file contains no tracks/routes")
-    except Exception as e:
-        # If gpxpy.parse fails or our check fails, it's not a valid GPX file
-        raise HTTPException(status_code=422, detail="Invalid or empty GPX file")
+        waypoints_data = json.loads(waypoints_json)
+        route_geometry_data = json.loads(route_geometry_json)
 
-    # Generate a unique filename to prevent overwriting files
-    unique_filename = f"{uuid.uuid4().hex}.gpx"
-    save_path = GPX_STORAGE_PATH / unique_filename
-    logger.debug(f"Saving twist GPX at '{save_path}'")
+        if not isinstance(waypoints_data, list) or len(waypoints_data) < 2:
+            raise_http("At least two waypoints are required to create a Twist", status_code=422)
+        if not isinstance(route_geometry_data, list):
+            raise_http("Route data not properly formed", status_code=422)
 
-    with open(save_path, "wb") as buffer:
-        buffer.write(contents)
+    except json.JSONDecodeError as e:
+        raise_http("Invalid or malformed coordinate data submitted", status_code=422, exception=e)
     
     twist = Twist(
         name=name,
-        file_path=str(save_path),
-        is_paved=is_paved
+        is_paved=is_paved,
+        waypoints=waypoints_data,
+        route_geometry=route_geometry_data
     )
     db.add(twist)
     db.commit()
@@ -92,38 +87,17 @@ async def create_twist(
 @app.delete("/twists/{twist_id}", response_class=HTMLResponse)
 async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
     """
-    Deletes a twist, its associated GPX file, and all related ratings.
+    Deletes a twist and all related ratings.
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
-    logger.debug(f"Attempting to delete twist '{twist.name}' with GPX at '{twist.file_path}'")
+    logger.debug(f"Attempting to delete twist '{twist.name}'")
+
     twist_id = twist.id
-    gpx_file_path = Path(twist.file_path)
-
-    # Perform GPX and twist deletion within a transactional block
-    try:
-        # Stage the DB record for deletion
-        db.delete(twist)
-
-        # Attempt to delete the file from the filesystem, if it exists
-        if gpx_file_path.is_file():
-            os.remove(gpx_file_path)
-        else:
-            logger.info(f"GPX file not found at '{twist.file_path}'. This is unexpected, but acceptable")
-
-        # If both prior operations succeed, commit the transaction to the database
-        db.commit()
-
-    except OSError as e:
-        # If file deletion fails (e.g., permissions), rollback
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Deletion failed due to a filesystem error.")
-    except Exception as e:
-        # Catch other potential errors and rollback
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Deletion failed due to an internal server error.")
+    db.delete(twist)
+    db.commit()
 
     logger.debug(f"Deleted twist with id '{twist_id}'")
 
@@ -140,17 +114,19 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.get("/twists/{twist_id}/gpx", response_class=FileResponse)
-async def get_twist_gpx(twist_id: int, db: Session = Depends(get_db)):
+@app.get("/twists/{twist_id}/geometry", response_class=JSONResponse)
+async def get_twist_data(twist_id: int, db: Session = Depends(get_db)):
     """
-    Fetches the GPX file for a given twist_id and returns its raw content.
+    Fetches the geometry data for a given twist_id and returns it as JSON.
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
-    logger.debug(f"GPX file being served from '{twist.file_path}'")
-    return FileResponse(path=twist.file_path, media_type="application/gpx+xml")
+    return {
+        "waypoints": twist.waypoints,
+        "route_geometry": twist.route_geometry
+    }
 
 @app.post("/twists/{twist_id}/rate", response_class=HTMLResponse)
 async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
@@ -159,7 +135,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
     logger.debug(f"Attempting to rate twist '{twist.name}'")
 
     form_data = await request.form()
@@ -181,20 +157,20 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
         if key in valid_criteria:
             try:
                 new_rating_data[key] = int(value)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
                 # Handle cases where a rating value isn't a valid number
-                raise HTTPException(status_code=422, detail=f"Invalid value for '{key.replace("_", " ").title()}' criterion")
+                raise_http(f"Invalid value for '{key.replace("_", " ").title()}' criterion", status_code=422, exception=e)
 
         # Handle the rating date separately
         if key == "rating_date":
             try:
                 new_rating_data["rating_date"] = date.fromisoformat(value)
-            except ValueError:
-                raise HTTPException(status_code=422, detail="Invalid date format")
+            except ValueError as e:
+                raise_http("Invalid date format", status_code=422, exception=e)
 
     # Check if we actually collected any ratings
     if not any(key in valid_criteria for key in new_rating_data):
-        raise HTTPException(status_code=422, detail="No valid rating data submitted")
+        raise_http("No valid rating data submitted", status_code=422, exception=e)
 
     # Create the new rating instance, linking it to the twist
     new_rating = Rating(**new_rating_data, twist_id=twist_id)
@@ -221,7 +197,7 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
     if twist.is_paved:
         Rating = PavedRating
@@ -237,7 +213,7 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     # Undo the empty transaction if nothing was deleted
     if delete_count == 0:
         db.rollback()
-        raise HTTPException(status_code=404, detail="Rating not found for this twist")
+        raise_http("Rating not found for this twist", status_code=404)
     db.commit()
 
     # Empty response to "delete" the card
@@ -279,7 +255,7 @@ async def render_rating_dropdown(request: Request, twist_id: int, db: Session = 
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
     return templates.TemplateResponse("fragments/rating_dropdown.html", {
         "request": request,
@@ -294,7 +270,7 @@ async def render_modal_rate_twist(request: Request, twist_id: int, db: Session =
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
     today = date.today()
     tomorrow = today + timedelta(days=1)
@@ -314,7 +290,7 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
     if twist.is_paved:
         ratings = twist.paved_ratings
@@ -358,7 +334,7 @@ async def render_modal_delete_twist(request: Request, twist_id: int, db: Session
     """
     twist = db.query(Twist).filter(Twist.id == twist_id).first()
     if not twist:
-        raise HTTPException(status_code=404, detail="Twist not found")
+        raise_http("Twist not found", status_code=404)
 
     return templates.TemplateResponse("fragments/modal_delete_twist.html", {
         "request": request,

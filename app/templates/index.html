@@ -11,7 +11,9 @@
     <div id="sidebar">
         <div id="twist-list-container">
             <h1>MotoTwist</h1>
-            <a id="modal-create-twist-button" href="#modal-create-twist" class="button">New Twist</a>
+            <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+            <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+            <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
 
             <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
                 <p>Loading twists...</p>
@@ -43,11 +45,9 @@
                     </fieldset>
                 </div>
 
-                <div class="form-group">
-                    <label for="modal-file">GPX File</label>
-                    <input type="file" id="modal-file" name="file" accept=".gpx" required
-                        onchange="autofillFromFilename(this, 'modal-name')">
-                </div>
+                <input type="hidden" name="waypoints_json" id="waypoints-data">
+                <input type="hidden" name="route_geometry_json" id="route-geometry-data">
+                <div id="route-status-indicator" class="gone"></div>
 
                 {{ render_form_buttons(submit_text="Create Twist") }}
             </form>

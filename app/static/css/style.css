@@ -66,6 +66,9 @@ body {
 #map {
     flex-grow: 1;
 }
+#map.creating-twist {
+    cursor: crosshair;
+}
 
 
 /* --- General Components --- */
@@ -80,8 +83,14 @@ ul {
     list-style: none;
 }
 
+/* Invisible but still takes up space */
 .invisible {
-    visibility: hidden;
+    visibility: hidden !important;
+}
+
+/* Takes up no space */
+.gone {
+    display: none !important;
 }
 
 .scroll-shut-on-delete {
@@ -132,6 +141,20 @@ ul {
     background-color: var(--accent-blue-hover);
 }
 
+.button-cancel {
+    background-color: var(--button-cancel);
+}
+.button-cancel:hover {
+    background-color: var(--button-cancel-hover);
+}
+
+.button-delete {
+    background-color: var(--accent-orange);
+}
+.button-delete:hover {
+    background-color: var(--accent-orange-hover);
+}
+
 
 /* --- Twist List --- */
 
@@ -139,7 +162,7 @@ ul {
     flex-grow: 1;
 }
 
-#modal-create-twist-button {
+.create-twist-button {
     display: block;
     width: 100%;
     margin-bottom: var(--padding-lg);
@@ -157,8 +180,14 @@ ul {
 
     transition: background-color var(--transition-fast);
 }
-#modal-create-twist-button:hover {
+.create-twist-button.button-cancel {
+    background-color: var(--button-cancel);
+}
+.create-twist-button:hover {
     background-color: var(--accent-blue-hover);
+}
+.create-twist-button.button-cancel:hover {
+    background-color: var(--button-cancel-hover);
 }
 
 .twist-item {
@@ -433,20 +462,6 @@ ul {
     justify-content: flex-end;
     margin-top: 30px;
     gap: 10px;
-}
-
-.modal-content .button-cancel {
-    background-color: var(--button-cancel);
-}
-.modal-content .button-cancel:hover {
-    background-color: var(--button-cancel-hover);
-}
-
-.modal-content .button-delete {
-    background-color: var(--accent-orange);
-}
-.modal-content .button-delete:hover {
-    background-color: var(--accent-orange-hover);
 }
 
 

@@ -1,6 +1,7 @@
 import datetime
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import JSON
 
 from database import Base
 
@@ -9,15 +10,17 @@ class Twist(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), index=True, nullable=False)
-    file_path = Column(String(255), unique=True, nullable=False)
     is_paved = Column(Boolean, default=True, nullable=False)
+
+    waypoints = Column(JSON, nullable=False)
+    route_geometry = Column(JSON, nullable=False)
 
     paved_ratings = relationship("PavedRating", back_populates="twist")
     unpaved_ratings = relationship("UnpavedRating", back_populates="twist")
 
     def __repr__(self):
         paved = "Paved" if self.is_paved else "Unpaved"
-        return f"[{self.id}] {self.name} ({paved}) => {self.file_path}"
+        return f"[{self.id}] {self.name} ({paved})"
     
 
 class PavedRating(Base):

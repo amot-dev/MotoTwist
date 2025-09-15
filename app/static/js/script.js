@@ -12,122 +12,83 @@ const mapLayers = {};
 // Get the computed styles from the root element (the <html> tag)
 const rootStyles = getComputedStyle(document.documentElement);
 const accentBlue = rootStyles.getPropertyValue('--accent-blue').trim();
+const accentBlueHoverLight = rootStyles.getPropertyValue('--accent-blue-hover-light').trim();
 const accentOrange = rootStyles.getPropertyValue('--accent-orange').trim();
 
+const startIcon = new L.Icon({
+    iconUrl: '/static/images/marker-icon-green.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
+});
+
+const endIcon = new L.Icon({
+    iconUrl: '/static/images/marker-icon-red.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
+});
+
+const waypointIcon = new L.Icon({
+    iconUrl: '/static/images/marker-icon-blue.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
+});
+
 /**
- * Loads a GPX track and adds it to the map with appropriate styling.
- * This is called only when a layer is first made visible.
+ * Loads a Twist's geometry data and adds it to the map as a new layer.
  * @param {string} twistId - The ID of the twist to load.
+ * @param {string} twistName - The name of the twist for the popup.
  * @param {boolean} isPaved - Whether the road surface is paved.
  */
-async function loadGpxLayer(twistId, twistName, isPaved) {
+async function loadTwistLayer(twistId, twistName, isPaved) {
     // If layer already exists, don't re-load it
-    if (mapLayers[twistId]) {
-        return;
-    }
+    if (mapLayers[twistId]) return;
 
-    const gpxUrl = `/twists/${twistId}/gpx`;
-    const lineColor = isPaved ? accentBlue : accentOrange;
-
-    // Configure layer
-    const gpxLayer = new L.GPX(gpxUrl, {
-        async: true,
-        markers: {
-            startIcon: '/static/images/marker-icon-green.png',
-            endIcon: '/static/images/marker-icon-red.png',
-            wptIcons: {
-                '': '/static/images/marker-icon-blue.png'
-            }
-        },
-        marker_options: {
-            iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
-        },
-        polyline_options: {
-            color: lineColor, weight: 5, opacity: 0.85
+    // Fetch route data
+    try {
+        const response = await fetch(`/twists/${twistId}/geometry`);
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
         }
-    });
+        const data = await response.json();
 
-    // Catch network errors (404, 500, etc)
-    gpxLayer.on('error', function(e) {
-        console.error(`Failed to load GPX file from ${gpxUrl}:`, e.error);
-        delete mapLayers[twistId];
-    });
+        // Create the route line
+        const lineColor = isPaved ? accentBlue : accentOrange;
+        const routeLine = L.polyline(data.route_geometry, {
+            color: lineColor,
+            weight: 5,
+            opacity: 0.85
+        });
+        routeLine.bindPopup(`<b>${twistName}</b>`);
 
-    // Catches errors when the GPX file is invalid or cannot be parsed
-    gpxLayer.on('gpx_failed', function(e) {
-        console.error(`Failed to parse GPX file from ${gpxUrl}:`, e.err);
-        delete mapLayers[twistId];
-    });
+        // Create the waypoint markers
+        const waypointMarkers = data.waypoints.map((point, index) => {
+            let icon = waypointIcon;
+            let zIndexOffset = 0;
+            const totalPoints = data.waypoints.length;
 
-    // Put start and end points above waypoints
-    gpxLayer.on('addpoint', function(e) {
-        if (e.point_type === 'start' || e.point_type === 'end') {
-            e.point.setZIndexOffset(1000);
+            if (totalPoints === 1 || index === 0) icon = startIcon;
+            else if (index === totalPoints - 1) icon = endIcon;
 
-            // Very hacky way to keep popup from waypoint
-            e.point.on('click', function(clickEvent) {
-                const clickedMarker = clickEvent.target;
-                const clickedLatLng = clickedMarker.getLatLng();
+            return L.marker(point, { icon: icon, zIndexOffset: zIndexOffset });
+        });
 
-                // Find the first overlapping waypoint underneath the clicked marker
-                const waypoint = gpxLayer.getLayers()[0].getLayers().find(layer => {
-                    // Is it a waypoint?
-                    if (!layer.options || !layer.options.icon || layer.options.title === undefined || layer === clickedMarker) {
-                        return false;
-                    }
-                    return layer.getLatLng().distanceTo(clickedLatLng) < 5; // Is the waypoint within 5 meters?
-                });
+        // Group all layers together
+        const twistLayer = L.featureGroup([routeLine, ...waypointMarkers]);
 
-                if (waypoint && waypoint.getPopup()) {
-                    // Get the waypoint's original, default popup content
-                    const waypointContent = waypoint.getPopup().getContent();
-                    // Open a new popup that is a clone of the waypoint's popup
-                    L.popup()
-                        .setLatLng(clickedLatLng)
-                        .setContent(waypointContent)
-                        .openOn(map);
-                }
-            });
-        }
-    });
-
-    // Create popup for tracks
-    gpxLayer.on('addline', function(e) {
-        // Find the <name> and <desc> elements within the track's XML element
-        const nameEl = e.element.querySelector('name');
-        const descEl = e.element.querySelector('desc');
-
-        // Get the text content, checking if the elements exist first
-        const name = nameEl ? nameEl.textContent : '';
-        const desc = descEl ? descEl.textContent : '';
-
-        let popupContent = '';
-        if (name && name != twistName) {
-            popupContent += `<b>${twistName} (${name})</b>`;
-        } else {
-            popupContent += `<b>${twistName}</b>`;
-        }
-        if (desc) {
-            // Using a <pre> tag preserves the line breaks from the description
-            popupContent += `<pre>${desc.trim()}</pre>`;
-        }
-
-        // Bind the popup if we have content
-        if (popupContent) {
-            e.line.bindPopup(popupContent);
-        }
-    });
-    
-    // Store layer
-    mapLayers[twistId] = gpxLayer;
-    
-    // Wait for it to load to add to map, allows fitting bounds before showing
-    gpxLayer.on('loaded', () => {
+        // Store and add the complete layer to the map
+        mapLayers[twistId] = twistLayer;
         const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
         if (twistItem && twistItem.classList.contains('is-visible')) {
-            gpxLayer.addTo(map);
+            twistLayer.addTo(map);
         }
-    });
+
+    } catch (error) {
+        console.error(`Failed to load route for Twist '${twistName}':`, error);
+        flash(`Failed to load route for Twist '${twistName}'`)
+
+        // Ensure a failed layer doesn't stick around
+        delete mapLayers[twistId];
+    }
 }
 
 /**
@@ -162,7 +123,7 @@ function setLayerVisibility(twistId, makeVisible) {
             // First time showing this layer, load the GPX data
             const isPaved = twistItem.dataset.paved === 'True';
             const twistName = twistItem.querySelector('.twist-name').textContent;
-            loadGpxLayer(twistId, twistName, isPaved);
+            loadTwistLayer(twistId, twistName, isPaved);
         }
     }
 
@@ -265,82 +226,169 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     }
 });
 
-/**
- * Autofills a text input with the name of a selected file, minus its extension.
- *
- * This function is designed to be called from the 'onchange' event of a file
- * input. It only populates the target input if that field is currently empty,
- * preserving any value previously entered by the user.
- *
- * @param {HTMLElement} fileInput - The file input element that triggered the function.
- * @param {string} targetInputId - The ID of the text input field to populate.
- */
-function autofillFromFilename(fileInput, targetInputId) {
-        const nameInput = document.getElementById(targetInputId);
 
-        // Only proceed if the file input has a file and the name field is empty
-        if (fileInput.files.length > 0 && nameInput.value === '') {
-            const fullFilename = fileInput.files[0].name;
-            const nameWithoutExtension = fullFilename.replace(/\.[^/.]+$/, '');
-            nameInput.value = nameWithoutExtension;
+const createTwistButton = document.querySelector('#start-new-twist');
+const finalizeTwistButton = document.querySelector('#finalize-new-twist')
+const cancelTwistButton = document.querySelector('#cancel-new-twist')
+const mapContainer = document.querySelector('#map');
+const twistForm = document.querySelector('#modal-create-twist form');
+let waypointCoords = [];
+let waypointMarkers = [];
+let routeLine = null;
+
+// Update marker icons based off position in list
+function updateMarkerIcons() {
+    const totalMarkers = waypointMarkers.length;
+    waypointMarkers.forEach((marker, index) => {
+        if (totalMarkers === 1 || index === 0) {
+            marker.setIcon(startIcon);
+        } else if (index === totalMarkers - 1) {
+            marker.setIcon(endIcon);
+        } else {
+            marker.setIcon(waypointIcon);
         }
-    }
+    });
+}
 
 /**
- * Displays a message in the flash message element for a set duration.
- * The function makes the flash element visible, sets its content,
- * and then fades it out after the specified duration.
- * @param {string} message - The message string to display. Can include HTML.
- * @param {number} duration - How long to display the message in ms before fading.
- * @param {string|null} [backgroundColor=null] - Optional background and border color for the flash message.
- * @param {string|null} [color=null] - Optional text color for the flash message.
+ * Handles creation of the route line while a Twist is being created.
  */
-function flash(message, duration, backgroundColor=null, color=null) {
-    // Exit early if the message is null, undefined, or empty
-    if (!message) return;
+async function updateRoute() {
+    if (routeLine) map.removeLayer(routeLine);
 
-    // Only proceed if the flash message element exists on the page
-    const flashElement = document.querySelector('.flash-message');
-    if (flashElement) {
-        flashElement.innerHTML = message;
-        flashElement.style.opacity = '1';
-        flashElement.style.backgroundColor = backgroundColor;
-        flashElement.style.borderColor = backgroundColor;
-        flashElement.style.color = color;
+    if (waypointCoords.length < 2) return;
 
-        // Set a timer to hide the message after the specified duration
-        setTimeout(() => {
-            flashElement.style.opacity = null;
+    // Format coordinates and call the OSRM API
+    const coordinates = waypointCoords.map(coord => `${coord.lng},${coord.lat}`).join(';');
+    const url = `http://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
 
-            // Only change non-opacity values after the transition is complete
-            flashElement.addEventListener('transitionend', () => {
-                flashElement.style.backgroundColor = null;
-                flashElement.style.borderColor = null;
-                flashElement.style.color = null;
-            }, { once: true });
-        }, duration);
+    // TODO: cancel request on new one
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Route not found');
+
+        const data = await response.json();
+        const routeGeometry = data.routes[0].geometry.coordinates;
+
+        // OSRM returns [lng, lat], Leaflet needs [lat, lng]
+        const latLngs = routeGeometry.map(coord => [coord[1], coord[0]]);
+
+        // Create a new polyline and add it to the map
+        routeLine = L.polyline(latLngs, { color: accentBlueHoverLight }).addTo(map);
+    } catch (error) {
+        console.error("Error fetching route:", error);
+        flash("Error drawing route", 5000, backgroundColor=accentOrange);
     }
 }
 
-// Listen for the flashMessage event from the server
-document.body.addEventListener('flashMessage', (event) => {
-    flash(event.detail.value, 3000);
+function stopTwistCreation() {
+    waypointMarkers.forEach(marker => map.removeLayer(marker));
+    waypointCoords = [];
+    waypointMarkers = [];
+
+    if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+    }
+
+    // Reset the status indicator
+    const statusIndicator = document.querySelector('#route-status-indicator');
+    statusIndicator.classList.add('gone');
+    statusIndicator.textContent = '';
+
+    // Reset button visibility to the initial state
+    finalizeTwistButton.classList.add('gone');
+    cancelTwistButton.classList.add('gone');
+    createTwistButton.classList.remove('gone');
+}
+
+// Begin recording route geometry
+createTwistButton.addEventListener('click', () => {
+    mapContainer.classList.add('creating-twist');
+    flash('Click on the map to create a Twist!', 5000);
+
+    // Swap button visibility
+    createTwistButton.classList.add('gone');
+    finalizeTwistButton.classList.remove('gone');
+    cancelTwistButton.classList.remove('gone');
 });
 
-// Listen for the response error event from the server
-document.body.addEventListener('htmx:responseError', function(event) {
-    const xhr = event.detail.xhr;
-    let errorMessage = xhr.responseText; // Default to the raw response
+// Handle saving of route geometry
+finalizeTwistButton.addEventListener('click', () => {
+    mapContainer.classList.remove('creating-twist');
 
-    // Try to parse the response as JSON
-    try {
-        const errorObject = JSON.parse(xhr.responseText);
-        // If parsing succeeds and a 'detail' key exists, use that.
-        if (errorObject && errorObject.detail) {
-            errorMessage = errorObject.detail;
+    const statusIndicator = document.querySelector('#route-status-indicator');
+
+    // Check if there's a route to save
+    if (waypointCoords.length > 1 && routeLine) {
+        const waypointsForJson = waypointCoords.map(coord => ({ lat: coord.lat, lng: coord.lng }));
+        document.querySelector('#waypoints-data').value = JSON.stringify(waypointsForJson);
+
+        const routeLatLngs = routeLine.getLatLngs();
+        const routeForJson = routeLatLngs.map(coord => ({ lat: coord.lat, lng: coord.lng }));
+        document.querySelector('#route-geometry-data').value = JSON.stringify(routeForJson);
+
+        statusIndicator.textContent = `✅ Route captured with ${waypointCoords.length} waypoints and ${routeLatLngs.length} geometry points.`;
+        statusIndicator.classList.remove('gone');
+
+    } else {
+        // Handle case where user finalizes without a valid route
+        statusIndicator.textContent = '⚠️ No valid route was created.';
+        statusIndicator.classList.remove('gone');
+    }
+});
+
+// Handle cancellation of route geometry recording
+cancelTwistButton.addEventListener('click', () => {
+    mapContainer.classList.remove('creating-twist');
+    stopTwistCreation();
+});
+
+// Listen for map clicks when recording route geometry
+map.on('click', function(e) {
+    if (!mapContainer.classList.contains('creating-twist')) return;
+
+    // Create a new marker
+    const marker = L.marker(e.latlng, { draggable: true }).addTo(map); // TODO: draggable
+
+    // Add a click listener to the marker to remove it
+    marker.on('click', () => {
+        const index = waypointMarkers.indexOf(marker);
+        if (index > -1) {
+            // Remove from map and arrays using the index
+            map.removeLayer(waypointMarkers[index]);
+            waypointMarkers.splice(index, 1);
+            waypointCoords.splice(index, 1);
+
+            // Update the route line with the modified waypoint list
+            updateRoute();
+            updateMarkerIcons();
         }
-    } catch (e) {}
+    });
 
-    // Display the flash with an orange accent
-    flash(errorMessage, 5000, backgroundColor=accentOrange);
+    // Listen for the marker being dragged and update route on end
+    marker.on('dragend', (event) => {
+        const index = waypointMarkers.indexOf(marker);
+        if (index > -1) {
+            // Redraw the route with the new coordinates
+            waypointCoords[index] = event.target.getLatLng();
+            updateRoute();
+        }
+    });
+
+    // Add the new waypoint and marker to state arrays
+    waypointCoords.push(e.latlng);
+    waypointMarkers.push(marker);
+
+    // Update the route line with the new waypoint
+    updateRoute();
+    updateMarkerIcons();
+});
+
+// HTMX hook for cleanup
+// TODO: make this more specific
+twistForm.addEventListener('htmx:afterRequest', function() {
+    setTimeout(() => {
+        stopTwistCreation();
+    }, 100);
 });
