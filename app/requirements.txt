@@ -3,7 +3,7 @@ fastapi
 humanize
 itsdangerous
 jinja2
-mysql-connector-python
+psycopg2-binary
 python-multipart
 sqlalchemy
 uvicorn

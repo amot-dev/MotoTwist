@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON
 
 from database import Base
 
@@ -12,8 +12,8 @@ class Twist(Base):
     name = Column(String(255), index=True, nullable=False)
     is_paved = Column(Boolean, default=True, nullable=False)
 
-    waypoints = Column(JSON, nullable=False)
-    route_geometry = Column(JSON, nullable=False)
+    waypoints = Column(JSONB, nullable=False)
+    route_geometry = Column(JSONB, nullable=False)
 
     paved_ratings = relationship("PavedRating", back_populates="twist")
     unpaved_ratings = relationship("UnpavedRating", back_populates="twist")
