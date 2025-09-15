@@ -1,3 +1,5 @@
+/* Map Display */
+
 // Initialize the map and set its view
 const map = L.map('map').setView([49.2827, -123.1207], 9);
 
@@ -29,6 +31,12 @@ const endIcon = new L.Icon({
 
 const waypointIcon = new L.Icon({
     iconUrl: '/static/images/marker-icon-blue.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
+});
+
+const hiddenIcon = new L.Icon({
+    iconUrl: '/static/images/marker-icon-grey.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
 });
@@ -69,7 +77,8 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
             if (totalPoints === 1 || index === 0) icon = startIcon;
             else if (index === totalPoints - 1) icon = endIcon;
 
-            return L.marker(point, { icon: icon, zIndexOffset: zIndexOffset });
+            return L.marker(point, { icon: icon })
+                .bindPopup(`<b>${twistName}</b>${point.name ? `<br>${point.name}` : ''}`);
         });
 
         // Group all layers together
@@ -226,45 +235,145 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     }
 });
 
-
+/* New Twist Creation */
 const createTwistButton = document.querySelector('#start-new-twist');
 const finalizeTwistButton = document.querySelector('#finalize-new-twist')
 const cancelTwistButton = document.querySelector('#cancel-new-twist')
 const mapContainer = document.querySelector('#map');
+const createWaypointPopupTemplate = document.querySelector('#create-waypoint-popup-template').content;
 const twistForm = document.querySelector('#modal-create-twist form');
-let waypointCoords = [];
-let waypointMarkers = [];
-let routeLine = null;
 
-// Update marker icons based off position in list
+// State Variables
+let waypoints = [];
+let waypointMarkers = [];
+let routeRequestController;
+let newRouteLine = null;
+
+/**
+ * Sets the visibility icon for a waypoint's hide button based on its isHidden property.
+ * @param {object} waypoint The waypoint object.
+ * @param {HTMLElement} hideIcon The <i> element for the icon.
+ */
+function setWaypointHideIcon(waypoint, hideIcon) {
+    if (waypoint.isHidden) {
+        hideIcon.classList.remove('fa-eye');
+        hideIcon.classList.add('fa-eye-slash');
+    } else {
+        hideIcon.classList.remove('fa-eye-slash');
+        hideIcon.classList.add('fa-eye');
+    }
+}
+
+/**
+ * Creates and configures the DOM element for a marker's popup.
+ * @param {L.Marker} marker The marker for which to create the popup content.
+ * @returns {HTMLElement} The configured popup content element.
+ */
+function createPopupContent(marker) {
+    const index = waypointMarkers.indexOf(marker);
+    if (index === -1) return null;
+
+    const waypoint = waypoints[index];
+    const totalMarkers = waypointMarkers.length;
+
+    // Create a fresh clone of the template
+    const popupContent = createWaypointPopupTemplate.cloneNode(true);
+    const nameInput = popupContent.querySelector('.create-waypoint-name-input');
+    const hideButton = popupContent.querySelector('.popup-button-hide');
+    const hideIcon = hideButton.querySelector('i');
+    const deleteButton = popupContent.querySelector('.popup-button-delete');
+
+    // Input for the waypoint name
+    nameInput.value = waypoint.name;
+    nameInput.addEventListener('input', (event) => {
+        waypoint.name = event.target.value; // Persist name change
+    });
+
+    // Close popup on enter
+    nameInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            map.closePopup();
+        }
+    });
+
+    // Toggle visibility of the hide button for start/end markers
+    const isStart = index === 0;
+    const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
+    hideButton.classList.toggle('gone', isStart || isEnd);
+
+    setWaypointHideIcon(waypoint, hideIcon)
+
+    // Hide button
+    hideButton.addEventListener('click', () => {
+        waypoint.isHidden = !waypoint.isHidden;
+        setWaypointHideIcon(waypoint, hideIcon)
+        updateMarkerIcons();
+    });
+
+    // Delete button
+    deleteButton.addEventListener('click', () => {
+        const index = waypointMarkers.indexOf(marker);
+        if (index > -1) {
+            map.removeLayer(marker);
+            waypointMarkers.splice(index, 1);
+            waypoints.splice(index, 1);
+            updateRoute();
+            updateMarkerIcons();
+        }
+    });
+
+    // Return the newly created and configured DOM element for Leaflet to display
+    return popupContent;
+}
+
+/**
+ * Updates all waypoint marker icons on the map to reflect their current
+ * status (start, end, intermediate, or hidden).
+ */
 function updateMarkerIcons() {
     const totalMarkers = waypointMarkers.length;
+
     waypointMarkers.forEach((marker, index) => {
-        if (totalMarkers === 1 || index === 0) {
-            marker.setIcon(startIcon);
-        } else if (index === totalMarkers - 1) {
-            marker.setIcon(endIcon);
+        const waypoint = waypoints[index];
+
+        // Update map marker icon
+        const isStart = totalMarkers === 1 || index === 0;
+        const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
+        if (waypoint.isHidden) {
+            marker.setIcon(hiddenIcon);
         } else {
-            marker.setIcon(waypointIcon);
+            // Set map icon based on position
+            if (isStart) marker.setIcon(startIcon);
+            else if (isEnd) marker.setIcon(endIcon);
+            else marker.setIcon(waypointIcon);
         }
     });
 }
 
 /**
- * Handles creation of the route line while a Twist is being created.
+ * Fetches and draws the route on the map using the current waypoints.
+ * It aborts any previously ongoing route requests.
  */
 async function updateRoute() {
-    if (routeLine) map.removeLayer(routeLine);
+    if (newRouteLine) map.removeLayer(newRouteLine);
 
-    if (waypointCoords.length < 2) return;
+    if (waypoints.length < 2) return;
+
+    // Abort any ongoing fetch requests
+    if (routeRequestController) {
+        routeRequestController.abort();
+    }
+    // Create a new AbortController for the new request
+    routeRequestController = new AbortController();
+    const signal = routeRequestController.signal;
 
     // Format coordinates and call the OSRM API
-    const coordinates = waypointCoords.map(coord => `${coord.lng},${coord.lat}`).join(';');
+    const coordinates = waypoints.map(waypoint => `${waypoint.latlng.lng},${waypoint.latlng.lat}`).join(';');
     const url = `http://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
 
-    // TODO: cancel request on new one
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal });
         if (!response.ok) throw new Error('Route not found');
 
         const data = await response.json();
@@ -274,21 +383,30 @@ async function updateRoute() {
         const latLngs = routeGeometry.map(coord => [coord[1], coord[0]]);
 
         // Create a new polyline and add it to the map
-        routeLine = L.polyline(latLngs, { color: accentBlueHoverLight }).addTo(map);
+        newRouteLine = L.polyline(latLngs, { color: accentBlueHoverLight }).addTo(map);
     } catch (error) {
-        console.error("Error fetching route:", error);
-        flash("Error drawing route", 5000, backgroundColor=accentOrange);
+        // If the error is an AbortError, do nothing
+        if (error.name === 'AbortError') {
+            return;
+        } else {
+            console.error("Error fetching route:", error);
+            flash("Error drawing route", 5000, { backgroundColor: accentOrange });
+        }
     }
 }
 
+/**
+ * Resets the Twist creation state, removing all waypoints, markers,
+ * and the route line from the map and resetting UI elements.
+ */
 function stopTwistCreation() {
     waypointMarkers.forEach(marker => map.removeLayer(marker));
-    waypointCoords = [];
+    waypoints = [];
     waypointMarkers = [];
 
-    if (routeLine) {
-        map.removeLayer(routeLine);
-        routeLine = null;
+    if (newRouteLine) {
+        map.removeLayer(newRouteLine);
+        newRouteLine = null;
     }
 
     // Reset the status indicator
@@ -320,15 +438,20 @@ finalizeTwistButton.addEventListener('click', () => {
     const statusIndicator = document.querySelector('#route-status-indicator');
 
     // Check if there's a route to save
-    if (waypointCoords.length > 1 && routeLine) {
-        const waypointsForJson = waypointCoords.map(coord => ({ lat: coord.lat, lng: coord.lng }));
+    const waypointsToSend = waypoints.filter(wp => !wp.isHidden);
+    if (waypointsToSend.length > 1 && newRouteLine) {
+        const waypointsForJson = waypointsToSend.map(wp => ({
+            lat: wp.latlng.lat,
+            lng: wp.latlng.lng,
+            name: wp.name
+        }));
         document.querySelector('#waypoints-data').value = JSON.stringify(waypointsForJson);
 
-        const routeLatLngs = routeLine.getLatLngs();
+        const routeLatLngs = newRouteLine.getLatLngs();
         const routeForJson = routeLatLngs.map(coord => ({ lat: coord.lat, lng: coord.lng }));
         document.querySelector('#route-geometry-data').value = JSON.stringify(routeForJson);
 
-        statusIndicator.textContent = `✅ Route captured with ${waypointCoords.length} waypoints and ${routeLatLngs.length} geometry points.`;
+        statusIndicator.textContent = `✅ Route captured with ${waypointsToSend.length} waypoints and ${routeLatLngs.length} geometry points.`;
         statusIndicator.classList.remove('gone');
 
     } else {
@@ -348,45 +471,37 @@ cancelTwistButton.addEventListener('click', () => {
 map.on('click', function(e) {
     if (!mapContainer.classList.contains('creating-twist')) return;
 
+    // Create a new waypoint
+    const newWaypoint = {
+        latlng: e.latlng,
+        name: '',
+        isHidden: false
+    };
+    waypoints.push(newWaypoint);
+
     // Create a new marker
-    const marker = L.marker(e.latlng, { draggable: true }).addTo(map); // TODO: draggable
+    const marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+    waypointMarkers.push(marker);
 
-    // Add a click listener to the marker to remove it
-    marker.on('click', () => {
-        const index = waypointMarkers.indexOf(marker);
-        if (index > -1) {
-            // Remove from map and arrays using the index
-            map.removeLayer(waypointMarkers[index]);
-            waypointMarkers.splice(index, 1);
-            waypointCoords.splice(index, 1);
-
-            // Update the route line with the modified waypoint list
-            updateRoute();
-            updateMarkerIcons();
-        }
-    });
+    // Bind a function that creates and returns the popup content on demand
+    marker.bindPopup(() => createPopupContent(marker));
 
     // Listen for the marker being dragged and update route on end
     marker.on('dragend', (event) => {
         const index = waypointMarkers.indexOf(marker);
         if (index > -1) {
             // Redraw the route with the new coordinates
-            waypointCoords[index] = event.target.getLatLng();
+            waypoints[index].latlng = event.target.getLatLng();
             updateRoute();
         }
     });
-
-    // Add the new waypoint and marker to state arrays
-    waypointCoords.push(e.latlng);
-    waypointMarkers.push(marker);
 
     // Update the route line with the new waypoint
     updateRoute();
     updateMarkerIcons();
 });
 
-// HTMX hook for cleanup
-// TODO: make this more specific
+// HTMX hook for cleanup, only listening on the Twist form
 twistForm.addEventListener('htmx:afterRequest', function() {
     setTimeout(() => {
         stopTwistCreation();

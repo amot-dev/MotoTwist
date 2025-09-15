@@ -23,6 +23,20 @@
 
     <div id="map"></div>
 
+    <template id="create-waypoint-popup-template">
+        <div class="create-waypoint-popup">
+            <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
+            <div class="popup-buttons">
+                <button class="popup-button-hide" title="Hide/Show Waypoint">
+                    <i class="far fa-eye"></i>
+                </button>
+                <button class="popup-button-delete" title="Delete Waypoint">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+
     <div id="modal-create-twist" class="modal">
         {% call render_modal_content("New Twist") %}
             <form hx-post="/twist"
