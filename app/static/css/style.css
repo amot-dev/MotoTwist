@@ -155,6 +155,85 @@ ul {
     background-color: var(--accent-orange-hover);
 }
 
+/* --- Leaflet Popups --- */
+.leaflet-popup-content-wrapper {
+    box-shadow: var(--shadow-modal);
+    border: var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0;
+    color: var(--text-offwhite);
+    background-color: var(--panel-slate);
+}
+.leaflet-popup-tip {
+    background-color: var(--panel-slate);
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    padding: var(--padding-lg);
+}
+.leaflet-popup-content:has(> .create-waypoint-popup) {
+    width: auto !important; /* Override Leaflet's fixed width */
+    min-width: 280px;
+}
+
+.leaflet-popup-close-button {
+    top: 8px;
+    right: 8px;
+    color: #aaa !important; /* Use important to override Leaflet inline styles */
+}
+.leaflet-popup-close-button:hover {
+    color: var(--text-offwhite) !important;
+}
+
+
+.create-waypoint-popup {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-sm);
+}
+
+.create-waypoint-name-input {
+    flex-grow: 1;
+    width: 100%;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--bg-charcoal);
+}
+
+.popup-buttons {
+    display: flex;
+    gap: var(--padding-xs);
+}
+
+
+.popup-button-hide,
+.popup-button-delete {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-sm);
+    font-size: 1.1rem;
+    line-height: 1; /* Ensures icon is centered */
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.popup-button-hide:hover,
+.popup-button-delete:hover {
+    background-color: var(--panel-slate-hover);
+    color: var(--text-offwhite);
+}
+.popup-button-delete:hover {
+    color: var(--accent-orange-hover-light);
+}
+
 
 /* --- Twist List --- */
 
