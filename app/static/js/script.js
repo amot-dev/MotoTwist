@@ -3,6 +3,11 @@
 // Initialize the map and set its view
 const map = L.map('map').setView([49.2827, -123.1207], 9);
 
+// Try to locate the user
+document.addEventListener('DOMContentLoaded', () => {
+    map.locate({ setView: true, maxZoom: 9 });
+});
+
 // Add a tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
