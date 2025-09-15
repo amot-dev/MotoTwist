@@ -1,5 +1,6 @@
+from copy import deepcopy
 from fastapi import HTTPException
-from math import radians, sin, cos, sqrt, atan2
+import math
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -56,83 +57,81 @@ async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> 
         if value is not None
     } if averages else {}
 
-# def haversine_distance(lat1, lon1, lat2, lon2):
-#     """
-#     Calculates the distance between two points on Earth using the Haversine formula.
-#     Returns the distance in kilometers.
-#     """
-#     R = 6371.0  # Earth radius in kilometers
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculates the distance between two points on Earth using the Haversine formula.
+    Returns the distance in kilometers.
+    """
+    R = 6371.0  # Earth radius in kilometers
 
-#     lat1_rad = radians(lat1)
-#     lon1_rad = radians(lon1)
-#     lat2_rad = radians(lat2)
-#     lon2_rad = radians(lon2)
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
 
-#     dlon = lon2_rad - lon1_rad
-#     dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+    dlat = lat2_rad - lat1_rad
 
-#     a = sin(dlat / 2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)**2
-#     c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-#     distance = R * c
-#     return distance
+    distance = R * c
+    return distance
 
-# def fix_waypoints_onto_track(gpx: gpxpy.gpx.GPX) -> gpxpy.gpx.GPX:
-#     """
-#     Maps waypoints in a GPX object to its primary track.
-#     - The first waypoint is mapped to the first trackpoint.
-#     - The last waypoint is mapped to the last trackpoint.
-#     - Intermediate waypoints are mapped to their nearest trackpoint.
+def snap_waypoints_to_route(waypoints_data, route_geometry_data):
+    """
+    Maps waypoints in a list of dictionaries to a route track.
+    - The first waypoint is mapped to the first trackpoint.
+    - The last waypoint is mapped to the last trackpoint.
+    - Intermediate waypoints are mapped to their nearest trackpoint.
 
-#     Returns the modified GPX object.
-#     """
-#     # 1. Basic validation
-#     if not gpx.tracks or not gpx.waypoints:
-#         # Not enough data to perform the mapping
-#         return gpx
+    Returns a new list of modified waypoints.
+    """
+    if not route_geometry_data or not waypoints_data or len(waypoints_data) < 2:
+        return waypoints_data
 
-#     # 2. Flatten all trackpoints from all segments into a single list
-#     all_trackpoints = [point for segment in gpx.tracks[0].segments for point in segment.points]
+    # Create a deep copy to avoid modifying the original list
+    snapped_waypoints = deepcopy(waypoints_data)
+    num_waypoints = len(snapped_waypoints)
+    num_trackpoints = len(route_geometry_data)
 
-#     if not all_trackpoints:
-#         # The track exists but has no points
-#         return gpx
+    # Handle the first waypoint
+    first_trackpoint = route_geometry_data[0]
+    snapped_waypoints[0]['lat'] = first_trackpoint['lat']
+    snapped_waypoints[0]['lng'] = first_trackpoint['lng']
 
-#     num_waypoints = len(gpx.waypoints)
+    # Handle the last waypoint
+    last_trackpoint = route_geometry_data[-1]
+    snapped_waypoints[-1]['lat'] = last_trackpoint['lat']
+    snapped_waypoints[-1]['lng'] = last_trackpoint['lng']
 
-#     # 3. Handle the first waypoint
-#     first_trackpoint = all_trackpoints[0]
-#     gpx.waypoints[0].latitude = first_trackpoint.latitude
-#     gpx.waypoints[0].longitude = first_trackpoint.longitude
+    # Handle intermediate waypoints with forward search
+    last_match_index = 0
+    if num_waypoints > 2:
+        # Iterate through waypoints from the second to the second-to-last
+        for i in range(1, num_waypoints - 1):
+            waypoint = snapped_waypoints[i]
 
-#     # 4. Handle the last waypoint (if there is more than one)
-#     if num_waypoints > 1:
-#         last_trackpoint = all_trackpoints[-1]
-#         gpx.waypoints[-1].latitude = last_trackpoint.latitude
-#         gpx.waypoints[-1].longitude = last_trackpoint.longitude
+            min_distance = float('inf')
+            closest_trackpoint_index = last_match_index
 
-#     # 5. Handle intermediate waypoints
-#     if num_waypoints > 2:
-#         # Iterate through waypoints from the second to the second-to-last
-#         for i in range(1, num_waypoints - 1):
-#             waypoint = gpx.waypoints[i]
+            # Start searching from the last matched trackpoint index
+            for j in range(last_match_index, num_trackpoints):
+                trackpoint = route_geometry_data[j]
+                distance = haversine_distance(
+                    waypoint['lat'], waypoint['lng'],
+                    trackpoint['lat'], trackpoint['lng']
+                )
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_trackpoint_index = j
 
-#             closest_trackpoint = None
-#             min_distance = float('inf')
+            # Update waypoint to the closest point found
+            closest_trackpoint = route_geometry_data[closest_trackpoint_index]
+            waypoint['lat'] = closest_trackpoint['lat']
+            waypoint['lng'] = closest_trackpoint['lng']
 
-#             # Find the closest trackpoint for the current waypoint
-#             for trackpoint in all_trackpoints:
-#                 distance = haversine_distance(
-#                     waypoint.latitude, waypoint.longitude,
-#                     trackpoint.latitude, trackpoint.longitude
-#                 )
-#                 if distance < min_distance:
-#                     min_distance = distance
-#                     closest_trackpoint = trackpoint
+            # Update the starting point for the next search
+            last_match_index = closest_trackpoint_index
 
-#             # Update waypoint coordinates to match the closest trackpoint
-#             if closest_trackpoint:
-#                 waypoint.latitude = closest_trackpoint.latitude
-#                 waypoint.longitude = closest_trackpoint.longitude
-
-#     return gpx
+    return snapped_waypoints

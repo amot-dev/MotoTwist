@@ -180,7 +180,7 @@ ul {
 .leaflet-popup-close-button {
     top: 8px;
     right: 8px;
-    color: #aaa !important; /* Use important to override Leaflet inline styles */
+    color: #aaa !important; /* Override Leaflet's inline styles */
 }
 .leaflet-popup-close-button:hover {
     color: var(--text-offwhite) !important;

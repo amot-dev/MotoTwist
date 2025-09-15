@@ -57,13 +57,15 @@ async def create_twist(
         if not isinstance(route_geometry_data, list):
             raise_http("Route data not properly formed", status_code=422)
 
+        snapped_waypoints_data = snap_waypoints_to_route(waypoints_data, route_geometry_data)
+
     except json.JSONDecodeError as e:
         raise_http("Invalid or malformed coordinate data submitted", status_code=422, exception=e)
     
     twist = Twist(
         name=name,
         is_paved=is_paved,
-        waypoints=waypoints_data,
+        waypoints=snapped_waypoints_data,
         route_geometry=route_geometry_data
     )
     db.add(twist)
