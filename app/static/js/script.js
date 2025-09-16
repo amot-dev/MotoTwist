@@ -589,7 +589,3 @@ twistForm.addEventListener('htmx:afterRequest', function() {
         stopTwistCreation();
     }, 100);
 });
-
-document.body.addEventListener('htmx:afterRequest', function() {
-    console.log("post request")
-});
