@@ -28,7 +28,7 @@
             <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
             <div class="popup-buttons">
                 <button class="popup-button-hide" title="Hide/Show Waypoint">
-                    <i class="far fa-eye"></i>
+                    <i class="far fa-solid fa-flag"></i>
                 </button>
                 <button class="popup-button-delete" title="Delete Waypoint">
                     <i class="fa-solid fa-trash"></i>
@@ -43,7 +43,8 @@
                 hx-target="#twist-list"
                 hx-swap="innerHTML"
                 hx-on::after-request="location.hash = ''; this.reset()"
-                enctype="multipart/form-data">
+                hx-ext="json-enc">
+
                 <div class="form-group">
                     <label for="modal-name">Twist Name</label>
                     <input type="text" id="modal-name" name="name" required>
@@ -59,8 +60,6 @@
                     </fieldset>
                 </div>
 
-                <input type="hidden" name="waypoints_json" id="waypoints-data">
-                <input type="hidden" name="route_geometry_json" id="route-geometry-data">
                 <div id="route-status-indicator" class="gone"></div>
 
                 {{ render_form_buttons(submit_text="Create Twist", submit_disabled=true) }}

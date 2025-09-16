@@ -234,7 +234,7 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
             if (layer.getBounds().isValid()) {
                 map.fitBounds(layer.getBounds());
             } else {
-                layer.on('loaded', (e) => map.fitBounds(e.target.getBounds()));
+                layer.on('loaded', (event) => map.fitBounds(event.target.getBounds()));
             }
         }
     }
@@ -277,13 +277,21 @@ function writeToStatus(element, message, mode = 'w') {
  * @param {object} waypoint The waypoint object.
  * @param {HTMLElement} hideIcon The <i> element for the icon.
  */
-function setWaypointHideIcon(waypoint, hideIcon) {
+function configureHiddenWaypointPopup(waypoint, hideIcon, nameInput) {
     if (waypoint.isHidden) {
-        hideIcon.classList.remove('fa-eye');
-        hideIcon.classList.add('fa-eye-slash');
+        hideIcon.classList.remove('fa-solid');
+        hideIcon.classList.add('fa-regular');
+
+        // Disable the input and set its text
+        nameInput.disabled = true;
+        nameInput.value = 'Shaping Point';
     } else {
-        hideIcon.classList.remove('fa-eye-slash');
-        hideIcon.classList.add('fa-eye');
+        hideIcon.classList.remove('fa-regular');
+        hideIcon.classList.add('fa-solid');
+
+        // Re-enable the input and restore its original name (if any)
+        nameInput.disabled = false;
+        nameInput.value = waypoint.name;
     }
 }
 
@@ -325,12 +333,12 @@ function createPopupContent(marker) {
     const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
     hideButton.classList.toggle('gone', isStart || isEnd);
 
-    setWaypointHideIcon(waypoint, hideIcon)
+    configureHiddenWaypointPopup(waypoint, hideIcon, nameInput)
 
     // Hide button
     hideButton.addEventListener('click', () => {
         waypoint.isHidden = !waypoint.isHidden;
-        setWaypointHideIcon(waypoint, hideIcon)
+        configureHiddenWaypointPopup(waypoint, hideIcon, nameInput)
         updateMarkerIcons();
     });
 
@@ -465,16 +473,7 @@ finalizeTwistButton.addEventListener('click', () => {
     // Check if there's a route to save
     const waypointsToSend = waypoints.filter(wp => !wp.isHidden);
     if (waypointsToSend.length > 1 && newRouteLine) {
-        const waypointsForJson = waypointsToSend.map(wp => ({
-            lat: wp.latlng.lat,
-            lng: wp.latlng.lng,
-            name: wp.name
-        }));
-        document.querySelector('#waypoints-data').value = JSON.stringify(waypointsForJson);
-
         const routeLatLngs = newRouteLine.getLatLngs();
-        const routeForJson = routeLatLngs.map(coord => ({ lat: coord.lat, lng: coord.lng }));
-        document.querySelector('#route-geometry-data').value = JSON.stringify(routeForJson);
 
         // Enable submission of form
         const submitButton = twistForm.querySelector('[type="submit"]');
@@ -546,9 +545,51 @@ map.on('click', function(e) {
     updateMarkerIcons();
 });
 
+(function() {
+    // Save the original send method so we can call it later
+    const originalSend = XMLHttpRequest.prototype.send;
+
+    // Override XHR send to intercept outgoing requests
+    XMLHttpRequest.prototype.send = function(body) {
+        // Check if this is a POST request to /twist
+        if (this._url && this._url.endsWith('/twist') && this._method === 'POST') {
+            // Serialize JSON
+            bodyJSON = JSON.parse(body);
+
+            // Build payload
+            const waypointsToSend = waypoints.filter(wp => !wp.isHidden);
+            bodyJSON.waypoints = waypointsToSend.map(wp => ({
+                lat: wp.latlng.lat,
+                lng: wp.latlng.lng,
+                name: wp.name
+            }));
+            bodyJSON.route_geometry = newRouteLine.getLatLngs().map(coord => ({ lat: coord.lat, lng: coord.lng }));
+
+            // Stringify JSON
+            body = JSON.stringify(bodyJSON);
+        }
+        // Call the original send function to actually send the request
+        return originalSend.apply(this, arguments);
+    };
+
+    // Save the original open method
+    const originalOpen = XMLHttpRequest.prototype.open;
+
+    // Override XHR open to capture the method and URL (for send)
+    XMLHttpRequest.prototype.open = function(method, url) {
+        this._method = method;
+        this._url = url;
+        return originalOpen.apply(this, arguments);
+    };
+})();
+
 // HTMX hook for cleanup, only listening on the Twist form
 twistForm.addEventListener('htmx:afterRequest', function() {
     setTimeout(() => {
         stopTwistCreation();
     }, 100);
+});
+
+document.body.addEventListener('htmx:afterRequest', function() {
+    console.log("post request")
 });

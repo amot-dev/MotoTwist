@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -14,12 +15,20 @@ import uvicorn
 from config import *
 from database import apply_migrations, wait_for_db
 from models import Twist, PavedRating, UnpavedRating
+from schemas import TwistCreate
 from utility import *
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="TODO")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Catches Pydantic's validation errors and returns a neat HTTPException.
+    """
+    raise_http("Error validating data", status_code=422, exception=exc)
 
 @app.get("/", response_class=HTMLResponse)
 async def render_index(request: Request, db: Session = Depends(get_db)):
@@ -36,37 +45,23 @@ async def render_index(request: Request, db: Session = Depends(get_db)):
 @app.post("/twist", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
-    name: str = Form(...),
-    is_paved_str: str = Form(..., alias="is_paved"),
-    waypoints_json: str = Form(...),
-    route_geometry_json: str = Form(...),
+    twist_data: TwistCreate,
     db: Session = Depends(get_db)
 ):
     """
     Handles the creation of a new Twist.
     """
+    snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, twist_data.route_geometry)
 
-    is_paved = is_paved_str.lower() == "true"
+    # Convert Pydantic model lists to dictionary lists before saving to JSONB columns
+    waypoints_for_db = [wp.model_dump() for wp in snapped_waypoints]
+    geometry_for_db = [coord.model_dump() for coord in twist_data.route_geometry]
 
-    try:
-        waypoints_data = json.loads(waypoints_json)
-        route_geometry_data = json.loads(route_geometry_json)
-
-        if not isinstance(waypoints_data, list) or len(waypoints_data) < 2:
-            raise_http("At least two waypoints are required to create a Twist", status_code=422)
-        if not isinstance(route_geometry_data, list):
-            raise_http("Route data not properly formed", status_code=422)
-
-        snapped_waypoints_data = snap_waypoints_to_route(waypoints_data, route_geometry_data)
-
-    except json.JSONDecodeError as e:
-        raise_http("Invalid or malformed coordinate data submitted", status_code=422, exception=e)
-    
     twist = Twist(
-        name=name,
-        is_paved=is_paved,
-        waypoints=snapped_waypoints_data,
-        route_geometry=route_geometry_data
+        name=twist_data.name,
+        is_paved=twist_data.is_paved,
+        waypoints=waypoints_for_db,
+        route_geometry=geometry_for_db
     )
     db.add(twist)
     db.commit()

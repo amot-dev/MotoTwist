@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from config import *
 from database import SessionLocal
 from models import Twist, PavedRating, UnpavedRating
+from schemas import Coordinate, Waypoint
 
 def get_db():
     """
@@ -57,53 +58,53 @@ async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> 
         if value is not None
     } if averages else {}
 
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_distance(p1: Coordinate, p2: Coordinate) -> float:
     """
     Calculates the distance between two points on Earth using the Haversine formula.
     Returns the distance in kilometers.
     """
     R = 6371.0  # Earth radius in kilometers
 
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
+    lat1_rad = math.radians(p1.lat)
+    lng1_rad = math.radians(p1.lng)
+    lat2_rad = math.radians(p2.lat)
+    lng2_rad = math.radians(p2.lng)
 
-    dlon = lon2_rad - lon1_rad
+    dlng = lng2_rad - lng1_rad
     dlat = lat2_rad - lat1_rad
 
-    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng / 2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     distance = R * c
     return distance
 
-def snap_waypoints_to_route(waypoints_data, route_geometry_data):
+def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coordinate]) -> list[Waypoint]:
     """
-    Maps waypoints in a list of dictionaries to a route track.
+    Maps a list of Waypoint objects to a route track of Coordinate objects.
     - The first waypoint is mapped to the first trackpoint.
     - The last waypoint is mapped to the last trackpoint.
     - Intermediate waypoints are mapped to their nearest trackpoint.
 
-    Returns a new list of modified waypoints.
+    Returns a new list of modified Waypoint objects.
     """
-    if not route_geometry_data or not waypoints_data or len(waypoints_data) < 2:
-        return waypoints_data
+    if not route_geometry or not waypoints or len(waypoints) < 2:
+        return waypoints
 
     # Create a deep copy to avoid modifying the original list
-    snapped_waypoints = deepcopy(waypoints_data)
+    snapped_waypoints = deepcopy(waypoints)
     num_waypoints = len(snapped_waypoints)
-    num_trackpoints = len(route_geometry_data)
+    num_trackpoints = len(route_geometry)
 
     # Handle the first waypoint
-    first_trackpoint = route_geometry_data[0]
-    snapped_waypoints[0]['lat'] = first_trackpoint['lat']
-    snapped_waypoints[0]['lng'] = first_trackpoint['lng']
+    first_trackpoint = route_geometry[0]
+    snapped_waypoints[0].lat = first_trackpoint.lat
+    snapped_waypoints[0].lng = first_trackpoint.lng
 
     # Handle the last waypoint
-    last_trackpoint = route_geometry_data[-1]
-    snapped_waypoints[-1]['lat'] = last_trackpoint['lat']
-    snapped_waypoints[-1]['lng'] = last_trackpoint['lng']
+    last_trackpoint = route_geometry[-1]
+    snapped_waypoints[-1].lat = last_trackpoint.lat
+    snapped_waypoints[-1].lng = last_trackpoint.lng
 
     # Handle intermediate waypoints with forward search
     last_match_index = 0
@@ -117,19 +118,16 @@ def snap_waypoints_to_route(waypoints_data, route_geometry_data):
 
             # Start searching from the last matched trackpoint index
             for j in range(last_match_index, num_trackpoints):
-                trackpoint = route_geometry_data[j]
-                distance = haversine_distance(
-                    waypoint['lat'], waypoint['lng'],
-                    trackpoint['lat'], trackpoint['lng']
-                )
+                trackpoint = route_geometry[j]
+                distance = haversine_distance(waypoint, trackpoint)
                 if distance < min_distance:
                     min_distance = distance
                     closest_trackpoint_index = j
 
             # Update waypoint to the closest point found
-            closest_trackpoint = route_geometry_data[closest_trackpoint_index]
-            waypoint['lat'] = closest_trackpoint['lat']
-            waypoint['lng'] = closest_trackpoint['lng']
+            closest_trackpoint = route_geometry[closest_trackpoint_index]
+            waypoint.lat = closest_trackpoint.lat
+            waypoint.lng = closest_trackpoint.lng
 
             # Update the starting point for the next search
             last_match_index = closest_trackpoint_index

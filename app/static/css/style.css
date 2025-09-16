@@ -186,7 +186,6 @@ ul {
     color: var(--text-offwhite) !important;
 }
 
-
 .create-waypoint-popup {
     display: flex;
     align-items: center;
@@ -203,6 +202,12 @@ ul {
     font-size: 1rem;
     color: var(--text-offwhite);
     background-color: var(--bg-charcoal);
+}
+.create-waypoint-name-input:disabled {
+    opacity: 0.6;
+    border-color: var(--panel-slate);
+    background-color: var(--panel-slate);
+    /* cursor: not-allowed; */
 }
 
 .popup-buttons {
