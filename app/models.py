@@ -38,6 +38,9 @@ class PavedRating(Base):
     twist_id = Column(Integer, ForeignKey("twists.id"))
     twist = relationship("Twist", back_populates="paved_ratings")
 
+    def __repr__(self):
+        return f"[{self.id}] (Paved)"
+
 class UnpavedRating(Base):
     __tablename__ = "unpaved_ratings"
 
@@ -52,3 +55,6 @@ class UnpavedRating(Base):
 
     twist_id = Column(Integer, ForeignKey("twists.id"))
     twist = relationship("Twist", back_populates="unpaved_ratings")
+
+    def __repr__(self):
+        return f"[{self.id}] (Unpaved)"

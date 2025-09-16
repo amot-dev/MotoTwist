@@ -56,24 +56,3 @@ document.body.addEventListener('htmx:responseError', function(event) {
     // Display the flash with an orange accent
     flash(errorMessage, 5000, backgroundColor=accentOrange);
 });
-
-/**
- * Autofills a text input with the name of a selected file, minus its extension.
- *
- * This function is designed to be called from the 'onchange' event of a file
- * input. It only populates the target input if that field is currently empty,
- * preserving any value previously entered by the user.
- *
- * @param {HTMLElement} fileInput - The file input element that triggered the function.
- * @param {string} targetInputId - The ID of the text input field to populate.
- */
-function autofillFromFilename(fileInput, targetInputId) {
-    const nameInput = document.getElementById(targetInputId);
-
-    // Only proceed if the file input has a file and the name field is empty
-    if (fileInput.files.length > 0 && nameInput.value === '') {
-        const fullFilename = fileInput.files[0].name;
-        const nameWithoutExtension = fullFilename.replace(/\.[^/.]+$/, '');
-        nameInput.value = nameWithoutExtension;
-    }
-}

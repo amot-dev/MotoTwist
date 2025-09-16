@@ -1,4 +1,4 @@
-{% from "fragments/_macros.html" import render_modal_button, render_modal_content, render_rating %}
+{% from "fragments/_macros.html" import render_modal_content, render_rating %}
 
 {% call render_modal_content(twist.name) %}
     <div id="rating-list" data-paved="{{ twist.is_paved | lower }}">

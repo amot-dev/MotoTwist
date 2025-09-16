@@ -7,8 +7,9 @@ from fastapi.templating import Jinja2Templates
 from humanize import ordinal
 import json
 import os
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import load_only, selectinload, Session
 from starlette.middleware.sessions import SessionMiddleware
+from time import time
 import uuid
 import uvicorn
 
@@ -29,6 +30,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     Catches Pydantic's validation errors and returns a neat HTTPException.
     """
     raise_http("Error validating data", status_code=422, exception=exc)
+
+@app.middleware("http")
+async def log_process_time(request: Request, call_next):
+    start_time = time()
+    response = await call_next(request)
+    process_time = (time() - start_time) * 1000
+
+    logger.debug(f"Request processing took {process_time:.2f}ms")
+
+    return response
 
 @app.get("/", response_class=HTMLResponse)
 async def render_index(request: Request, db: Session = Depends(get_db)):
@@ -57,6 +68,7 @@ async def create_twist(
     waypoints_for_db = [wp.model_dump() for wp in snapped_waypoints]
     geometry_for_db = [coord.model_dump() for coord in twist_data.route_geometry]
 
+    # Create the new Twist
     twist = Twist(
         name=twist_data.name,
         is_paved=twist_data.is_paved,
@@ -65,10 +77,12 @@ async def create_twist(
     )
     db.add(twist)
     db.commit()
-    logger.debug(f"Created twist with id '{twist.id}'")
+    logger.debug(f"Created twist '{twist}'")
 
     # Render the twist list fragment with the new data
-    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
+    twists = db.query(Twist).options(
+        load_only(Twist.name, Twist.is_paved)
+    ).order_by(Twist.name).all()
 
     events = {
         "twistAdded":  str(twist.id),
@@ -86,20 +100,13 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
     """
     Deletes a twist and all related ratings.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
-    if not twist:
+    rows_deleted = db.query(Twist).filter(Twist.id == twist_id).delete(synchronize_session=False)
+    if rows_deleted == 0:
+        db.rollback()
         raise_http("Twist not found", status_code=404)
 
-    logger.debug(f"Attempting to delete twist '{twist.name}'")
-
-    twist_id = twist.id
-    db.delete(twist)
     db.commit()
-
     logger.debug(f"Deleted twist with id '{twist_id}'")
-
-    # Render the twist list fragment with the new data
-    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
 
     events = {
         "twistDeleted":  str(twist_id),
@@ -116,7 +123,9 @@ async def get_twist_data(twist_id: int, db: Session = Depends(get_db)):
     """
     Fetches the geometry data for a given twist_id and returns it as JSON.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.waypoints, Twist.route_geometry)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
@@ -130,10 +139,12 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     """
     Handles the creation of a new rating.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.name, Twist.is_paved)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
-    logger.debug(f"Attempting to rate twist '{twist.name}'")
+    logger.debug(f"Attempting to rate twist '{twist}'")
 
     form_data = await request.form()
 
@@ -173,7 +184,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     new_rating = Rating(**new_rating_data, twist_id=twist_id)
     db.add(new_rating)
     db.commit()
-    logger.debug(f"Created {paved_str} rating with id '{new_rating.id}'")
+    logger.debug(f"Created rating '{new_rating}'")
 
     # Set a header to trigger a client-side event after the swap, passing a message
     events = {
@@ -192,7 +203,9 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     """
     Deletes a twist rating.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.is_paved)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
@@ -203,15 +216,13 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
         Rating = UnpavedRating
         paved_str = "unpaved"
 
-    # Delete the rating
-    logger.debug(f"Attempting to delete {paved_str} rating '{rating_id}' from twist '{twist.name}'")
-    delete_count = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
-
-    # Undo the empty transaction if nothing was deleted
-    if delete_count == 0:
+    rows_deleted = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
+    if rows_deleted == 0:
         db.rollback()
         raise_http("Rating not found for this twist", status_code=404)
+
     db.commit()
+    logger.debug(f"Deleted rating with id '{rating_id}' from twist with id '{twist.id}'")
 
     # Empty response to "delete" the card
     remaining_ratings_count = db.query(Rating).filter(Rating.twist_id == twist_id).count()
@@ -232,7 +243,9 @@ async def render_twist_list(request: Request, db: Session = Depends(get_db)):
     """
     Returns an HTML fragment containing the sorted list of twists.
     """
-    twists = db.query(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name).all()
+    twists = db.query(Twist).options(
+        load_only(Twist.name, Twist.is_paved)
+    ).order_by(Twist.name).all()
 
     # Set a header to trigger a client-side event after the swap
     events = {
@@ -250,7 +263,9 @@ async def render_rating_dropdown(request: Request, twist_id: int, db: Session = 
     """
     Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.is_paved)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
@@ -265,7 +280,9 @@ async def render_modal_rate_twist(request: Request, twist_id: int, db: Session =
     """
     Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.name, Twist.is_paved)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
@@ -285,7 +302,11 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
     """
     Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.name, Twist.is_paved).
+        selectinload(Twist.paved_ratings),
+        selectinload(Twist.unpaved_ratings)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
@@ -329,7 +350,9 @@ async def render_modal_delete_twist(request: Request, twist_id: int, db: Session
     """
     Returns an HTML fragment for the twist deletion confirmation modal.
     """
-    twist = db.query(Twist).filter(Twist.id == twist_id).first()
+    twist = db.query(Twist).options(
+        load_only(Twist.name)
+    ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
 
