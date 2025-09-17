@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, SmallInteger, String, Date
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -14,7 +14,7 @@ class Twist(Base):
 
     waypoints = Column(JSONB, nullable=False)
     route_geometry = Column(JSONB, nullable=False)
-    simplification_tolerance_m = Column(Integer)
+    simplification_tolerance_m = Column(SmallInteger)
 
     paved_ratings = relationship("PavedRating", back_populates="twist")
     unpaved_ratings = relationship("UnpavedRating", back_populates="twist")
@@ -22,7 +22,6 @@ class Twist(Base):
     def __repr__(self):
         paved = "Paved" if self.is_paved else "Unpaved"
         return f"[{self.id}] {self.name} ({paved})"
-    
 
 class PavedRating(Base):
     __tablename__ = "paved_ratings"
@@ -30,11 +29,11 @@ class PavedRating(Base):
     id = Column(Integer, primary_key=True)
     rating_date = Column(Date, default=datetime.date.today)
 
-    traffic = Column(Integer, doc="Level of vehicle traffic on the road")
-    scenery = Column(Integer, doc="Visual appeal of surroundings")
-    pavement = Column(Integer, doc="Quality of road surface")
-    twistyness = Column(Integer, doc="Tightness and frequency of turns")
-    intensity = Column(Integer, doc="Overall riding energy the road draws out, from mellow to adrenaline-pumping")
+    traffic = Column(SmallInteger, doc="Level of vehicle traffic on the road")
+    scenery = Column(SmallInteger, doc="Visual appeal of surroundings")
+    pavement = Column(SmallInteger, doc="Quality of road surface")
+    twistyness = Column(SmallInteger, doc="Tightness and frequency of turns")
+    intensity = Column(SmallInteger, doc="Overall riding energy the road draws out, from mellow to adrenaline-pumping")
 
     twist_id = Column(Integer, ForeignKey("twists.id", ondelete="CASCADE"))
     twist = relationship("Twist", back_populates="paved_ratings")
@@ -48,11 +47,11 @@ class UnpavedRating(Base):
     id = Column(Integer, primary_key=True)
     rating_date = Column(Date, default=datetime.date.today)
 
-    traffic = Column(Integer, doc="Frequency of other vehicles or trail users")
-    scenery = Column(Integer, doc="Visual appeal of surroundings")
-    surface_consistency = Column(Integer, doc="Predictability of traction across the route")
-    technicality = Column(Integer, doc="Challenge level from terrain features like rocks, ruts, sand, or mud")
-    flow = Column(Integer, doc="Smoothness of the trail without constant disruptions or awkward sections")
+    traffic = Column(SmallInteger, doc="Frequency of other vehicles or trail users")
+    scenery = Column(SmallInteger, doc="Visual appeal of surroundings")
+    surface_consistency = Column(SmallInteger, doc="Predictability of traction across the route")
+    technicality = Column(SmallInteger, doc="Challenge level from terrain features like rocks, ruts, sand, or mud")
+    flow = Column(SmallInteger, doc="Smoothness of the trail without constant disruptions or awkward sections")
 
     twist_id = Column(Integer, ForeignKey("twists.id", ondelete="CASCADE"))
     twist = relationship("Twist", back_populates="unpaved_ratings")
