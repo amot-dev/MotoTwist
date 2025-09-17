@@ -49,6 +49,10 @@ def calculate_tolerance_from_m(tolerance_m_str: str) -> int | None:
         logger.exception(f"Invalid value '{tolerance_m_str}' in TWIST_SIMPLIFICATION_TOLERANCE_M")
 TWIST_SIMPLIFICATION_TOLERANCE_M=calculate_tolerance_from_m(os.environ.get("TWIST_SIMPLIFICATION_TOLERANCE_M", "0"))
 
+# OSM and OSRM
+OSM_URL = os.environ.get("OSM_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+OSRM_URL = os.environ.get("OSRM_URL", "https://router.project-osrm.org")
+
 # Criteria columns
 RATING_EXCLUDED_COLUMNS = {"id", "twist_id", "rating_date"}
 RATING_CRITERIA_PAVED = [

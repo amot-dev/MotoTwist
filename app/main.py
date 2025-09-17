@@ -50,6 +50,8 @@ async def render_index(request: Request, db: Session = Depends(get_db)):
     flash_message = request.session.pop('flash', None)
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "osm_url": OSM_URL,
+        "osrm_url": OSRM_URL,
         "flash": flash_message
     })
 
