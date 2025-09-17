@@ -40,9 +40,14 @@ logging.setLogRecordFactory(record_factory)
 # Set app logger
 logger = logging.getLogger("mototwist")
 
-# GPX storage path (don't change unless you know what you're doing)
-GPX_STORAGE_PATH = Path("/gpx")
-GPX_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+# Twist simplification tolerance
+def calculate_tolerance_from_m(tolerance_m_str: str) -> int | None:
+    try:
+        tolerance_m = int(tolerance_m_str.strip().rstrip("mM"))
+        return tolerance_m
+    except Exception:
+        logger.exception(f"Invalid value '{tolerance_m_str}' in TWIST_SIMPLIFICATION_TOLERANCE_M")
+TWIST_SIMPLIFICATION_TOLERANCE_M=calculate_tolerance_from_m(os.environ.get("TWIST_SIMPLIFICATION_TOLERANCE_M", "0"))
 
 # Criteria columns
 RATING_EXCLUDED_COLUMNS = {"id", "twist_id", "rating_date"}

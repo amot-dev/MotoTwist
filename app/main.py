@@ -20,7 +20,7 @@ from schemas import TwistCreate
 from utility import *
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="TODO")
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET_KEY", "mototwist"))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -62,22 +62,24 @@ async def create_twist(
     """
     Handles the creation of a new Twist.
     """
-    snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, twist_data.route_geometry)
+    simplified_route, tolerance = simplify_route(twist_data.route_geometry)
+    snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
     # Convert Pydantic model lists to dictionary lists before saving to JSONB columns
     waypoints_for_db = [wp.model_dump() for wp in snapped_waypoints]
-    geometry_for_db = [coord.model_dump() for coord in twist_data.route_geometry]
+    geometry_for_db = [coord.model_dump() for coord in simplified_route]
 
     # Create the new Twist
     twist = Twist(
         name=twist_data.name,
         is_paved=twist_data.is_paved,
         waypoints=waypoints_for_db,
-        route_geometry=geometry_for_db
+        route_geometry=geometry_for_db,
+        simplification_tolerance_m=tolerance
     )
     db.add(twist)
     db.commit()
-    logger.debug(f"Created twist '{twist}'")
+    logger.debug(f"Created Twist '{twist}'")
 
     # Render the twist list fragment with the new data
     twists = db.query(Twist).options(
@@ -106,7 +108,7 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
         raise_http("Twist not found", status_code=404)
 
     db.commit()
-    logger.debug(f"Deleted twist with id '{twist_id}'")
+    logger.debug(f"Deleted Twist with id '{twist_id}'")
 
     events = {
         "twistDeleted":  str(twist_id),
@@ -144,7 +146,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     ).filter(Twist.id == twist_id).first()
     if not twist:
         raise_http("Twist not found", status_code=404)
-    logger.debug(f"Attempting to rate twist '{twist}'")
+    logger.debug(f"Attempting to rate Twist '{twist}'")
 
     form_data = await request.form()
 
@@ -219,10 +221,10 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     rows_deleted = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
     if rows_deleted == 0:
         db.rollback()
-        raise_http("Rating not found for this twist", status_code=404)
+        raise_http("Rating not found for this Twist", status_code=404)
 
     db.commit()
-    logger.debug(f"Deleted rating with id '{rating_id}' from twist with id '{twist.id}'")
+    logger.debug(f"Deleted rating with id '{rating_id}' from Twist with id '{twist.id}'")
 
     # Empty response to "delete" the card
     remaining_ratings_count = db.query(Rating).filter(Rating.twist_id == twist_id).count()
