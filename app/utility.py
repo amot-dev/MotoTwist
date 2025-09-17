@@ -1,6 +1,7 @@
 from copy import deepcopy
 from fastapi import HTTPException
 import math
+from shapely.geometry import LineString
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -133,3 +134,32 @@ def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coor
             last_match_index = closest_trackpoint_index
 
     return snapped_waypoints
+
+def simplify_route(coordinates: list[Coordinate], epsilon: float | None = None) -> (list[Coordinate], int | None):
+    """
+    Simplifies a route's coordinates, returning the new list and tolerance in meters.
+    The tolerance is taken from the provided `epsilon` (in degrees) or falls back
+    to the global `TWIST_SIMPLIFICATION_TOLERANCE_M` setting if epsilon is None.
+    """
+    # Approximation for 1 degree of latitude in meters
+    METERS_PER_DEGREE_APPROX = 111132
+
+    # Only simplify if more than 2 points
+    if len(coordinates) < 2:
+        return (coordinates, None)
+
+    # Calculate epsilon from env if not given
+    if epsilon is None:
+        if not TWIST_SIMPLIFICATION_TOLERANCE_M:
+            logger.debug("Twist simplification skipped due to unset tolerance")
+            return (coordinates, None)
+
+        logger.info(f"Simplifying Twist route with tolerance of {TWIST_SIMPLIFICATION_TOLERANCE_M}m")
+        epsilon = TWIST_SIMPLIFICATION_TOLERANCE_M / METERS_PER_DEGREE_APPROX
+
+    # Simplify route
+    line = LineString([(c.lat, c.lng) for c in coordinates])
+    simplified_line = line.simplify(epsilon, preserve_topology=True)
+    simplified_coordinates = [Coordinate(lat=x, lng=y) for x, y in simplified_line.coords]
+
+    return (simplified_coordinates, TWIST_SIMPLIFICATION_TOLERANCE_M)

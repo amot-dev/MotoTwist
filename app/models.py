@@ -14,6 +14,7 @@ class Twist(Base):
 
     waypoints = Column(JSONB, nullable=False)
     route_geometry = Column(JSONB, nullable=False)
+    simplification_tolerance_m = Column(Integer)
 
     paved_ratings = relationship("PavedRating", back_populates="twist")
     unpaved_ratings = relationship("UnpavedRating", back_populates="twist")
