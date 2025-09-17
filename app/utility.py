@@ -1,7 +1,7 @@
 from copy import deepcopy
 from fastapi import HTTPException
-import math
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
+from shapely.ops import nearest_points
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -59,79 +59,44 @@ async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> 
         if value is not None
     } if averages else {}
 
-def haversine_distance(p1: Coordinate, p2: Coordinate) -> float:
-    """
-    Calculates the distance between two points on Earth using the Haversine formula.
-    Returns the distance in kilometers.
-    """
-    R = 6371.0  # Earth radius in kilometers
-
-    lat1_rad = math.radians(p1.lat)
-    lng1_rad = math.radians(p1.lng)
-    lat2_rad = math.radians(p2.lat)
-    lng2_rad = math.radians(p2.lng)
-
-    dlng = lng2_rad - lng1_rad
-    dlat = lat2_rad - lat1_rad
-
-    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    distance = R * c
-    return distance
-
 def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coordinate]) -> list[Waypoint]:
     """
-    Maps a list of Waypoint objects to a route track of Coordinate objects.
+    Maps a list of Waypoints to a route track of Coordinates.
     - The first waypoint is mapped to the first trackpoint.
     - The last waypoint is mapped to the last trackpoint.
     - Intermediate waypoints are mapped to their nearest trackpoint.
 
-    Returns a new list of modified Waypoint objects.
+    Returns a new list of modified Waypoints.
     """
     if not route_geometry or not waypoints or len(waypoints) < 2:
         return waypoints
 
     # Create a deep copy to avoid modifying the original list
     snapped_waypoints = deepcopy(waypoints)
-    num_waypoints = len(snapped_waypoints)
-    num_trackpoints = len(route_geometry)
+    line = LineString([(coord.lat, coord.lng) for coord in route_geometry])
 
     # Handle the first waypoint
-    first_trackpoint = route_geometry[0]
-    snapped_waypoints[0].lat = first_trackpoint.lat
-    snapped_waypoints[0].lng = first_trackpoint.lng
+    first_coord = line.coords[0]
+    snapped_waypoints[0].lat = first_coord[0]
+    snapped_waypoints[0].lng = first_coord[1]
 
     # Handle the last waypoint
-    last_trackpoint = route_geometry[-1]
-    snapped_waypoints[-1].lat = last_trackpoint.lat
-    snapped_waypoints[-1].lng = last_trackpoint.lng
+    last_coord = line.coords[-1]
+    snapped_waypoints[-1].lat = last_coord[0]
+    snapped_waypoints[-1].lng = last_coord[1]
 
-    # Handle intermediate waypoints with forward search
-    last_match_index = 0
-    if num_waypoints > 2:
-        # Iterate through waypoints from the second to the second-to-last
-        for i in range(1, num_waypoints - 1):
+    # Handle intermediate waypoints
+    if len(snapped_waypoints) > 2:
+        for i in range(1, len(snapped_waypoints) - 1):
             waypoint = snapped_waypoints[i]
+            point = Point(waypoint.lat, waypoint.lng)
 
-            min_distance = float('inf')
-            closest_trackpoint_index = last_match_index
+            # Find the nearest point on the line to the waypoint's location
+            snapped_point = nearest_points(line, point)[0]
 
-            # Start searching from the last matched trackpoint index
-            for j in range(last_match_index, num_trackpoints):
-                trackpoint = route_geometry[j]
-                distance = haversine_distance(waypoint, trackpoint)
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_trackpoint_index = j
-
-            # Update waypoint to the closest point found
-            closest_trackpoint = route_geometry[closest_trackpoint_index]
-            waypoint.lat = closest_trackpoint.lat
-            waypoint.lng = closest_trackpoint.lng
-
-            # Update the starting point for the next search
-            last_match_index = closest_trackpoint_index
+            # Update the waypoint's coordinates
+            waypoint.lat = snapped_point.x
+            waypoint.lng = snapped_point.y
 
     return snapped_waypoints
 
