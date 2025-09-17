@@ -30,6 +30,37 @@ To get this application running, you will need to have **Docker** and **Docker C
 4.  **Access the application:**
     Open your web browser and navigate to `http://localhost:8000`.
 
+### Environment Variables
+
+Below is an overview of all available environment variables for MotoTwist.
+
+#### Application Options
+
+| Variable | Description | Default   |
+| - | - | - |
+| `TWIST_SIMPLIFICATION_TOLERANCE_M` | Sets the simplification tolerance for new Twist routes. A higher value (e.g., `"50m"`) removes more points and reduces storage size. Set to `"0m"` to disable. | `"30m"`   |
+
+#### Database Options
+
+These variables are required to connect to the PostgreSQL database.
+
+| Variable | Description | Default   |
+| - | - | - |
+| `POSTGRES_HOST` | The hostname of the database server. In Docker, this should match the service name. | `"db"` |
+| `POSTGRES_PORT` | The port the database is running on. | `5432` |
+| `POSTGRES_DB` | The name of the database to connect to. | `"mototwist"` |
+| `POSTGRES_USER` | The username for the database connection. | `"mototwist"` |
+| `POSTGRES_PASSWORD` | The password for the database connection. **This must be changed for production!** | `"changethis"` |
+
+#### Developer Options
+
+These settings are useful for local development and debugging.
+
+| Variable | Description | Default   |
+| - | - | - |
+| `LOG_LEVEL` | Sets the application's logging level. Common values are `DEBUG`, `INFO`, `WARNING`. | `INFO` |
+| `UVICORN_RELOAD` | If set to `true`, the server will automatically restart when code changes are detected. (Also requires mounting the source as a bind mount). | `false` |
+
 ### Usage
 
 1.  **Drawing a New Twist:**
