@@ -4,6 +4,7 @@ humanize
 itsdangerous
 jinja2
 psycopg2-binary
+pydantic-settings
 python-multipart
 shapely
 sqlalchemy

@@ -1,7 +1,7 @@
 from datetime import date, timedelta
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from humanize import ordinal
@@ -10,29 +10,33 @@ import os
 from sqlalchemy.orm import load_only, selectinload, Session
 from starlette.middleware.sessions import SessionMiddleware
 from time import time
-import uuid
+from typing import Awaitable, Callable, Never
 import uvicorn
 
-from config import *
+from config import logger
 from database import apply_migrations, wait_for_db
 from models import Twist, PavedRating, UnpavedRating
-from schemas import TwistCreate
+from settings import settings
+from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, WaypointDict
 from utility import *
 
+
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET_KEY", "mototwist"))
+app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> None:
     """
     Catches Pydantic's validation errors and returns a neat HTTPException.
     """
     raise_http("Error validating data", status_code=422, exception=exc)
 
+
 @app.middleware("http")
-async def log_process_time(request: Request, call_next):
+async def log_process_time(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     start_time = time()
     response = await call_next(request)
     process_time = (time() - start_time) * 1000
@@ -41,8 +45,9 @@ async def log_process_time(request: Request, call_next):
 
     return response
 
+
 @app.get("/", response_class=HTMLResponse)
-async def render_index(request: Request, db: Session = Depends(get_db)):
+async def render_index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     This endpoint serves the main page of the application.
     """
@@ -50,17 +55,18 @@ async def render_index(request: Request, db: Session = Depends(get_db)):
     flash_message = request.session.pop('flash', None)
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "osm_url": OSM_URL,
-        "osrm_url": OSRM_URL,
+        "osm_url": settings.OSM_URL,
+        "osrm_url": settings.OSRM_URL,
         "flash": flash_message
     })
+
 
 @app.post("/twist", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
     twist_data: TwistCreate,
     db: Session = Depends(get_db)
-):
+) -> HTMLResponse:
     """
     Handles the creation of a new Twist.
     """
@@ -68,8 +74,14 @@ async def create_twist(
     snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
     # Convert Pydantic model lists to dictionary lists before saving to JSONB columns
-    waypoints_for_db = [wp.model_dump() for wp in snapped_waypoints]
-    geometry_for_db = [coord.model_dump() for coord in simplified_route]
+    waypoints_for_db = [
+        cast(WaypointDict, wp.model_dump())
+        for wp in snapped_waypoints
+    ]
+    geometry_for_db = [
+        cast(CoordinateDict, coord.model_dump())
+        for coord in simplified_route
+    ]
 
     # Create the new Twist
     twist = Twist(
@@ -99,8 +111,9 @@ async def create_twist(
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
+
 @app.delete("/twists/{twist_id}", response_class=HTMLResponse)
-async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
+async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist and all related ratings.
     """
@@ -122,8 +135,9 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
+
 @app.get("/twists/{twist_id}/geometry", response_class=JSONResponse)
-async def get_twist_data(twist_id: int, db: Session = Depends(get_db)):
+async def get_twist_data(twist_id: int, db: Session = Depends(get_db)) -> TwistGeometryData:
     """
     Fetches the geometry data for a given twist_id and returns it as JSON.
     """
@@ -138,8 +152,9 @@ async def get_twist_data(twist_id: int, db: Session = Depends(get_db)):
         "route_geometry": twist.route_geometry
     }
 
+
 @app.post("/twists/{twist_id}/rate", response_class=HTMLResponse)
-async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
+async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Handles the creation of a new rating.
     """
@@ -155,16 +170,17 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     if twist.is_paved:
         Rating = PavedRating
         criteria_list = RATING_CRITERIA_PAVED
-        paved_str = "paved"
     else:
         Rating = UnpavedRating
         criteria_list = RATING_CRITERIA_UNPAVED
-        paved_str = "unpaved"
     valid_criteria = {criteria["name"] for criteria in criteria_list}
 
     # Build the dictionary for the new rating object
-    new_rating_data = {}
+    new_rating_data: dict[str, date | int] = {}
     for key, value in form_data.items():
+        if not is_form_value_string(value):
+            raise_http(f"Invalid value for '{key.replace("_", " ").title()}' criterion", status_code=422)
+
         # If the key from the form is a valid rating name, add it to the dict
         if key in valid_criteria:
             try:
@@ -182,7 +198,7 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
 
     # Check if we actually collected any ratings
     if not any(key in valid_criteria for key in new_rating_data):
-        raise_http("No valid rating data submitted", status_code=422, exception=e)
+        raise_http("No valid rating data submitted", status_code=422)
 
     # Create the new rating instance, linking it to the twist
     new_rating = Rating(**new_rating_data, twist_id=twist_id)
@@ -202,8 +218,9 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
-@app.delete("/twists/{twist_id}/ratings/{rating_id}")
-async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, db: Session = Depends(get_db)):
+
+@app.delete("/twists/{twist_id}/ratings/{rating_id}", response_class=HTMLResponse)
+async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist rating.
     """
@@ -213,12 +230,7 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     if not twist:
         raise_http("Twist not found", status_code=404)
 
-    if twist.is_paved:
-        Rating = PavedRating
-        paved_str = "paved"
-    else:
-        Rating = UnpavedRating
-        paved_str = "unpaved"
+    Rating = PavedRating if twist.is_paved else UnpavedRating
 
     rows_deleted = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
     if rows_deleted == 0:
@@ -242,8 +254,9 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
+
 @app.get("/twist-list", response_class=HTMLResponse)
-async def render_twist_list(request: Request, db: Session = Depends(get_db)):
+async def render_twist_list(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment containing the sorted list of twists.
     """
@@ -252,7 +265,7 @@ async def render_twist_list(request: Request, db: Session = Depends(get_db)):
     ).order_by(Twist.name).all()
 
     # Set a header to trigger a client-side event after the swap
-    events = {
+    events: dict[str, dict[Never, Never]] = {
         "twistsLoaded": {}
     }
     response = templates.TemplateResponse("fragments/twist_list.html", {
@@ -262,8 +275,9 @@ async def render_twist_list(request: Request, db: Session = Depends(get_db)):
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
+
 @app.get("/rating-dropdown/{twist_id}", response_class=HTMLResponse)
-async def render_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)):
+async def render_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
@@ -279,8 +293,9 @@ async def render_rating_dropdown(request: Request, twist_id: int, db: Session = 
         "average_ratings": await calculate_average_rating(db, twist, round_to=1)
     })
 
+
 @app.get("/modal-rate-twist/{twist_id}", response_class=HTMLResponse)
-async def render_modal_rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
+async def render_modal_rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
     """
@@ -301,8 +316,9 @@ async def render_modal_rate_twist(request: Request, twist_id: int, db: Session =
         "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED
     })
 
+
 @app.get("/modal-view-twist-ratings/{twist_id}", response_class=HTMLResponse)
-async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: Session = Depends(get_db)):
+async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
     """
@@ -326,11 +342,11 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
     sorted_ratings = sorted(ratings, key=lambda r: r.rating_date, reverse=True) if ratings else []
 
     # Structure data for the template
-    ratings_for_template = []
+    ratings_for_template: list[RatingListItem] = []
     for rating in sorted_ratings:
         ratings_dict = {
             key: value for key, value in rating.__dict__.items()
-            if key in criteria_names
+            if key in criteria_names and isinstance(value, int)
         }
         # Pre-format the date for easier display in the template
         ordinal_day = ordinal(rating.rating_date.day)
@@ -349,8 +365,9 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
         "ratings": ratings_for_template
     })
 
+
 @app.get("/modal-delete-twist/{twist_id}", response_class=HTMLResponse)
-async def render_modal_delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)):
+async def render_modal_delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment for the twist deletion confirmation modal.
     """
