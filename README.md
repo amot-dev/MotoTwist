@@ -39,6 +39,7 @@ Below is an overview of all available environment variables for MotoTwist.
 | Variable | Description | Default   |
 | - | - | - |
 | `TWIST_SIMPLIFICATION_TOLERANCE_M` | Sets the simplification tolerance for new Twist routes. A higher value (e.g., `"50m"`) removes more points and reduces storage size. Set to `"0m"` to disable. | `"30m"`   |
+| `SESSION_SECRET_KEY` | A long, random string used to cryptographically sign session cookies, preventing tampering. **This must be changed for production!** | `"changethis"` |
 
 #### Database Options
 

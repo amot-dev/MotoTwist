@@ -20,7 +20,7 @@ from schemas import TwistCreate
 from utility import *
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="TODO")
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET_KEY", "mototwist"))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
