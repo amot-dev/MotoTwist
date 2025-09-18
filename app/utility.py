@@ -2,15 +2,14 @@ from copy import deepcopy
 from fastapi import HTTPException
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from sqlalchemy import inspect, func
-from sqlalchemy.engine import Row
-from sqlalchemy.orm import Mapper, Session
+from sqlalchemy import func, inspect, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapper
 from starlette.datastructures import UploadFile
-from typing import Any, cast, NoReturn, TypeGuard
+from typing import cast, NoReturn, TypeGuard
 
 from config import logger
-from database import SessionLocal
-from models import Twist, PavedRating, UnpavedRating
+from models import PavedRating, UnpavedRating
 from settings import settings
 from schemas import AverageRating, Coordinate, RatingCriterion, Waypoint
 
@@ -27,17 +26,6 @@ RATING_CRITERIA_UNPAVED: list[RatingCriterion] = [
     for col in cast(Mapper[UnpavedRating], inspect(UnpavedRating)).columns
     if col.name not in RATING_EXCLUDED_COLUMNS
 ]
-
-
-def get_db():
-    """
-    Dependency to get a database session
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def raise_http(detail: str, status_code: int = 500, exception: Exception | None = None) -> NoReturn:
@@ -57,11 +45,11 @@ def is_form_value_string(value: UploadFile | str) -> TypeGuard[str]:
     return isinstance(value, str)
 
 
-async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> dict[str, AverageRating]:
+async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_is_paved: bool, round_to: int) -> dict[str, AverageRating]:
     """
     Calculates the average ratings for a twist.
     """
-    if twist.is_paved:
+    if twist_is_paved:
         target_model = PavedRating
         criteria_list = RATING_CRITERIA_PAVED
     else:
@@ -74,7 +62,10 @@ async def calculate_average_rating(db: Session, twist: Twist, round_to: int) -> 
 
     # Query averages for target ratings columns for this twist
     query_expressions = [func.avg(col).label(col.key) for col in criteria_columns]
-    averages: Row[Any] | None = db.query(*query_expressions).filter(target_model.twist_id == twist.id).first()
+    result = await session.execute(
+        select(*query_expressions).where(target_model.twist_id == twist_id)
+    )
+    averages = result.first()
 
     return {
         key: cast(AverageRating, {

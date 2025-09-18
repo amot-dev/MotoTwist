@@ -132,6 +132,12 @@ Follow these steps to set up and run the application in development mode.
 5.  **Start Developing:**
     More thorough documentation for this is coming (maybe), but I'm sure you can figure it out.
 
+> [!TIP]
+> You may run mototwist in an interactive terminal with:
+> ```bash
+> docker compose run --service-ports mototwist
+> ```
+
 6.  **Migrate the database if needed:**
     If you make any model changes, you'll need to make a migration from them. All migrations are applied to the database on container restart.
     ```bash

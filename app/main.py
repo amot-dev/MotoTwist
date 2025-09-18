@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -7,24 +8,63 @@ from fastapi.templating import Jinja2Templates
 from humanize import ordinal
 import json
 import os
-from sqlalchemy.orm import load_only, selectinload, Session
-from starlette.middleware.sessions import SessionMiddleware
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import MultipleResultsFound, NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only, selectinload
 from time import time
 from typing import Awaitable, Callable, Never
 import uvicorn
 
 from config import logger
-from database import apply_migrations, wait_for_db
-from models import Twist, PavedRating, UnpavedRating
+from database import apply_migrations, get_db, wait_for_db
+from models import Twist, PavedRating, UnpavedRating, User
 from settings import settings
-from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, WaypointDict
+from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, UserCreate, UserRead, WaypointDict
+from users import auth_backend, fastapi_users, UserManager, get_user_db
 from utility import *
 
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend), prefix="/auth", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"]
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create initial admin user
+    async for session in get_db():
+        result = await session.execute(
+            select(func.count()).select_from(User)
+        )
+        user_count = result.scalar_one()
+        if user_count == 0:
+            user_data = UserCreate(
+                email=settings.MOTOTWIST_ADMIN_EMAIL,
+                password=settings.MOTOTWIST_ADMIN_PASSWORD,
+                is_active=True,
+                is_superuser=True,
+                is_verified=True,
+            )
+            user_db = await anext(get_user_db(session))
+            user_manager = UserManager(user_db)
+            await user_manager.create(user_data, safe=True)
+            logger.info(f"Admin user '{settings.MOTOTWIST_ADMIN_EMAIL}' created")
+        else:
+            logger.info("Admin user creation skipped")
+
+    yield
+
+    # Runs on shutdown
+    logger.info("Shutting down...")
 
 
 @app.exception_handler(RequestValidationError)
@@ -47,17 +87,15 @@ async def log_process_time(request: Request, call_next: Callable[[Request], Awai
 
 
 @app.get("/", response_class=HTMLResponse)
-async def render_index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_index(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     This endpoint serves the main page of the application.
     """
 
-    flash_message = request.session.pop('flash', None)
     return templates.TemplateResponse("index.html", {
         "request": request,
         "osm_url": settings.OSM_URL,
-        "osrm_url": settings.OSRM_URL,
-        "flash": flash_message
+        "osrm_url": settings.OSRM_URL
     })
 
 
@@ -65,7 +103,7 @@ async def render_index(request: Request, db: Session = Depends(get_db)) -> HTMLR
 async def create_twist(
     request: Request,
     twist_data: TwistCreate,
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Handles the creation of a new Twist.
@@ -91,14 +129,15 @@ async def create_twist(
         route_geometry=geometry_for_db,
         simplification_tolerance_m=tolerance
     )
-    db.add(twist)
-    db.commit()
+    session.add(twist)
+    await session.commit()
     logger.debug(f"Created Twist '{twist}'")
 
     # Render the twist list fragment with the new data
-    twists = db.query(Twist).options(
-        load_only(Twist.name, Twist.is_paved)
-    ).order_by(Twist.name).all()
+    results = await session.execute(
+        select(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name)
+    )
+    twists = results.all()
 
     events = {
         "twistAdded":  str(twist.id),
@@ -113,16 +152,17 @@ async def create_twist(
 
 
 @app.delete("/twists/{twist_id}", response_class=HTMLResponse)
-async def delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def delete_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist and all related ratings.
     """
-    rows_deleted = db.query(Twist).filter(Twist.id == twist_id).delete(synchronize_session=False)
-    if rows_deleted == 0:
-        db.rollback()
+    result = await session.execute(
+        delete(Twist).where(Twist.id == twist_id)
+    )
+    if result.rowcount == 0:
         raise_http("Twist not found", status_code=404)
 
-    db.commit()
+    await session.commit()
     logger.debug(f"Deleted Twist with id '{twist_id}'")
 
     events = {
@@ -137,15 +177,19 @@ async def delete_twist(request: Request, twist_id: int, db: Session = Depends(ge
 
 
 @app.get("/twists/{twist_id}/geometry", response_class=JSONResponse)
-async def get_twist_data(twist_id: int, db: Session = Depends(get_db)) -> TwistGeometryData:
+async def get_twist_data(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> TwistGeometryData:
     """
     Fetches the geometry data for a given twist_id and returns it as JSON.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.waypoints, Twist.route_geometry)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.execute(
+            select(Twist.waypoints, Twist.route_geometry).where(Twist.id == twist_id)
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     return {
         "waypoints": twist.waypoints,
@@ -154,17 +198,23 @@ async def get_twist_data(twist_id: int, db: Session = Depends(get_db)) -> TwistG
 
 
 @app.post("/twists/{twist_id}/rate", response_class=HTMLResponse)
-async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def rate_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Handles the creation of a new rating.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.name, Twist.is_paved)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
-    logger.debug(f"Attempting to rate Twist '{twist}'")
+    try:
+        result = await session.scalars(
+            select(Twist).where(Twist.id == twist_id).options(
+                load_only(Twist.id, Twist.name, Twist.is_paved)
+            )
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
+    logger.debug(f"Attempting to rate Twist '{twist}'")
     form_data = await request.form()
 
     if twist.is_paved:
@@ -202,8 +252,8 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
 
     # Create the new rating instance, linking it to the twist
     new_rating = Rating(**new_rating_data, twist_id=twist_id)
-    db.add(new_rating)
-    db.commit()
+    session.add(new_rating)
+    await session.commit()
     logger.debug(f"Created rating '{new_rating}'")
 
     # Set a header to trigger a client-side event after the swap, passing a message
@@ -213,35 +263,43 @@ async def rate_twist(request: Request, twist_id: int, db: Session = Depends(get_
     response = templates.TemplateResponse("fragments/rating_dropdown.html", {
         "request": request,
         "twist_id": twist_id,
-        "average_ratings": await calculate_average_rating(db, twist, round_to=1)
+        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
     })
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
 
 @app.delete("/twists/{twist_id}/ratings/{rating_id}", response_class=HTMLResponse)
-async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist rating.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.is_paved)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.scalars(
+            select(Twist.is_paved).where(Twist.id == twist_id)
+        )
+        twist_is_paved = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
-    Rating = PavedRating if twist.is_paved else UnpavedRating
+    Rating = PavedRating if twist_is_paved else UnpavedRating
 
-    rows_deleted = db.query(Rating).filter(Rating.id == rating_id, Rating.twist_id == twist_id).delete(synchronize_session=False)
-    if rows_deleted == 0:
-        db.rollback()
-        raise_http("Rating not found for this Twist", status_code=404)
+    result = await session.execute(
+        delete(Rating).where(Rating.id == rating_id, Rating.twist_id == twist_id)
+    )
+    if result.rowcount == 0:
+        raise_http("Rating with id '{rating_id}' not found for Twist with id '{twist_id}'", status_code=404)
 
-    db.commit()
-    logger.debug(f"Deleted rating with id '{rating_id}' from Twist with id '{twist.id}'")
+    await session.commit()
+    logger.debug(f"Deleted rating with id '{rating_id}' from Twist with id '{twist_id}'")
 
     # Empty response to "delete" the card
-    remaining_ratings_count = db.query(Rating).filter(Rating.twist_id == twist_id).count()
+    result = await session.execute(
+        select(func.count()).select_from(Rating).where(Rating.twist_id == twist_id)
+    )
+    remaining_ratings_count = result.scalar_one()
     if remaining_ratings_count > 0:
         response = HTMLResponse(content="")
     else:
@@ -256,13 +314,14 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, d
 
 
 @app.get("/twist-list", response_class=HTMLResponse)
-async def render_twist_list(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_twist_list(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment containing the sorted list of twists.
     """
-    twists = db.query(Twist).options(
-        load_only(Twist.name, Twist.is_paved)
-    ).order_by(Twist.name).all()
+    results = await session.execute(
+        select(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name)
+    )
+    twists = results.all()
 
     # Set a header to trigger a client-side event after the swap
     events: dict[str, dict[Never, Never]] = {
@@ -277,33 +336,41 @@ async def render_twist_list(request: Request, db: Session = Depends(get_db)) -> 
 
 
 @app.get("/rating-dropdown/{twist_id}", response_class=HTMLResponse)
-async def render_rating_dropdown(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_rating_dropdown(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.is_paved)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.execute(
+            select(Twist.id, Twist.is_paved).where(Twist.id == twist_id)
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     return templates.TemplateResponse("fragments/rating_dropdown.html", {
         "request": request,
         "twist_id": twist_id,
-        "average_ratings": await calculate_average_rating(db, twist, round_to=1)
+        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
     })
 
 
 @app.get("/modal-rate-twist/{twist_id}", response_class=HTMLResponse)
-async def render_modal_rate_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_modal_rate_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.name, Twist.is_paved)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.execute(
+            select(Twist.id, Twist.name, Twist.is_paved).where(Twist.id == twist_id)
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     today = date.today()
     tomorrow = today + timedelta(days=1)
@@ -318,17 +385,23 @@ async def render_modal_rate_twist(request: Request, twist_id: int, db: Session =
 
 
 @app.get("/modal-view-twist-ratings/{twist_id}", response_class=HTMLResponse)
-async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_modal_view_twist_ratings(twist_id: int, request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.name, Twist.is_paved).
-        selectinload(Twist.paved_ratings),
-        selectinload(Twist.unpaved_ratings)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.scalars(
+            select(Twist).where(Twist.id == twist_id).options(
+                load_only(Twist.name, Twist.is_paved).
+                selectinload(Twist.paved_ratings),
+                selectinload(Twist.unpaved_ratings)
+            )
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     if twist.is_paved:
         ratings = twist.paved_ratings
@@ -367,15 +440,19 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, db: S
 
 
 @app.get("/modal-delete-twist/{twist_id}", response_class=HTMLResponse)
-async def render_modal_delete_twist(request: Request, twist_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+async def render_modal_delete_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment for the twist deletion confirmation modal.
     """
-    twist = db.query(Twist).options(
-        load_only(Twist.name)
-    ).filter(Twist.id == twist_id).first()
-    if not twist:
-        raise_http("Twist not found", status_code=404)
+    try:
+        result = await session.execute(
+            select(Twist.id, Twist.name).where(Twist.id == twist_id)
+        )
+        twist = result.one()
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     return templates.TemplateResponse("fragments/modal_delete_twist.html", {
         "request": request,

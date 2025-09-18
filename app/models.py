@@ -1,10 +1,16 @@
 from datetime import date
+from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Boolean, ForeignKey, Integer, SmallInteger, String, Date
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 from schemas import CoordinateDict, WaypointDict
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
+    __tablename__ = "users"
+
 
 class Twist(Base):
     __tablename__ = "twists"
@@ -24,6 +30,7 @@ class Twist(Base):
         paved = "Paved" if self.is_paved else "Unpaved"
         return f"[{self.id}] {self.name} ({paved})"
 
+
 class PavedRating(Base):
     __tablename__ = "paved_ratings"
 
@@ -41,6 +48,7 @@ class PavedRating(Base):
 
     def __repr__(self):
         return f"[{self.id}] (Paved)"
+
 
 class UnpavedRating(Base):
     __tablename__ = "unpaved_ratings"

@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     LOG_LEVEL: str = "INFO"
-    SESSION_SECRET_KEY: str = "mototwist"
+    MOTOTWIST_SECRET_KEY: str = "mototwist"
+    MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"
+    MOTOTWIST_ADMIN_PASSWORD: str = "password"
     OSM_URL: str = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
     OSRM_URL: str = "https://router.project-osrm.org"
     TWIST_SIMPLIFICATION_TOLERANCE_M: int = Field(default=0)
@@ -24,11 +26,14 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "mototwist"
     POSTGRES_PASSWORD: str = "password"
 
+    REDIS_URL: str = "redis://redis:6379"
+
+
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
         """Construct the database URL from individual components."""
-        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     @field_validator("LOG_LEVEL")
     @classmethod
