@@ -38,7 +38,9 @@ Below is an overview of all available environment variables for MotoTwist.
 
 | Variable | Description | Default   |
 | - | - | - |
-| `SESSION_SECRET_KEY` | A long, random string used to cryptographically sign session cookies, preventing tampering. **This must be changed for production!** | `"changethis"` |
+| `MOTOTWIST_SECRET_KEY` | A long, random string used to cryptographically sign session cookies, preventing tampering. **This must be changed for production!** | `"changethis"` |
+| `MOTOTWIST_ADMIN_EMAIL` | The email to use for creating the initial admin user. Only affects initial container setup. **This should be changed for production!** | `"admin@admin.com"` |
+| `MOTOTWIST_ADMIN_PASSWORD` | The password to assign to the initial admin user. Only affects initial container setup. Do not set to final wanted password. | `"password"` |
 | `OSM_URL` | The URL template for the OpenStreetMap tile server, which provides the visual base map. | `"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"` |
 | `OSRM_URL` | The base URL for the OSRM routing engine, used for calculating routes for new Twists. | `"https://router.project-osrm.org"` |
 | `TWIST_SIMPLIFICATION_TOLERANCE_M` | Sets the simplification tolerance for new Twist routes. A higher value (e.g., `"50m"`) removes more points and reduces storage size. Set to `"0m"` to disable. | `"30m"`   |
@@ -57,6 +59,7 @@ These variables are required to connect to the PostgreSQL database.
 | `POSTGRES_DB` | The name of the database to connect to. | `"mototwist"` |
 | `POSTGRES_USER` | The username for the database connection. | `"mototwist"` |
 | `POSTGRES_PASSWORD` | The password for the database connection. **This must be changed for production!** | `"changethis"` |
+| `REDIS_URL` | The URL to use to connect to Redis. Do not change unless you have an external instance. | `"redis://redis:6379"` |
 
 #### Developer Options
 
