@@ -2,6 +2,7 @@ alembic
 asyncpg
 fastapi
 fastapi-users[sqlalchemy]
+httpx
 humanize
 itsdangerous
 jinja2

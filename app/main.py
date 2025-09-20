@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_users.authentication import RedisStrategy
+import httpx
 from humanize import ordinal
 import json
 import os
@@ -23,7 +24,7 @@ import uvicorn
 from config import logger
 from database import apply_migrations, create_automigration, get_db, wait_for_db
 from models import Twist, PavedRating, UnpavedRating, User
-from settings import settings
+from settings import *
 from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, UserCreate, WaypointDict
 from users import auth_backend, current_active_user, current_user_optional, get_user_db, get_user_manager, get_redis_strategy, UserManager
 from utility import *
@@ -89,19 +90,61 @@ async def render_index(request: Request, user: User | None = Depends(current_use
     """
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "version": settings.MOTOTWIST_VERSION,
+        "upstream": settings.MOTOTWIST_UPSTREAM,
         "user": user,
         "osm_url": settings.OSM_URL,
         "osrm_url": settings.OSRM_URL
     })
 
 
-@app.post("/login")
+@app.get("/latest-version", response_class=HTMLResponse)
+async def get_latest_version(request: Request) -> HTMLResponse:
+    """
+    Get the latest version from GitHub and return an HTML fragment.
+    """
+    # Default version indicates a development environment
+    if settings.MOTOTWIST_VERSION == Settings.model_fields["MOTOTWIST_VERSION"].default:
+        return HTMLResponse(
+            content="<strong title='To limit use of the GitHub API, the latest version is not checked on dev builds'>Unchecked</strong>"
+        )
+
+    url = f"https://api.github.com/repos/{settings.MOTOTWIST_UPSTREAM}/releases/latest"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, follow_redirects=True)
+            response.raise_for_status()  # Raise an exception for 4XX/5XX responses
+            data = response.json()
+            latest_version = data.get("tag_name")
+    except httpx.HTTPStatusError as e:
+        # Handle cases where the repo is not found or there are no releases
+        raise_http("Could not read latest version from GitHub API",
+            status_code=e.response.status_code,
+            exception=e
+        )
+
+    if settings.MOTOTWIST_VERSION != latest_version:
+        events = {
+            "flashMessage": f"MotoTwist {latest_version} is now available!"
+        }
+        response = templates.TemplateResponse("fragments/new_version.html", {
+            "request": request,
+            "latest_version": latest_version,
+            "upstream": settings.MOTOTWIST_UPSTREAM
+        })
+        response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+        return response
+    return HTMLResponse(content=f"<strong>{latest_version}</strong>")
+
+
+@app.post("/login", response_class=HTMLResponse)
 async def login(
     request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),
     user_manager: UserManager = Depends(get_user_manager),
     strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
-):
+) -> HTMLResponse:
     """
     Logs a user in and updates the auth widget.
     """
@@ -131,13 +174,13 @@ async def login(
     return response
 
 
-@app.get("/logout")
+@app.get("/logout", response_class=HTMLResponse)
 async def logout(
     request: Request,
     response: Response,
     user: User = Depends(current_active_user),
     strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
-):
+) -> HTMLResponse:
     """
     Logs a user out and updates the auth widget.
     """

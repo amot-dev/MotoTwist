@@ -6,101 +6,133 @@
 {% endblock %}
 
 {% block content %}
-    <div class="flash-message"></div>
+<div class="flash-message"></div>
 
-    <div id="sidebar">
-        <div id="twist-list-container">
-            <h1>MotoTwist</h1>
-            <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
-            <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
-            <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+<div id="sidebar">
+    <div id="twist-list-container">
+        <h1>MotoTwist</h1>
+        <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+        <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+        <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
 
-            <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
-                <p>Loading twists...</p>
-            </ul>
+        <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
+            <p>Loading twists...</p>
+        </ul>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<template id="create-waypoint-popup-template">
+    <div class="create-waypoint-popup">
+        <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
+        <div class="popup-buttons">
+            <button class="popup-button-hide" title="Hide/Show Waypoint">
+                <i class="far fa-solid fa-flag"></i>
+            </button>
+            <button class="popup-button-delete" title="Delete Waypoint">
+                <i class="fa-solid fa-trash"></i>
+            </button>
         </div>
     </div>
+</template>
 
-    <div id="map"></div>
+<div id="top-right-controls">
+    {% include "fragments/auth_widget.html" %}
+    <a id="modal-about-button" href="#modal-about" class="button button-block">
+        <i class="fa-solid fa-circle-info"></i>
+    </a>
+</div>
 
-    <template id="create-waypoint-popup-template">
-        <div class="create-waypoint-popup">
-            <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
-            <div class="popup-buttons">
-                <button class="popup-button-hide" title="Hide/Show Waypoint">
-                    <i class="far fa-solid fa-flag"></i>
-                </button>
-                <button class="popup-button-delete" title="Delete Waypoint">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+<div id="modal-login" class="modal">
+    {% call render_modal_content("Login") %}
+        <form hx-post="/login"
+            hx-target="#auth-widget"
+            hx-swap="outerHTML">
+
+            <div class="form-group">
+                <label for="username">Email</label>
+                <input type="email" id="username" name="username" required>
             </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            {{ render_form_buttons(submit_text="Login") }}
+        </form>
+    {% endcall %}
+</div>
+
+<div id="modal-about" class="modal">
+    {% call render_modal_content("About") %}
+    <div class="about-content">
+        <p class="app-tagline">
+            A self-hosted, Dockerized service to store, rate, and view your favorite motorcycle roads from GPX files.
+        </p>
+
+        <ul class="info-list">
+            <li>
+                <span>Current Version</span>
+                <strong>{{ version }}</strong>
+            </li>
+            <li>
+                <span>Latest Version</span>
+                <strong hx-get="/latest-version" hx-trigger="load" hx-swap="outerHTML">Unknown</strong>
+            </li>
+            <li>
+                <span>Source Code</span>
+                <a href="https://github.com/{{ upstream }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
+            </li>
+        </ul>
+
+        <div class="support-info">
+            <p>Enjoying the app? A small contribution helps keep the project alive and running!</p>
+            <a href='https://ko-fi.com/B0B11LJBPP' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
         </div>
-    </template>
-
-    <div id="top-right-controls">
-        {% include "fragments/auth_widget.html" %}
-        <a href="#modal-info" class="button button-block"><i class="fa-solid fa-circle-info"></i></a>
     </div>
+    {% endcall %}
+</div>
 
-    <div id="modal-login" class="modal">
-        {% call render_modal_content("Login") %}
-            <form hx-post="/login"
-                hx-target="#auth-widget"
-                hx-swap="outerHTML">
+<div id="modal-create-twist" class="modal">
+    {% call render_modal_content("New Twist") %}
+    <form hx-post="/twist"
+        hx-target="#twist-list"
+        hx-swap="innerHTML"
+        hx-ext="json-enc">
 
-                <div class="form-group">
-                    <label for="username">Email</label>
-                    <input type="email" id="username" name="username" required>
+        <div class="form-group">
+            <label for="modal-name">Twist Name</label>
+            <input type="text" id="modal-name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <fieldset>
+                <legend>Surface Type</legend>
+                <div class="radio-group">
+                    <label><input type="radio" name="is_paved" value="true" checked> Paved</label>
+                    <label><input type="radio" name="is_paved" value="false"> Unpaved</label>
                 </div>
+            </fieldset>
+        </div>
 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
+        <div id="route-status-indicator" class="gone"></div>
 
-                {{ render_form_buttons(submit_text="Login") }}
-            </form>
-        {% endcall %}
-    </div>
+        {{ render_form_buttons(submit_text="Create Twist", submit_disabled=true) }}
+    </form>
+    {% endcall %}
+</div>
 
-    <div id="modal-create-twist" class="modal">
-        {% call render_modal_content("New Twist") %}
-            <form hx-post="/twist"
-                hx-target="#twist-list"
-                hx-swap="innerHTML"
-                hx-ext="json-enc">
+<div id="modal-rate-twist" class="modal modal-dynamic">
+    <p>Loading form...</p>
+</div>
 
-                <div class="form-group">
-                    <label for="modal-name">Twist Name</label>
-                    <input type="text" id="modal-name" name="name" required>
-                </div>
+<div id="modal-view-twist-ratings" class="modal modal-dynamic">
+    <p>Loading ratings...</p>
+</div>
 
-                <div class="form-group">
-                    <fieldset>
-                        <legend>Surface Type</legend>
-                        <div class="radio-group">
-                            <label><input type="radio" name="is_paved" value="true" checked> Paved</label>
-                            <label><input type="radio" name="is_paved" value="false"> Unpaved</label>
-                        </div>
-                    </fieldset>
-                </div>
-
-                <div id="route-status-indicator" class="gone"></div>
-
-                {{ render_form_buttons(submit_text="Create Twist", submit_disabled=true) }}
-            </form>
-        {% endcall %}
-    </div>
-
-    <div id="modal-rate-twist" class="modal modal-dynamic">
-        <p>Loading form...</p>
-    </div>
-
-    <div id="modal-view-twist-ratings" class="modal modal-dynamic">
-        <p>Loading ratings...</p>
-    </div>
-
-    <div id="modal-delete-twist" class="modal modal-dynamic">
-        <p>Loading form...</p>
-    </div>
+<div id="modal-delete-twist" class="modal modal-dynamic">
+    <p>Loading form...</p>
+</div>
 {% endblock %}

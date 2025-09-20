@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Configure Pydantic to load from a .env file if it exists
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    MOTOTWIST_VERSION: str = "dev"
+    MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
+
     LOG_LEVEL: str = "INFO"
     MOTOTWIST_SECRET_KEY: str = "mototwist"
     MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"

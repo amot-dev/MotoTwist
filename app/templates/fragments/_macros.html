@@ -1,4 +1,4 @@
-{# Render dynamic modal opening button #}
+{# Render dynamic modal opening button for a Twist #}
 {% macro render_modal_button(twist_id, modal_name, id=False, extra_classes="") -%}
 <a {% if id %}id="modal-{{ modal_name }}-button"{% endif %}
     href="#modal-{{ modal_name }}"

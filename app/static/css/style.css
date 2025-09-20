@@ -235,6 +235,18 @@ ul {
     vertical-align: middle;
 }
 
+#modal-about-button {
+    border-radius: 200px;
+    padding: 0;
+    cursor: default;
+    background: transparent;
+}
+#modal-about-button i {
+    font-size: 46px;
+    color: var(--accent-blue);
+    cursor: pointer;
+}
+
 
 /* --- Leaflet Popups --- */
 .leaflet-popup-content-wrapper {
@@ -467,8 +479,8 @@ ul {
 .rating-slider {
     position: relative;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     height: 2rem;
     width: 100%;
     border-radius: var(--radius-lg);
@@ -482,8 +494,8 @@ ul {
     position: absolute;
     z-index: 1;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     top: 0;
     left: 0;
     width: 100%;
@@ -520,7 +532,7 @@ ul {
 }
 
 
-/* --- Modal & Form Styles --- */
+/* --- Modal General --- */
 
 .modal {
     display: none;
@@ -638,7 +650,7 @@ ul {
 }
 
 
-/* --- Rate Twist --- */
+/* --- Modal Rate Twist --- */
 .rate-form[data-paved="true" i] {
   --accent: var(--accent-blue);
 }
@@ -652,7 +664,7 @@ ul {
 }
 
 
-/* --- Twist Ratings --- */
+/* --- Modal View Twist Ratings --- */
 
 #rating-list {
     overflow-y: auto;
@@ -690,6 +702,50 @@ ul {
     position: absolute;
     top: var(--padding-lg);
     right: var(--padding-lg);
+}
+
+
+/* --- Modal About --- */
+
+.about-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-lg); /* Create space between sections */
+}
+
+.app-tagline {
+    margin-top: var(--padding-sm);
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.info-list {
+    margin-bottom: calc(var(--padding-lg) * 1.5);
+}
+
+.info-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--panel-slate-hover);
+    padding: var(--padding-md) 0;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-list li span {
+    color: var(--text-muted);
+}
+
+.info-list li .button-link {
+    --accent: var(--accent-blue);
+    --accent-hover-light: var(--accent-blue-hover-light);
+}
+
+.support-info {
+    text-align: center;
 }
 
 
