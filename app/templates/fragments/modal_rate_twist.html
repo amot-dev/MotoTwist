@@ -5,7 +5,6 @@
         hx-ext="morph"
         hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .rating-dropdown"
         hx-swap="morph:innerHTML"
-        hx-on::after-request="location.hash=''; this.reset()"
         data-paved="{{ twist.is_paved | lower }}">
 
         <div class="form-group">
