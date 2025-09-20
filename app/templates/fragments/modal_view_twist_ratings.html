@@ -1,28 +1,28 @@
 {% from "fragments/_macros.html" import render_modal_content, render_rating %}
 
 {% call render_modal_content(twist.name) %}
-    <div id="rating-list" data-paved="{{ twist.is_paved | lower }}">
-        {% if ratings %}
-            {% for rating_entry in ratings %}
-                <div class="rating-card scroll-shut-on-delete">
-                    <h3>{{ rating_entry.formatted_date }}</h3>
-                    <a href="#modal-view-twist-ratings" class="button button-link"
-                        hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
-                        hx-target="closest .rating-card"
-                        hx-swap="outerHTML swap:500ms"
-                        hx-on::after-request="htmx.trigger('.rating-dropdown', 'ratingDeleted-{{ twist.id }}')">
+<div id="rating-list" data-paved="{{ twist.is_paved | lower }}">
+    {% if ratings %}
+    {% for rating_entry in ratings %}
+    <div class="rating-card scroll-shut-on-delete">
+        <h3>{{ rating_entry.formatted_date }}</h3>
+        <a href="#modal-view-twist-ratings" class="button button-link"
+            hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
+            hx-target="closest .rating-card"
+            hx-swap="outerHTML swap:500ms"
+            hx-on::after-request="htmx.trigger('.rating-dropdown', 'ratingDeleted-{{ twist.id }}')">
 
-                        <i class="fa-solid fa-trash"></i>
-                    </a>
-                    <ul>
-                        {% for criteria, rating in rating_entry.ratings.items() %}
-                            {{ render_rating(criteria, rating) }}
-                        {% endfor %}
-                    </ul>
-                </div>
+            <i class="fa-solid fa-trash"></i>
+        </a>
+        <ul>
+            {% for criteria, rating in rating_entry.ratings.items() %}
+            {{ render_rating(criteria, rating) }}
             {% endfor %}
-        {% else %}
-            <p>No ratings yet</p>
-        {% endif %}
+        </ul>
     </div>
+    {% endfor %}
+    {% else %}
+    <p>No ratings yet</p>
+    {% endif %}
+</div>
 {% endcall %}

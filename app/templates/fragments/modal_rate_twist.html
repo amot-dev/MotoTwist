@@ -1,29 +1,29 @@
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
 {% call render_modal_content("Rate " ~ twist.name) %}
-    <form class="rate-form" hx-post="/twists/{{ twist.id }}/rate"
-        hx-ext="morph"
-        hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .rating-dropdown"
-        hx-swap="morph:innerHTML"
-        data-paved="{{ twist.is_paved | lower }}">
+<form class="rate-form" hx-post="/twists/{{ twist.id }}/rate"
+    hx-ext="morph"
+    hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .rating-dropdown"
+    hx-swap="morph:innerHTML"
+    data-paved="{{ twist.is_paved | lower }}">
 
-        <div class="form-group">
-            <label for="rating-date">Rating Date</label>
-            <input type="date" id="rating-date" name="rating_date" value="{{ today }}" max="{{ tomorrow }}" required>
-        </div>
+    <div class="form-group">
+        <label for="rating-date">Rating Date</label>
+        <input type="date" id="rating-date" name="rating_date" value="{{ today }}" max="{{ tomorrow }}" required>
+    </div>
 
-        {% for criteria in criteria_list %}
-        <div class="form-group slider-group">
-            <label for="{{ criteria.name }}" title="{{ criteria.desc }}">{{ criteria.name.replace('_', ' ') | title }}</label>
-            <input type="range"
-                id="{{ criteria.name }}"
-                name="{{ criteria.name }}"
-                min="0" max="10" value="5"
-                oninput="this.nextElementSibling.value = this.value">
-            <output for="{{ criteria.name }}">5</output>
-        </div>
-        {% endfor %}
+    {% for criteria in criteria_list %}
+    <div class="form-group slider-group">
+        <label for="{{ criteria.name }}" title="{{ criteria.desc }}">{{ criteria.name.replace('_', ' ') | title }}</label>
+        <input type="range"
+            id="{{ criteria.name }}"
+            name="{{ criteria.name }}"
+            min="0" max="10" value="5"
+            oninput="this.nextElementSibling.value = this.value">
+        <output for="{{ criteria.name }}">5</output>
+    </div>
+    {% endfor %}
 
-        {{ render_form_buttons(submit_text="Submit Rating") }}
-    </form>
+    {{ render_form_buttons(submit_text="Submit Rating") }}
+</form>
 {% endcall %}
