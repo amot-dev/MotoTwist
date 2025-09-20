@@ -76,7 +76,6 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
         // Create the waypoint markers
         const waypointMarkers = data.waypoints.map((point, index) => {
             let icon = waypointIcon;
-            let zIndexOffset = 0;
             const totalPoints = data.waypoints.length;
 
             if (totalPoints === 1 || index === 0) icon = startIcon;

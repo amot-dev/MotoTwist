@@ -40,7 +40,7 @@
 <div id="top-right-controls">
     {% include "fragments/auth_widget.html" %}
     <a id="modal-about-button" href="#modal-about" class="button button-block">
-        <i class="fa-solid fa-circle-info"></i>
+        <img src="{{ url_for('static', path='/images/favicon.ico') }}">
     </a>
 </div>
 
@@ -69,7 +69,7 @@
     {% call render_modal_content("About") %}
     <div class="about-content">
         <p class="app-tagline">
-            A self-hosted, Dockerized service to store, rate, and view your favorite motorcycle roads from GPX files.
+            The ultimate companion for every motorcycle enthusiast. Discover, track, and save your most epic journeys.
         </p>
 
         <ul class="info-list">

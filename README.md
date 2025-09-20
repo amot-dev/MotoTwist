@@ -1,6 +1,10 @@
 # MotoTwist
 
-A self-hosted, Dockerized service to store, rate, and view your favorite motorcycle roads from GPX files.
+_Track the Thrill. Rate the Road._
+
+MotoTwist is the ultimate companion for every motorcycle enthusiast. Discover, track, and save your most epic journeys. MotoTwist allows you to rate routes on key criteria like scenery, road quality, and twistiness. Or, for the offroad enthusiasts, you can rate them on surface consistency, technicality, and general flow.
+
+Share your favorite roads with a community of fellow riders and find your next great adventure, recommended by those who've ridden it before.
 
 
 ## Getting Started

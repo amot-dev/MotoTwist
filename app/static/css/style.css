@@ -162,7 +162,7 @@ ul {
 
 #top-right-controls {
     position: fixed;
-    z-index: 10001;
+    z-index: 1000;
     top: var(--padding-sm);
     right: var(--padding-sm);
 }
@@ -236,13 +236,13 @@ ul {
 }
 
 #modal-about-button {
-    border-radius: 200px;
     padding: 0;
     cursor: default;
     background: transparent;
 }
-#modal-about-button i {
-    font-size: 46px;
+#modal-about-button img {
+    border-radius: 50%;
+    height: 46px;
     color: var(--accent-blue);
     cursor: pointer;
 }
