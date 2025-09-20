@@ -1,5 +1,6 @@
 services:
   mototwist:
     build: .
+    user: "1000:1000"
     volumes:
       - ./app:/app

@@ -9,6 +9,7 @@
     --accent-blue-hover: #0081C7;
     --accent-blue-hover-light: #4dc4ff;
     --accent-blue-dark: #00598C;
+    --accent-blue-dark-hover: #004168;
     --accent-orange: #E8751A;
     --accent-orange-hover: #BF6216;
     --accent-orange-hover-light: #F5A665;
@@ -125,6 +126,7 @@ ul {
 }
 
 .button-block {
+    display: inline-block;
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-md) var(--padding-lg);
@@ -154,6 +156,66 @@ ul {
 .button-delete:hover {
     background-color: var(--accent-orange-hover);
 }
+
+
+/* --- Auth Widget --- */
+
+#auth-widget {
+    position: fixed;
+    z-index: 10001;
+    top: var(--padding-sm);
+    right: var(--padding-sm);
+}
+
+.auth-dropdown-menu {
+    display: none; /* Hidden by default */
+    box-shadow: var(--shadow-soft);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    padding: 0;
+    background-color: var(--accent-blue-dark);
+}
+
+/* Show the menu when hovering over the dropdown container */
+.auth-dropdown:hover .auth-dropdown-menu {
+    display: block;
+}
+
+.auth-dropdown-menu a {
+    display: block;
+    padding: var(--padding-md);
+    text-align: center; /* Match the button's text alignment */
+    text-decoration: none;
+    color: var(--text-offwhite);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+
+.auth-dropdown-menu a:hover {
+  background-color: var(--accent-blue-dark-hover);
+}
+
+.auth-display {
+    min-width: 140px;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+
+    transition: background-color var(--transition-fast), border-radius var(--transition-fast);
+}
+
+.auth-dropdown:hover .auth-display {
+    background-color: var(--accent-blue-hover);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.button-login {
+    vertical-align: middle;
+}
+
 
 /* --- Leaflet Popups --- */
 .leaflet-popup-content-wrapper {
@@ -516,6 +578,8 @@ ul {
     transition: background-color var(--transition-fast);
 }
 
+.modal-content input[type="email"],
+.modal-content input[type="password"],
 .modal-content input[type="text"],
 .modal-content input[type="file"],
 .modal-content input[type="date"] {

@@ -11,6 +11,8 @@ from schemas import CoordinateDict, WaypointDict
 class User(SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "users"
 
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
 
 class Twist(Base):
     __tablename__ = "twists"

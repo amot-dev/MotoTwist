@@ -144,7 +144,7 @@ Follow these steps to set up and run the application in development mode.
 6.  **Migrate the database if needed:**
     If you make any model changes, you'll need to make a migration from them. All migrations are applied to the database on container restart.
     ```bash
-    docker compose exec mototwist alembic revision --autogenerate -m "Your very descriptive message"
+    docker compose run --rm mototwist create-migration "Your very descriptive message"
     ```
 
 > [!TIP]

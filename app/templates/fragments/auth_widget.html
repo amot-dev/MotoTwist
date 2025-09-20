@@ -1,0 +1,17 @@
+<div id="auth-widget" class="{% if user %}auth-dropdown{% endif %}">
+{% if user %}
+    <button class="button button-block auth-display">{{ user.name }}</button>
+    <div class="auth-dropdown-menu">
+        <a>Profile</a>
+        <a>Admin Settings</a>
+        <a hx-get="/logout"
+            hx-target="#auth-widget"
+            hx-swap="outerHTML">
+            
+            Logout
+        </a>
+    </div>
+{% else %}
+    <a href="#modal-login" class="button button-block button-login">Login</a>
+{% endif %}
+</div>

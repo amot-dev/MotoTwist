@@ -22,6 +22,18 @@ async def get_db():
         yield session
 
 
+def create_automigration(message: str):
+    """
+    Creates a new Alembic automigration file based on model changes.
+    """
+    logger.info(f"Creating automigration with message: '{message}'...")
+
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option('sqlalchemy.url', settings.SQLALCHEMY_DATABASE_URL)
+
+    command.revision(alembic_cfg, message=message, autogenerate=True)
+
+
 def apply_migrations():
     logger.info("Applying database migrations...")
     alembic_cfg = Config("alembic.ini")

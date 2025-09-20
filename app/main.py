@@ -3,8 +3,10 @@ from datetime import date, timedelta
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi_users.authentication import RedisStrategy
 from humanize import ordinal
 import json
 import os
@@ -12,30 +14,19 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
+import sys
 from time import time
 from typing import Awaitable, Callable, Never
+import uuid
 import uvicorn
 
 from config import logger
-from database import apply_migrations, get_db, wait_for_db
+from database import apply_migrations, create_automigration, get_db, wait_for_db
 from models import Twist, PavedRating, UnpavedRating, User
 from settings import settings
-from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, UserCreate, UserRead, WaypointDict
-from users import auth_backend, fastapi_users, UserManager, get_user_db
+from schemas import CoordinateDict, RatingListItem, TwistCreate, TwistGeometryData, UserCreate, WaypointDict
+from users import auth_backend, current_active_user, current_user_optional, get_user_db, get_user_manager, get_redis_strategy, UserManager
 from utility import *
-
-
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
-
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth", tags=["auth"]
-)
-app.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"]
-)
 
 
 @asynccontextmanager
@@ -67,6 +58,11 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> None:
     """
@@ -87,16 +83,85 @@ async def log_process_time(request: Request, call_next: Callable[[Request], Awai
 
 
 @app.get("/", response_class=HTMLResponse)
-async def render_index(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_index(request: Request, session: AsyncSession = Depends(get_db), user: User | None = Depends(current_user_optional)) -> HTMLResponse:
     """
-    This endpoint serves the main page of the application.
+    Serves the main page of the application.
     """
+    result = await session.scalars(
+        select(User)
+    )
+    print(result.all())
 
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "user": user,
         "osm_url": settings.OSM_URL,
         "osrm_url": settings.OSRM_URL
     })
+
+
+@app.post("/login")
+async def login(
+    request: Request,
+    credentials: OAuth2PasswordRequestForm = Depends(),
+    user_manager: UserManager = Depends(get_user_manager),
+    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+):
+    """
+    Logs a user in and updates the auth widget.
+    """
+    user = await user_manager.authenticate(credentials)
+
+    # Handle failed login
+    if not user:
+        raise_http("Invalid email or password", status_code=401)
+
+    events = {
+        "flashMessage": f"Welcome back, {user.name}!"
+    }
+    response = templates.TemplateResponse("fragments/auth_widget.html", {
+        "request": request,
+        "user": user
+    })
+
+    # Create the session cookie and attach it to a response
+    cookie_response = await auth_backend.login(strategy, user)
+
+    # Copy cookie into template response
+    cookie = cookie_response.headers.get("Set-Cookie")
+    if cookie:
+        response.headers["Set-Cookie"] = cookie
+
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+
+@app.get("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    user: User = Depends(current_active_user),
+    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+):
+    """
+    Logs a user out and updates the auth widget.
+    """
+    # Get the session token from the request cookie
+    token = request.cookies.get("mototwist")
+    if token is None:
+        raise_http("No session cookie found", status_code=401)
+
+    await auth_backend.logout(strategy, user, token)
+
+    events = {
+        "flashMessage": f"See you soon, {user.name}!"
+    }
+    response = templates.TemplateResponse("fragments/auth_widget.html", {
+        "request": request,
+        "user": None
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
 
 
 @app.post("/twist", response_class=HTMLResponse)
@@ -462,6 +527,22 @@ async def render_modal_delete_twist(request: Request, twist_id: int, session: As
 
 if __name__ == "__main__":
     wait_for_db()
+
+    # Check if the create-migration command was given
+    if len(sys.argv) > 1 and sys.argv[1] == "create-migration":
+        # Make sure a message was also provided
+        if len(sys.argv) < 3:
+            logger.error("create-migration requires a message")
+            print("Usage: python main.py create-migration <your_message_here>", file=sys.stderr)
+            sys.exit(1)
+
+        # Get the message from the third argument
+        migration_message = sys.argv[2]
+
+        # Create migration and exit
+        create_automigration(migration_message)
+        sys.exit(0)
+
     apply_migrations()
     logger.info("Starting MotoTwist...")
     uvicorn.run(

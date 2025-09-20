@@ -37,6 +37,30 @@
         </div>
     </template>
 
+    {% include "fragments/auth_widget.html" %}
+
+    <div id="modal-login" class="modal">
+        {% call render_modal_content("Login") %}
+            <form hx-post="/login"
+                hx-target="#auth-widget"
+                hx-swap="outerHTML"
+                hx-on::after-request="location.hash=''; this.reset()">
+
+                <div class="form-group">
+                    <label for="username">Email</label>
+                    <input type="email" id="username" name="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                {{ render_form_buttons(submit_text="Login") }}
+            </form>
+        {% endcall %}
+    </div>
+
     <div id="modal-create-twist" class="modal">
         {% call render_modal_content("New Twist") %}
             <form hx-post="/twist"

@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport, RedisStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
@@ -10,11 +10,22 @@ import uuid
 from database import get_db
 from models import User
 from settings import settings
+from schemas import UserCreate
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = settings.MOTOTWIST_SECRET_KEY
     verification_token_secret = settings.MOTOTWIST_SECRET_KEY
+
+    async def create(self, user_create: UserCreate, safe: bool = False, request: Request | None = None) -> User: # pyright: ignore [reportIncompatibleMethodOverride]
+        # If a name isn't provided, create one from the email
+        if user_create.name is None:
+            user_create.name = user_create.email.partition("@")[0]
+
+        # Call the original create method to finish the process
+        created_user = await super().create(user_create, safe, request)
+
+        return created_user
 
 
 async def get_user_db(
@@ -50,3 +61,4 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
 )
 
 current_active_user = fastapi_users.current_user(active=True)
+current_user_optional = fastapi_users.current_user(active=True, optional=True)
