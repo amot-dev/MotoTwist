@@ -76,7 +76,6 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
         // Create the waypoint markers
         const waypointMarkers = data.waypoints.map((point, index) => {
             let icon = waypointIcon;
-            let zIndexOffset = 0;
             const totalPoints = data.waypoints.length;
 
             if (totalPoints === 1 || index === 0) icon = startIcon;
@@ -431,6 +430,9 @@ async function updateRoute() {
  * and the route line from the map and resetting UI elements.
  */
 function stopTwistCreation() {
+    // Immediate return if not creating Twist
+    if (!mapContainer.classList.contains('creating-twist')) return;
+
     mapContainer.classList.remove('creating-twist');
 
     waypointMarkers.forEach(marker => map.removeLayer(marker));
@@ -583,9 +585,29 @@ map.on('click', function(e) {
     };
 })();
 
-// HTMX hook for cleanup, only listening on the Twist form
-twistForm.addEventListener('htmx:afterRequest', function() {
-    setTimeout(() => {
-        stopTwistCreation();
-    }, 100);
+// Listen for the flashMessage event from the server
+document.body.addEventListener('flashMessage', (event) => {
+    location.hash='';
+    forms = document.querySelectorAll('form')
+    forms.forEach(form => form.reset());
+    stopTwistCreation();
+    flash(event.detail.value, 3000);
+});
+
+// Listen for the response error event from the server
+document.body.addEventListener('htmx:responseError', function(event) {
+    const xhr = event.detail.xhr;
+    let errorMessage = xhr.responseText; // Default to the raw response
+
+    // Try to parse the response as JSON
+    try {
+        const errorObject = JSON.parse(xhr.responseText);
+        // If parsing succeeds and a 'detail' key exists, use that.
+        if (errorObject && errorObject.detail) {
+            errorMessage = errorObject.detail;
+        }
+    } catch (e) {}
+
+    // Display the flash with an orange accent
+    flash(errorMessage, 5000, backgroundColor=accentOrange);
 });
