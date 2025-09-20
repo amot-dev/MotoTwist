@@ -158,17 +158,36 @@ ul {
 }
 
 
-/* --- Auth Widget --- */
+/* --- Controls --- */
 
-#auth-widget {
+#top-right-controls {
     position: fixed;
     z-index: 10001;
     top: var(--padding-sm);
     right: var(--padding-sm);
 }
 
+/* Make direct children sit side-by-side */
+#top-right-controls > * {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: var(--padding-sm); /* Space between items */
+}
+
+#top-right-controls > *:first-child {
+    margin-left: 0; /* Remove space from first item */
+}
+
+#auth-widget {
+    position: relative;
+}
+
 .auth-dropdown-menu {
     display: none; /* Hidden by default */
+    position: absolute;
+    top: 100%; /* Position directly below the parent button */
+    left: 0;
+    width: 100%;
     box-shadow: var(--shadow-soft);
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     padding: 0;

@@ -589,7 +589,8 @@ map.on('click', function(e) {
 // Listen for the flashMessage event from the server
 document.body.addEventListener('flashMessage', (event) => {
     location.hash='';
-    document.querySelectorAll('form').reset();
+    forms = document.querySelectorAll('form')
+    forms.forEach(form => form.reset());
     stopTwistCreation();
     flash(event.detail.value, 3000);
 });

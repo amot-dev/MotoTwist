@@ -37,7 +37,10 @@
         </div>
     </template>
 
-    {% include "fragments/auth_widget.html" %}
+    <div id="top-right-controls">
+        {% include "fragments/auth_widget.html" %}
+        <a href="#modal-info" class="button button-block"><i class="fa-solid fa-circle-info"></i></a>
+    </div>
 
     <div id="modal-login" class="modal">
         {% call render_modal_content("Login") %}

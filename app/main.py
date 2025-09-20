@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
             )
             user_db = await anext(get_user_db(session))
             user_manager = UserManager(user_db)
-            await user_manager.create(user_data, safe=True)
+            await user_manager.create(user_data)
             logger.info(f"Admin user '{settings.MOTOTWIST_ADMIN_EMAIL}' created")
         else:
             logger.info("Admin user creation skipped")
@@ -83,15 +83,10 @@ async def log_process_time(request: Request, call_next: Callable[[Request], Awai
 
 
 @app.get("/", response_class=HTMLResponse)
-async def render_index(request: Request, session: AsyncSession = Depends(get_db), user: User | None = Depends(current_user_optional)) -> HTMLResponse:
+async def render_index(request: Request, user: User | None = Depends(current_user_optional)) -> HTMLResponse:
     """
     Serves the main page of the application.
     """
-    result = await session.scalars(
-        select(User)
-    )
-    print(result.all())
-
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": user,
