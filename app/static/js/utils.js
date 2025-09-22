@@ -33,3 +33,26 @@ function flash(message, duration, backgroundColor=null, color=null) {
         }, duration);
     }
 }
+
+// Listen for the flashMessage event from the server
+document.body.addEventListener('flashMessage', (event) => {
+    flash(event.detail.value, 3000);
+});
+
+// Listen for the response error event from the server
+document.body.addEventListener('htmx:responseError', function(event) {
+    const xhr = event.detail.xhr;
+    let errorMessage = xhr.responseText; // Default to the raw response
+
+    // Try to parse the response as JSON
+    try {
+        const errorObject = JSON.parse(xhr.responseText);
+        // If parsing succeeds and a 'detail' key exists, use that.
+        if (errorObject && errorObject.detail) {
+            errorMessage = errorObject.detail;
+        }
+    } catch (e) {}
+
+    // Display the flash with an orange accent
+    flash(errorMessage, 5000, backgroundColor=accentOrange);
+});

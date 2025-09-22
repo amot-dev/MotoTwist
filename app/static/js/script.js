@@ -171,6 +171,14 @@ function applyVisibilityFromStorage() {
     });
 }
 
+// Listen for the custom event sent from the server when a modal needs to be closed
+document.body.addEventListener('closeModal', () => {
+    location.hash='';
+    forms = document.querySelectorAll('form')
+    forms.forEach(form => form.reset());
+    stopTwistCreation();
+});
+
 // Listen for the custom event sent from the server after the twist list is initially loaded
 document.body.addEventListener('twistsLoaded', () => {
     applyVisibilityFromStorage();
@@ -584,30 +592,3 @@ map.on('click', function(e) {
         return originalOpen.apply(this, arguments);
     };
 })();
-
-// Listen for the flashMessage event from the server
-document.body.addEventListener('flashMessage', (event) => {
-    location.hash='';
-    forms = document.querySelectorAll('form')
-    forms.forEach(form => form.reset());
-    stopTwistCreation();
-    flash(event.detail.value, 3000);
-});
-
-// Listen for the response error event from the server
-document.body.addEventListener('htmx:responseError', function(event) {
-    const xhr = event.detail.xhr;
-    let errorMessage = xhr.responseText; // Default to the raw response
-
-    // Try to parse the response as JSON
-    try {
-        const errorObject = JSON.parse(xhr.responseText);
-        // If parsing succeeds and a 'detail' key exists, use that.
-        if (errorObject && errorObject.detail) {
-            errorMessage = errorObject.detail;
-        }
-    } catch (e) {}
-
-    // Display the flash with an orange accent
-    flash(errorMessage, 5000, backgroundColor=accentOrange);
-});

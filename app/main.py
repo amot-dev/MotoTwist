@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 import sys
 from time import time
-from typing import Awaitable, Callable, Never
+from typing import Awaitable, Callable
 import uuid
 import uvicorn
 
@@ -155,6 +155,7 @@ async def login(
         raise_http("Invalid email or password", status_code=401)
 
     events = {
+        "closeModal": "",
         "flashMessage": f"Welcome back, {user.name}!"
     }
     response = templates.TemplateResponse("fragments/auth_widget.html", {
@@ -244,6 +245,7 @@ async def create_twist(
 
     events = {
         "twistAdded":  str(twist.id),
+        "closeModal": "",
         "flashMessage": "Twist created successfully!"
     }
     response = templates.TemplateResponse("fragments/twist_list.html", {
@@ -270,6 +272,7 @@ async def delete_twist(request: Request, twist_id: int, session: AsyncSession = 
 
     events = {
         "twistDeleted":  str(twist_id),
+        "closeModal": "",
         "flashMessage": "Twist deleted successfully!"
     }
 
@@ -361,6 +364,7 @@ async def rate_twist(request: Request, twist_id: int, session: AsyncSession = De
 
     # Set a header to trigger a client-side event after the swap, passing a message
     events = {
+        "closeModal": "",
         "flashMessage": "Twist rated successfully!"
     }
     response = templates.TemplateResponse("fragments/rating_dropdown.html", {
@@ -427,8 +431,8 @@ async def render_twist_list(request: Request, session: AsyncSession = Depends(ge
     twists = results.all()
 
     # Set a header to trigger a client-side event after the swap
-    events: dict[str, dict[Never, Never]] = {
-        "twistsLoaded": {}
+    events = {
+        "twistsLoaded": ""
     }
     response = templates.TemplateResponse("fragments/twist_list.html", {
         "request": request,
