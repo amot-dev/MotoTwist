@@ -40,9 +40,9 @@ def raise_http(detail: str, status_code: int = 500, exception: Exception | None 
         raise HTTPException(status_code=status_code, detail=detail)
 
 
-def is_form_value_string(value: UploadFile | str) -> TypeGuard[str]:
+def is_form_value_string(value: UploadFile | str | None) -> TypeGuard[str]:
     """Returns True if the form value is a string, acting as a type guard."""
-    return isinstance(value, str)
+    return value is not None and isinstance(value, str)
 
 
 async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_is_paved: bool, round_to: int) -> dict[str, AverageRating]:

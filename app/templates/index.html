@@ -95,6 +95,14 @@
     {% endcall %}
 </div>
 
+<div id="modal-profile" class="modal modal-dynamic">
+    <p>Loading profile...</p>
+</div>
+
+<div id="modal-admin-settings" class="modal modal-dynamic">
+    <p>Loading admin settings...</p>
+</div>
+
 <div id="modal-create-twist" class="modal">
     {% call render_modal_content("New Twist") %}
     <form hx-post="/twist"

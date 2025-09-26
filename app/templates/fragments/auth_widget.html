@@ -2,9 +2,21 @@
     {% if user %}
     <button class="button button-block auth-display">{{ user.name }}</button>
     <div class="auth-dropdown-menu">
-        <a>Profile</a>
+        <a href="#modal-profile"
+            hx-get="/modal-profile"
+            hx-target="#modal-profile"
+            hx-swap="innerHTML">
+
+            Profile
+        </a>
         {% if user.is_superuser %}
-        <a>Admin Settings</a>
+        <a href="#modal-admin-settings"
+            hx-get="/modal-admin-settings"
+            hx-target="#modal-admin-settings"
+            hx-swap="innerHTML">
+
+            Admin Settings
+        </a>
         {% endif %}
         <a hx-get="/logout"
             hx-target="#auth-widget"
