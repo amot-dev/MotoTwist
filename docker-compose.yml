@@ -5,8 +5,12 @@ services:
       - .env
     ports:
       - "8000:8000"
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   db:
     image: postgres:17.6
@@ -14,6 +18,16 @@ services:
       - .env
     volumes:
       - db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db:

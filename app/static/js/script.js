@@ -76,7 +76,6 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
         // Create the waypoint markers
         const waypointMarkers = data.waypoints.map((point, index) => {
             let icon = waypointIcon;
-            let zIndexOffset = 0;
             const totalPoints = data.waypoints.length;
 
             if (totalPoints === 1 || index === 0) icon = startIcon;
@@ -171,6 +170,14 @@ function applyVisibilityFromStorage() {
         setLayerVisibility(twistId, shouldBeVisible);
     });
 }
+
+// Listen for the custom event sent from the server when a modal needs to be closed
+document.body.addEventListener('closeModal', () => {
+    location.hash='';
+    forms = document.querySelectorAll('form')
+    forms.forEach(form => form.reset());
+    stopTwistCreation();
+});
 
 // Listen for the custom event sent from the server after the twist list is initially loaded
 document.body.addEventListener('twistsLoaded', () => {
@@ -431,6 +438,9 @@ async function updateRoute() {
  * and the route line from the map and resetting UI elements.
  */
 function stopTwistCreation() {
+    // Immediate return if not creating Twist
+    if (!mapContainer.classList.contains('creating-twist')) return;
+
     mapContainer.classList.remove('creating-twist');
 
     waypointMarkers.forEach(marker => map.removeLayer(marker));
@@ -582,10 +592,3 @@ map.on('click', function(e) {
         return originalOpen.apply(this, arguments);
     };
 })();
-
-// HTMX hook for cleanup, only listening on the Twist form
-twistForm.addEventListener('htmx:afterRequest', function() {
-    setTimeout(() => {
-        stopTwistCreation();
-    }, 100);
-});
