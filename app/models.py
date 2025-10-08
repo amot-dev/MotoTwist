@@ -2,10 +2,13 @@ from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Boolean, ForeignKey, Integer, SmallInteger, String, Date
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
 from schemas import CoordinateDict, WaypointDict
+
+
+Base = declarative_base()
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):

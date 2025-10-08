@@ -16,6 +16,7 @@ RUN adduser --system --group --no-create-home mototwist
 RUN mkdir /gpx && chown mototwist:mototwist /gpx
 
 WORKDIR /app
+ENV PYTHONPATH "/"
 COPY --from=builder /install /usr/local
 COPY --chown=mototwist:mototwist ./app .
 
@@ -23,4 +24,4 @@ USER mototwist
 
 EXPOSE 8000
 
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "-m", "app.main"]
