@@ -1,13 +1,3 @@
-{# Render dynamic modal opening button for a Twist #}
-{% macro render_modal_button(twist_id, modal_name, id=False, extra_classes="") -%}
-<a {% if id %}id="modal-{{ modal_name }}-button"{% endif %}
-    href="#modal-{{ modal_name }}"
-    class="button {{ extra_classes | trim }}"
-    hx-get="/modal-{{ modal_name }}/{{ twist_id }}"
-    hx-target="#modal-{{ modal_name }}"
-    hx-swap="innerHTML">{{ caller() }}</a>
-{%- endmacro %}
-
 {# Render modal content with a consistent header and close button #}
 {% macro render_modal_content(title) %}
 <div class="modal-content">

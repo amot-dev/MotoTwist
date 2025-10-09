@@ -10,7 +10,7 @@
             hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
             hx-target="closest .rating-card"
             hx-swap="outerHTML swap:500ms"
-            hx-on::after-request="htmx.trigger('.rating-dropdown', 'ratingDeleted-{{ twist.id }}')">
+            hx-on::after-request="htmx.trigger('.ratings-dropdown', 'ratingDeleted-{{ twist.id }}')">
 
             <i class="fa-solid fa-trash"></i>
         </a>

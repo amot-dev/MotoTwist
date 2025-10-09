@@ -3,7 +3,7 @@
     <button class="button button-block auth-display">{{ user.name }}</button>
     <div class="auth-dropdown-menu">
         <a href="#modal-profile"
-            hx-get="/modal-profile"
+            hx-get="/users/templates/profile-modal"
             hx-target="#modal-profile"
             hx-swap="innerHTML">
 
@@ -11,7 +11,7 @@
         </a>
         {% if user.is_superuser %}
         <a href="#modal-admin-settings"
-            hx-get="/modal-admin-settings"
+            hx-get="/admin/templates/settings-modal"
             hx-target="#modal-admin-settings"
             hx-swap="innerHTML">
 

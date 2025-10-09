@@ -171,6 +171,7 @@ function applyVisibilityFromStorage() {
     });
 }
 
+
 // Listen for the custom event sent from the server when a modal needs to be closed
 document.body.addEventListener('closeModal', () => {
     location.hash='';
@@ -214,21 +215,21 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
         setLayerVisibility(twistId, !twistItem.classList.contains('is-visible'));
     } else if (event.target.closest('.twist-header')) {
         // Clicked on the twist name
-        const ratingDropdown = twistItem.querySelector('.rating-dropdown');
-        const isCurrentlyOpen = ratingDropdown.classList.contains('is-open');
+        const ratingsDropdown = twistItem.querySelector('.ratings-dropdown');
+        const isCurrentlyOpen = ratingsDropdown.classList.contains('is-open');
 
         // Hide all rating dropdowns
-        const allDropdowns = twistItem.closest('#twist-list').querySelectorAll('.rating-dropdown');
-        allDropdowns.forEach(container => {
+        const allRatingsDropdowns = twistItem.closest('#twist-list').querySelectorAll('.ratings-dropdown');
+        allRatingsDropdowns.forEach(container => {
             container.classList.remove('is-open');
         });
 
         // Show current rating dropdown if it was hidden
         if (!isCurrentlyOpen) {
-            ratingDropdown.classList.add('is-open');
+            ratingsDropdown.classList.add('is-open');
 
             // Load content if needed
-            if (ratingDropdown.querySelector('.loading')) {
+            if (ratingsDropdown.querySelector('.loading')) {
                 const twistHeader = twistItem.querySelector('.twist-header')
                 htmx.trigger(twistHeader, 'load-ratings');
             }
@@ -561,8 +562,8 @@ map.on('click', function(e) {
 
     // Override XHR send to intercept outgoing requests
     XMLHttpRequest.prototype.send = function(body) {
-        // Check if this is a POST request to /twist
-        if (this._url && this._url.endsWith('/twist') && this._method === 'POST') {
+        // Check if this is a POST request to /twists
+        if (this._url && this._url.endsWith('/twists') && this._method === 'POST') {
             // Serialize JSON
             bodyJSON = JSON.parse(body);
 

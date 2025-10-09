@@ -14,12 +14,12 @@ from app.utility import *
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter(
-    prefix="",
+    prefix="/users",
     tags=["User Management"]
 )
 
 
-@router.put("/user", response_class=HTMLResponse)
+@router.put("/", response_class=HTMLResponse)
 async def update_user(
     request: Request,
     name: str = Form(...),
@@ -67,7 +67,7 @@ async def update_user(
     events = {
         "flashMessage": "Profile updated!"
     }
-    response = templates.TemplateResponse("fragments/auth_widget.html", {
+    response = templates.TemplateResponse("fragments/auth/widget.html", {
         "request": request,
         "user": user
     })
@@ -75,13 +75,13 @@ async def update_user(
     return response
 
 
-@router.get("/modal-profile", tags=["Templates"], response_class=HTMLResponse)
-async def render_modal_profile(request: Request, user: User = Depends(current_active_user), session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/templates/profile-modal", tags=["Templates"], response_class=HTMLResponse)
+async def render_profile_modal(request: Request, user: User = Depends(current_active_user), session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Returns HTMX for the current user's profile
     """
 
-    return templates.TemplateResponse("fragments/modal_profile.html", {
+    return templates.TemplateResponse("fragments/users/profile_modal.html", {
         "request": request,
         "user": user
     })

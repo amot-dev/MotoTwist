@@ -16,12 +16,12 @@ from app.utility import *
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter(
-    prefix="",
+    prefix="/twists",
     tags=["Twists"]
 )
 
 
-@router.post("/twist", response_class=HTMLResponse)
+@router.post("/", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
     twist_data: TwistCreate,
@@ -66,7 +66,7 @@ async def create_twist(
         "closeModal": "",
         "flashMessage": "Twist created successfully!"
     }
-    response = templates.TemplateResponse("fragments/twist_list.html", {
+    response = templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,
         "twists": twists
     })
@@ -74,7 +74,7 @@ async def create_twist(
     return response
 
 
-@router.delete("/twists/{twist_id}", response_class=HTMLResponse)
+@router.delete("/{twist_id}", response_class=HTMLResponse)
 async def delete_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist and all related ratings.
@@ -100,8 +100,8 @@ async def delete_twist(request: Request, twist_id: int, session: AsyncSession = 
     return response
 
 
-@router.get("/twists/{twist_id}/geometry", response_class=JSONResponse)
-async def get_twist_data(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> TwistGeometryData:
+@router.get("/{twist_id}/geometry", response_class=JSONResponse)
+async def get_twist_geometry(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> TwistGeometryData:
     """
     Fetches the geometry data for a given twist_id and returns it as JSON.
     """
@@ -121,8 +121,8 @@ async def get_twist_data(request: Request, twist_id: int, session: AsyncSession 
     }
 
 
-@router.get("/twist-list", tags=["Templates"], response_class=HTMLResponse)
-async def render_twist_list(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
+async def render_list(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment containing the sorted list of twists.
     """
@@ -135,7 +135,7 @@ async def render_twist_list(request: Request, session: AsyncSession = Depends(ge
     events = {
         "twistsLoaded": ""
     }
-    response = templates.TemplateResponse("fragments/twist_list.html", {
+    response = templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,
         "twists": twists
     })
@@ -143,8 +143,8 @@ async def render_twist_list(request: Request, session: AsyncSession = Depends(ge
     return response
 
 
-@router.get("/modal-delete-twist/{twist_id}", tags=["Templates"], response_class=HTMLResponse)
-async def render_modal_delete_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/{twist_id}/templates/delete-modal", tags=["Templates"], response_class=HTMLResponse)
+async def render_delete_modal(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Returns an HTML fragment for the twist deletion confirmation modal.
     """
@@ -158,7 +158,7 @@ async def render_modal_delete_twist(request: Request, twist_id: int, session: As
     except MultipleResultsFound:
         raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
-    return templates.TemplateResponse("fragments/modal_delete_twist.html", {
+    return templates.TemplateResponse("fragments/twists/delete_modal.html", {
         "request": request,
         "twist": twist
     })

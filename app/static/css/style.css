@@ -415,9 +415,9 @@ ul {
 }
 
 
-/* --- Rating Dropdown --- */
+/* --- Ratings Dropdown --- */
 
-.rating-dropdown {
+.ratings-dropdown {
     position: relative;
     overflow: hidden;
     max-height: 0;
@@ -428,22 +428,22 @@ ul {
 
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
-.rating-dropdown.is-open {
+.ratings-dropdown.is-open {
     max-height: 500px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
-.rating-dropdown h4 {
+.ratings-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
     margin-bottom: var(--padding-sm);
 }
 
-.rating-dropdown .button {
+.ratings-dropdown .button {
     font-size: 0.8rem;
 }
 
-.rating-dropdown #modal-rate-twist-button {
+.ratings-dropdown #modal-rate-twist-button {
     position: absolute;
     top: var(--padding-sm);
     right: var(--padding-lg);
@@ -455,18 +455,18 @@ ul {
 
     transition: background-color 0.2s ease;
 }
-.rating-dropdown #modal-rate-twist-button:hover {
+.ratings-dropdown #modal-rate-twist-button:hover {
     background-color: var(--accent-hover);
 }
 
-.rating-dropdown li {
+.ratings-dropdown li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
 }
 
-.rating-dropdown #modal-delete-twist-button {
+.ratings-dropdown #modal-delete-twist-button {
     position: absolute;
     bottom: var(--padding-md);
     right: var(--padding-lg);

@@ -15,7 +15,7 @@
         <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
         <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
 
-        <ul id="twist-list" hx-get="/twist-list" hx-trigger="load" hx-swap="innerHTML">
+        <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
             <p>Loading twists...</p>
         </ul>
     </div>
@@ -38,7 +38,7 @@
 </template>
 
 <div id="top-right-controls">
-    {% include "fragments/auth_widget.html" %}
+    {% include "fragments/auth/widget.html" %}
     <a id="modal-about-button" href="#modal-about" class="button button-block">
         <img src="{{ url_for('static', path='/images/favicon.ico') }}">
     </a>
@@ -95,7 +95,12 @@
     {% endcall %}
 </div>
 
-<div id="modal-profile" class="modal modal-dynamic">
+<div id="modal-profile" class="modal modal-dynamic"
+    hx-get="/users/templates/profile-modal"
+    hx-target="this"
+    hx-trigger="updateProfileModal from:body"
+    hx-swap="innerHTML">
+
     <p>Loading profile...</p>
 </div>
 
@@ -105,7 +110,7 @@
 
 <div id="modal-create-twist" class="modal">
     {% call render_modal_content("New Twist") %}
-    <form hx-post="/twist"
+    <form hx-post="/twists"
         hx-target="#twist-list"
         hx-swap="innerHTML"
         hx-ext="json-enc">

@@ -19,13 +19,13 @@ from app.utility import *
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter(
-    prefix="",
+    prefix="/twists/{twist_id}/ratings",
     tags=["Ratings"]
 )
 
 
-@router.post("/twists/{twist_id}/rate", response_class=HTMLResponse)
-async def rate_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.post("/", response_class=HTMLResponse)
+async def create_rating(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Handles the creation of a new rating.
     """
@@ -88,7 +88,7 @@ async def rate_twist(request: Request, twist_id: int, session: AsyncSession = De
         "closeModal": "",
         "flashMessage": "Twist rated successfully!"
     }
-    response = templates.TemplateResponse("fragments/rating_dropdown.html", {
+    response = templates.TemplateResponse("fragments/ratings/dropdown.html", {
         "request": request,
         "twist_id": twist_id,
         "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
@@ -97,8 +97,8 @@ async def rate_twist(request: Request, twist_id: int, session: AsyncSession = De
     return response
 
 
-@router.delete("/twists/{twist_id}/ratings/{rating_id}", response_class=HTMLResponse)
-async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.delete("/{rating_id}", response_class=HTMLResponse)
+async def delete_rating(request: Request, twist_id: int, rating_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Deletes a twist rating.
     """
@@ -141,8 +141,8 @@ async def delete_twist_rating(request: Request, twist_id: int, rating_id: int, s
     return response
 
 
-@router.get("/rating-dropdown/{twist_id}", tags=["Templates"], response_class=HTMLResponse)
-async def render_rating_dropdown(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/templates/dropdown", tags=["Templates"], response_class=HTMLResponse)
+async def render_dropdown(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
     """
@@ -156,15 +156,15 @@ async def render_rating_dropdown(request: Request, twist_id: int, session: Async
     except MultipleResultsFound:
         raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
-    return templates.TemplateResponse("fragments/rating_dropdown.html", {
+    return templates.TemplateResponse("fragments/ratings/dropdown.html", {
         "request": request,
         "twist_id": twist_id,
         "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
     })
 
 
-@router.get("/modal-rate-twist/{twist_id}", tags=["Templates"], response_class=HTMLResponse)
-async def render_modal_rate_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/templates/rate-modal", tags=["Templates"], response_class=HTMLResponse)
+async def render_rate_modal(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
     """
@@ -181,7 +181,7 @@ async def render_modal_rate_twist(request: Request, twist_id: int, session: Asyn
     today = date.today()
     tomorrow = today + timedelta(days=1)
 
-    return templates.TemplateResponse("fragments/modal_rate_twist.html", {
+    return templates.TemplateResponse("fragments/ratings/rate_modal.html", {
         "request": request,
         "twist": twist,
         "today": today,
@@ -190,8 +190,8 @@ async def render_modal_rate_twist(request: Request, twist_id: int, session: Asyn
     })
 
 
-@router.get("/modal-view-twist-ratings/{twist_id}", tags=["Templates"], response_class=HTMLResponse)
-async def render_modal_view_twist_ratings(twist_id: int, request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+@router.get("/templates/view-modal", tags=["Templates"], response_class=HTMLResponse)
+async def render_view_modal(twist_id: int, request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """
     Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
     """
@@ -238,7 +238,7 @@ async def render_modal_view_twist_ratings(twist_id: int, request: Request, sessi
         })
 
     # Pass the request, twist, and ratings to the template
-    return templates.TemplateResponse("fragments/modal_view_twist_ratings.html", {
+    return templates.TemplateResponse("fragments/ratings/view_modal.html", {
         "request": request,
         "twist": twist,
         "ratings": ratings_for_template

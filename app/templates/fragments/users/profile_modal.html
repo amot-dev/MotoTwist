@@ -1,7 +1,7 @@
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
 {% call render_modal_content(user.name ~ "'s Profile") %}
-<form hx-put="/user"
+<form hx-put="/users"
     hx-target="#auth-widget"
     hx-swap="outerHTML">
 

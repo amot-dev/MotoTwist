@@ -1,8 +1,8 @@
 {% for twist in twists %}
 <li class="twist-item scroll-shut-on-delete" data-twist-id="{{ twist.id }}" data-paved="{{ twist.is_paved }}">
     <div class="twist-header"
-        hx-get="/rating-dropdown/{{ twist.id }}"
-        hx-target="next .rating-dropdown"
+        hx-get="/twists/{{ twist.id }}/ratings/templates/dropdown"
+        hx-target="next .ratings-dropdown"
         hx-swap="innerHTML"
         hx-trigger="load-ratings">
 
@@ -11,9 +11,9 @@
             <i class="far fa-eye"></i>
         </span>
     </div>
-    <div class="rating-dropdown"
+    <div class="ratings-dropdown"
         hx-ext="morph"
-        hx-get="/rating-dropdown/{{ twist.id }}"
+        hx-get="/twists/{{ twist.id }}/ratings/templates/dropdown"
         hx-trigger="ratingDeleted-{{ twist.id }} from:body"
         hx-target="this"
         hx-swap="morph:innerHTML">
