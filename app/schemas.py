@@ -13,6 +13,7 @@ class UserCreate(schemas.BaseUserCreate):
     pass
 
 class UserUpdate(schemas.BaseUserUpdate):
+    name: str | None = None
     pass
 
 

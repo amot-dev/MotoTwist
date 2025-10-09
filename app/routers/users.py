@@ -5,9 +5,11 @@ from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import logger
 from app.database import get_db
 from app.models import User
 from app.settings import *
+from app.schemas import UserUpdate
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import *
 
@@ -28,13 +30,12 @@ async def update_user(
     password_confirmation: str | None = Form(None),
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
-    session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
-    has_changes = False
+    user_updates = UserUpdate()
 
     if name and name != user.name:
-        user.name = name
-        has_changes = True
+        logger.debug(f"Changing name for {user.id} from {user.name} to {name}")
+        user_updates.name = name
 
     if email and email.lower() != user.email:
         # Check if the new email is already taken by another user
@@ -42,30 +43,25 @@ async def update_user(
             await user_manager.get_by_email(email)
             raise_http("This email address is already in use", status_code=409)
         except UserNotExists:
-            user.email = email.lower()
-            has_changes = True
+            logger.debug(f"Changing email for {user.id} from {user.email} to {email.lower()}")
+            user_updates.email = email.lower()
 
     if password:
         if password != password_confirmation:
             raise_http("Passwords do not match", status_code=422)
+        logger.debug(f"Changing password for {user.id}")
+        user_updates.password = password
 
-        # Use the user_manager to validate password complexity
+    # Commit changes only if there were changes
+    if user_updates.model_dump(exclude_unset=True):
         try:
-            await user_manager.validate_password(password, user)
+            await user_manager.update(user_updates, user, request=request)
         except InvalidPasswordException as e:
             raise_http("Invalid password", status_code=422, exception=e)
 
-        # Hash the new password and update the user model
-        user.hashed_password = user_manager.password_helper.hash(password)
-        has_changes = True
-
-    # Commit changes only if there were changes
-    if has_changes:
-        session.add(user)
-        await session.commit()
-
     events = {
-        "flashMessage": "Profile updated!"
+        "flashMessage": "Profile updated!",
+        "updateProfileModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
         "request": request,

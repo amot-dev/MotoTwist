@@ -546,10 +546,17 @@ ul {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
+
+    /* Initial state of animation control variable --- */
+    --content-animation-name: animatetop;
 }
-.modal:not(.modal-dynamic):target,
-.modal.modal-dynamic:has(.modal-content):target {
+.modal:has(.modal-content):target {
     display: flex;
+
+    /*  Set the animation ONCE when the modal opens.
+        It runs for 1ms, uses 'forwards' to make the variable change stick,
+        and then it's done forever for this modal instance. */
+    animation: set-animation-played 1ms forwards;
 }
 
 .modal-content {
@@ -565,7 +572,7 @@ ul {
     color: var(--text-offwhite);
     background-color: var(--panel-slate);
 
-    animation: animatetop 0.4s;
+    animation: var(--content-animation-name) 0.4s;
 }
 @keyframes animatetop {
     from {
@@ -575,6 +582,12 @@ ul {
     to {
         top: 0;
         opacity: 1;
+    }
+}
+@keyframes no-animation { from {} to {} }
+@keyframes set-animation-played {
+    to {
+        --content-animation-name: no-animation;
     }
 }
 
