@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import logger
 from app.database import get_db
 from app.models import User
-from app.settings import *
 from app.schemas import UserUpdate
+from app.settings import *
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import *
 

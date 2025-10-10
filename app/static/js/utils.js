@@ -56,3 +56,43 @@ document.body.addEventListener('htmx:responseError', function(event) {
     // Display the flash with an orange accent
     flash(errorMessage, 5000, backgroundColor=accentOrange);
 });
+
+document.body.addEventListener('click', function(event) {
+    // Find the button that was clicked
+    const copyButton = event.target.closest('.button-copy-input');
+
+    // If a copy button wasn't clicked or it's already copied, do nothing
+    if (!copyButton || copyButton.classList.contains('copied')) {
+        return;
+    }
+
+    // Find the target input field using the button's data attribute
+    const targetId = copyButton.dataset.targetId;
+    const inputField = document.getElementById(targetId);
+    if (!inputField) {
+        return;
+    }
+
+    // Use the modern Clipboard API to copy the input's value
+    navigator.clipboard.writeText(inputField.value).then(() => {
+        // --- Success! Provide feedback ---
+        const icon = copyButton.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-copy');
+            icon.classList.add('fa-check');
+        }
+        copyButton.classList.add('copied');
+
+        // Reset the button after 2 seconds
+        setTimeout(() => {
+            if (icon) {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-copy');
+            }
+            copyButton.classList.remove('copied');
+        }, 2000);
+
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+});

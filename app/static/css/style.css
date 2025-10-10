@@ -115,6 +115,11 @@ ul {
     text-decoration: none;
 }
 
+.button-small {
+    padding: var(--padding-sm) var(--padding-md);
+    font-size: 0.9rem;
+}
+
 .button-link {
     color: var(--accent);
 
@@ -663,6 +668,155 @@ ul {
 }
 
 
+/* --- Modal About --- */
+
+.about-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-lg); /* Create space between sections */
+}
+
+.app-tagline {
+    margin-top: var(--padding-sm);
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.info-list {
+    margin-bottom: calc(var(--padding-lg) * 1.5);
+}
+
+.info-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--panel-slate-hover);
+    padding: var(--padding-md) 0;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-list li span {
+    color: var(--text-muted);
+}
+
+.info-list li .button-link {
+    --accent: var(--accent-blue);
+    --accent-hover-light: var(--accent-blue-hover-light);
+}
+
+.support-info {
+    text-align: center;
+}
+
+
+/* --- User Management List --- */
+
+#user-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-sm);
+}
+
+.user-row {
+    display: flex;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    background-color: var(--bg-charcoal);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: var(--padding-xs);
+    min-width: 0; /* Prevents flexbox overflow */
+    margin-right: var(--padding-lg);
+}
+
+.user-name {
+    font-weight: bold;
+}
+
+.user-email {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.user-controls {
+    display: flex;
+    flex-shrink: 0; /* Prevent controls from shrinking */
+    gap: var(--padding-md);
+    align-items: center;
+}
+
+.user-control-icon {
+    color: var(--text-muted);
+    cursor: pointer;
+
+    transition: color var(--transition-fast);
+}
+.user-control-icon:hover {
+    color: var(--text-offwhite);
+}
+.user-control-icon .fa-toggle-on {
+    color: var(--accent-blue);
+}
+.user-control-icon .fa-user-shield {
+    color: var(--accent-orange);
+}
+
+.link-display-container {
+    display: flex;
+    margin-top: var(--padding-sm);
+}
+
+.password-link-input {
+    font-family: monospace;
+}
+
+.button-copy-input {
+    border: var(--border-default);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--panel-slate);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+.button-copy-input:hover {
+    background-color: var(--panel-slate-hover);
+}
+.button-copy-input.copied {
+    background-color: var(--accent-blue-dark);
+    color: white;
+    cursor: default;
+}
+
+#add-user-form {
+    border: 2px dashed var(--border-gray);
+    background-color: transparent;
+}
+
+#add-user-form label {
+    cursor: pointer;
+}
+
+#add-user-form .fa-user-shield {
+    display: none; /* Hide the 'admin' icon by default */
+}
+#add-user-form input[type="checkbox"]:checked + label .fa-user {
+    display: none; /* Hide the 'regular' icon when checked */
+}
+#add-user-form input[type="checkbox"]:checked + label .fa-user-shield {
+    display: inline-block; /* Show the 'admin' icon when checked */
+}
+
+
 /* --- Modal Rate Twist --- */
 .rate-form[data-paved="true" i] {
   --accent: var(--accent-blue);
@@ -715,50 +869,6 @@ ul {
     position: absolute;
     top: var(--padding-lg);
     right: var(--padding-lg);
-}
-
-
-/* --- Modal About --- */
-
-.about-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--padding-lg); /* Create space between sections */
-}
-
-.app-tagline {
-    margin-top: var(--padding-sm);
-    font-size: 1.1rem;
-    color: var(--text-muted);
-}
-
-.info-list {
-    margin-bottom: calc(var(--padding-lg) * 1.5);
-}
-
-.info-list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--panel-slate-hover);
-    padding: var(--padding-md) 0;
-}
-
-.info-list li:last-child {
-    border-bottom: none;
-}
-
-.info-list li span {
-    color: var(--text-muted);
-}
-
-.info-list li .button-link {
-    --accent: var(--accent-blue);
-    --accent-hover-light: var(--accent-blue-hover-light);
-}
-
-.support-info {
-    text-align: center;
 }
 
 

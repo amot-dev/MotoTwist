@@ -76,7 +76,7 @@ async def log_process_time(request: Request, call_next: Callable[[Request], Awai
     return response
 
 
-# app.include_router(admin.router)
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(ratings.router)
 app.include_router(twists.router)

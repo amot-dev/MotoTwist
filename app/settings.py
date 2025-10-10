@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
 
     LOG_LEVEL: str = "INFO"
+    MOTOTWIST_BASE_URL: str = "http://localhost:8000"
     MOTOTWIST_SECRET_KEY: str = "mototwist"
     MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"
     MOTOTWIST_ADMIN_PASSWORD: str = "password"
@@ -52,6 +53,12 @@ class Settings(BaseSettings):
                 f"Must be one of {valid_levels}"
             )
         return upper_value
+
+    @field_validator("MOTOTWIST_BASE_URL")
+    @classmethod
+    def remove_trailing_slash_from_base_url(cls, value: str) -> str:
+        """Removes the trailing slash from the base URL."""
+        return value.rstrip("/")
 
     @field_validator("TWIST_SIMPLIFICATION_TOLERANCE_M", mode="before")
     @classmethod
