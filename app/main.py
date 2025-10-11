@@ -20,7 +20,7 @@ from models import User
 from app.routers import admin, auth, ratings, twists, users
 from settings import *
 from schemas import UserCreate
-from users import current_user_optional, get_user_db, UserManager
+from users import current_active_user_optional, get_user_db, UserManager
 from utility import *
 
 
@@ -87,7 +87,7 @@ app.include_router(users.router)
 
 
 @app.get("/", tags=["Index", "Templates"], response_class=HTMLResponse)
-async def render_index_page(request: Request, user: User | None = Depends(current_user_optional)) -> HTMLResponse:
+async def render_index_page(request: Request, user: User | None = Depends(current_active_user_optional)) -> HTMLResponse:
     """
     Serves the main page of the application.
     """

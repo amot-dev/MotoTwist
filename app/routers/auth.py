@@ -8,7 +8,7 @@ import json
 import uuid
 
 from app.models import User
-from app.users import auth_backend, current_active_user, get_user_manager, get_redis_strategy, UserManager
+from app.users import auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy, UserManager
 from app.utility import *
 
 templates = Jinja2Templates(directory="templates")
@@ -30,7 +30,7 @@ async def login(
     user = await user_manager.authenticate(credentials)
 
     # Handle failed login
-    if not user:
+    if not user or not user.is_active:
         raise_http("Invalid email or password", status_code=401)
 
     events = {
@@ -58,21 +58,23 @@ async def login(
 async def logout(
     request: Request,
     response: Response,
-    user: User = Depends(current_active_user),
+    user: User | None = Depends(current_active_user_optional),
     strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
 ) -> HTMLResponse:
     """
     Logs a user out and updates the auth widget.
     """
-    # Get the session token from the request cookie
-    token = request.cookies.get("mototwist")
-    if token is None:
-        raise_http("No session cookie found", status_code=401)
+    flash_message = "You have been logged out"
 
-    await auth_backend.logout(strategy, user, token)
+    if user:
+        # Get the session token from the request cookie
+        token = request.cookies.get("mototwist")
+        if token:
+            await auth_backend.logout(strategy, user, token)
+            flash_message = f"See you soon, {user.name}!"
 
     events = {
-        "flashMessage": f"See you soon, {user.name}!"
+        "flashMessage": flash_message
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
         "request": request,

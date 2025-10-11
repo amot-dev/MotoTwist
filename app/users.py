@@ -72,5 +72,5 @@ fastapi_users = FastAPIUsers[User, UUID](
 )
 
 current_active_user = fastapi_users.current_user(active=True)
+current_active_user_optional = fastapi_users.current_user(active=True, optional=True)
 current_admin_user = fastapi_users.current_user(active=True, superuser=True)
-current_user_optional = fastapi_users.current_user(active=True, optional=True)
