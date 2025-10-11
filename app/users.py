@@ -56,7 +56,6 @@ cookie_transport = CookieTransport(cookie_name="mototwist", cookie_max_age=3600)
 redis_client = redis.asyncio.from_url(settings.REDIS_URL, decode_responses=True)  # pyright: ignore [reportUnknownMemberType]
 
 def get_redis_strategy() -> RedisStrategy[User, UUID]:
-    """Dependency to get the Redis authentication strategy."""
     return RedisStrategy(redis_client, lifetime_seconds=3600)
 
 auth_backend = AuthenticationBackend(

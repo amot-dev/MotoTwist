@@ -30,7 +30,12 @@ RATING_CRITERIA_UNPAVED: list[RatingCriterion] = [
 
 def raise_http(detail: str, status_code: int = 500, exception: Exception | None = None) -> NoReturn:
     """
-    Logs an error and its stack trace, then raises an HTTPException.
+    Log an error and its stack trace, then raise an HTTPException.
+
+    :param detail: The error message to send to the client.
+    :param status_code: Optional HTTP status code. Defaults to 500.
+    :param exception: Optional Exception object from which to create stack trace. Defaults to None.
+    :raises HTTPException: Always.
     """
     if exception:
         logger.exception(detail)
@@ -41,13 +46,25 @@ def raise_http(detail: str, status_code: int = 500, exception: Exception | None 
 
 
 def is_form_value_string(value: UploadFile | str | None) -> TypeGuard[str]:
+    """
+    Type Guard to validate form values as strings.
+
+    :param value: The form value to validate.
+    :return: True if the value is a string, False otherwise.
+    """
     """Returns True if the form value is a string, acting as a type guard."""
     return value is not None and isinstance(value, str)
 
 
 async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_is_paved: bool, round_to: int) -> dict[str, AverageRating]:
     """
-    Calculates the average ratings for a twist.
+    Calculate the average ratings for a Twist.
+
+    :param session: The session to use for database transactions.
+    :param twist_id: The id of the Twist for which to calculate average ratings.
+    :param twist_is_paved: Whether or not the Twist is paved.
+    :param round_to: The number of decimal places to round to.
+    :return: A dictionary of each criteria and its average rating.
     """
     if twist_is_paved:
         target_model = PavedRating
@@ -79,12 +96,14 @@ async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_i
 
 def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coordinate]) -> list[Waypoint]:
     """
-    Maps a list of Waypoints to a route track of Coordinates.
+    Map a list of Waypoints to a route track of Coordinates.
     - The first waypoint is mapped to the first trackpoint.
     - The last waypoint is mapped to the last trackpoint.
     - Intermediate waypoints are mapped to their nearest trackpoint.
 
-    Returns a new list of modified Waypoints.
+    :param waypoints: The list of Waypoints to snap to the route.
+    :param route_geometry: The list of Coordinates making up the route to snap to.
+    :return: A new list of modified Waypoints.
     """
     if not route_geometry or not waypoints or len(waypoints) < 2:
         return waypoints
@@ -119,31 +138,27 @@ def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coor
     return snapped_waypoints
 
 
-def simplify_route(coordinates: list[Coordinate], epsilon: float | None = None) -> tuple[list[Coordinate], int | None]:
+
+def simplify_route(coordinates: list[Coordinate]) -> list[Coordinate]:
     """
-    Simplifies a route's coordinates, returning the new list and tolerance in meters.
-    The tolerance is taken from the provided `epsilon` (in degrees) or falls back
-    to the global `TWIST_SIMPLIFICATION_TOLERANCE_M` setting if epsilon is None.
+    Simplify a route's coordinates based off the `TWIST_SIMPLIFICATION_TOLERANCE_M` setting. Reduces storage space for database.
+
+    :param coordinates: The list of Coordinates to simplify.
+    :return: A new list of simplified Coordinates.
     """
     # Approximation for 1 degree of latitude in meters
     METERS_PER_DEGREE_APPROX = 111132
 
     # Only simplify if more than 2 points
     if len(coordinates) < 2:
-        return (coordinates, None)
+        return coordinates
 
-    # Calculate epsilon from env if not given
-    if epsilon is None:
-        if not settings.TWIST_SIMPLIFICATION_TOLERANCE_M:
-            logger.debug("Twist simplification skipped due to unset tolerance")
-            return (coordinates, None)
-
-        logger.info(f"Simplifying Twist route with tolerance of {settings.TWIST_SIMPLIFICATION_TOLERANCE_M}m")
-        epsilon = settings.TWIST_SIMPLIFICATION_TOLERANCE_M / METERS_PER_DEGREE_APPROX
+    logger.info(f"Simplifying Twist route with tolerance of {settings.TWIST_SIMPLIFICATION_TOLERANCE_M}m")
+    epsilon = settings.TWIST_SIMPLIFICATION_TOLERANCE_M / METERS_PER_DEGREE_APPROX
 
     # Simplify route
     line = LineString([(c.lat, c.lng) for c in coordinates])
     simplified_line = line.simplify(epsilon, preserve_topology=True)
     simplified_coordinates = [Coordinate(lat=x, lng=y) for x, y in simplified_line.coords]
 
-    return (simplified_coordinates, settings.TWIST_SIMPLIFICATION_TOLERANCE_M)
+    return simplified_coordinates

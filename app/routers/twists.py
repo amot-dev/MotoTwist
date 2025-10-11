@@ -28,9 +28,9 @@ async def create_twist(
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
-    Handles the creation of a new Twist.
+    Create a new Twist.
     """
-    simplified_route, tolerance = simplify_route(twist_data.route_geometry)
+    simplified_route = simplify_route(twist_data.route_geometry)
     snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
     # Convert Pydantic model lists to dictionary lists before saving to JSONB columns
@@ -49,7 +49,7 @@ async def create_twist(
         is_paved=twist_data.is_paved,
         waypoints=waypoints_for_db,
         route_geometry=geometry_for_db,
-        simplification_tolerance_m=tolerance
+        simplification_tolerance_m=settings.TWIST_SIMPLIFICATION_TOLERANCE_M
     )
     session.add(twist)
     await session.commit()
@@ -62,9 +62,9 @@ async def create_twist(
     twists = results.all()
 
     events = {
+        "flashMessage": "Twist created successfully!",
         "twistAdded":  str(twist.id),
-        "closeModal": "",
-        "flashMessage": "Twist created successfully!"
+        "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,
@@ -75,9 +75,13 @@ async def create_twist(
 
 
 @router.delete("/{twist_id}", response_class=HTMLResponse)
-async def delete_twist(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def delete_twist(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Deletes a twist and all related ratings.
+    Delete a Twist and all related ratings.
     """
     result = await session.execute(
         delete(Twist).where(Twist.id == twist_id)
@@ -89,9 +93,9 @@ async def delete_twist(request: Request, twist_id: int, session: AsyncSession = 
     logger.debug(f"Deleted Twist with id '{twist_id}'")
 
     events = {
+        "flashMessage": "Twist deleted successfully!",
         "twistDeleted":  str(twist_id),
-        "closeModal": "",
-        "flashMessage": "Twist deleted successfully!"
+        "closeModal": ""
     }
 
     # Empty response to "delete" the list item
@@ -101,9 +105,13 @@ async def delete_twist(request: Request, twist_id: int, session: AsyncSession = 
 
 
 @router.get("/{twist_id}/geometry", response_class=JSONResponse)
-async def get_twist_geometry(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> TwistGeometryData:
+async def get_twist_geometry(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> TwistGeometryData:
     """
-    Fetches the geometry data for a given twist_id and returns it as JSON.
+    Serve JSON containing the geometry data for a given Twist.
     """
     try:
         result = await session.execute(
@@ -122,9 +130,12 @@ async def get_twist_geometry(request: Request, twist_id: int, session: AsyncSess
 
 
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
-async def render_list(request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_list(
+    request: Request,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Returns an HTML fragment containing the sorted list of twists.
+    Serve an HTML fragment containing the sorted list of Twists.
     """
     results = await session.execute(
         select(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name)
@@ -144,9 +155,13 @@ async def render_list(request: Request, session: AsyncSession = Depends(get_db))
 
 
 @router.get("/{twist_id}/templates/delete-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_delete_modal(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_delete_modal(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Returns an HTML fragment for the twist deletion confirmation modal.
+    Serve an HTML fragment containing the Twist deletion confirmation modal.
     """
     try:
         result = await session.execute(

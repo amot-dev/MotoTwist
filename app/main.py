@@ -67,7 +67,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 @app.middleware("http")
-async def log_process_time(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+async def log_process_time(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     start_time = time()
     response = await call_next(request)
     process_time = (time() - start_time) * 1000
@@ -87,9 +90,16 @@ app.include_router(users.router)
 
 
 @app.get("/", tags=["Index", "Templates"], response_class=HTMLResponse)
-async def render_index_page(request: Request, user: User | None = Depends(current_active_user_optional)) -> HTMLResponse:
+async def render_index_page(
+    request: Request,
+    user: User | None = Depends(current_active_user_optional)
+) -> HTMLResponse:
     """
-    Serves the main page of the application.
+    Serve the main page of MotoTwist.
+
+    :param request: FastAPI request.
+    :param user: Optional logged in user.
+    :return: TemplateResponse containing main page.
     """
     # Add a flash message if it exists in the session
     flash_message: str = request.session.pop("flash", None)
@@ -107,7 +117,11 @@ async def render_index_page(request: Request, user: User | None = Depends(curren
 @app.get("/latest-version", tags=["Templates"], response_class=HTMLResponse)
 async def get_latest_version(request: Request) -> HTMLResponse:
     """
-    Get the latest version from GitHub and return an HTML fragment.
+    Serve an HTML fragment containing the latest version from GitHub, or "Unchecked" if running a dev build.
+
+    :param request: FastAPI request.
+    :raises HTTPException: Unable to read from the GitHub API.
+    :return: TemplateResponse containing version HTML fragment.
     """
     # Default version indicates a development environment
     if settings.MOTOTWIST_VERSION == Settings.model_fields["MOTOTWIST_VERSION"].default:

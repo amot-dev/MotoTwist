@@ -3,10 +3,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
-from app.database import get_db
 from app.models import User
 from app.schemas import UserUpdate
 from app.settings import *
@@ -31,6 +29,9 @@ async def update_user(
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
 ) -> HTMLResponse:
+    """
+    Update the current user. Self-serve.
+    """
     user_updates = UserUpdate()
 
     if name and name != user.name:
@@ -77,6 +78,9 @@ async def delete_user(
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
 ) -> HTMLResponse:
+    """
+    Delete the current user. Self-serve.
+    """
     await user_manager.delete(user, request=request)
 
     events = {
@@ -97,6 +101,9 @@ async def deactivate_user(
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
 ) -> HTMLResponse:
+    """
+    Deactivate the current user. Self-serve.
+    """
     await user_manager.update(UserUpdate(is_active=False), user, request=request)
 
     events = {
@@ -112,9 +119,12 @@ async def deactivate_user(
 
 
 @router.get("/templates/profile-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_profile_modal(request: Request, user: User = Depends(current_active_user), session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_profile_modal(
+    request: Request,
+    user: User = Depends(current_active_user)
+) -> HTMLResponse:
     """
-    Returns HTMX for the current user's profile
+    Serve an HTML fragment containing the current user's profile modal.
     """
 
     return templates.TemplateResponse("fragments/users/profile_modal.html", {

@@ -37,7 +37,7 @@ async def create_user(
     user_manager: UserManager = Depends(get_user_manager)
 ) -> HTMLResponse:
     """
-    Creates a new user.
+    Create a new user.
     """
 
     if not admin.is_superuser:
@@ -86,7 +86,7 @@ async def delete_user(
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
-    Deletes a  user.
+    Delete a user.
     """
 
     if not admin.is_superuser:
@@ -131,7 +131,7 @@ async def toggle_user_active(
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
-    Toggles the active state for a given user.
+    Toggle the active state for a given user.
     """
 
     if not admin.is_superuser:
@@ -176,7 +176,7 @@ async def toggle_user_admin(
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
-    Toggles the superuser state for a given user.
+    Toggle the superuser state for a given user.
     """
 
     if not admin.is_superuser:
@@ -219,7 +219,7 @@ async def render_settings_modal(
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
-    Returns HTMX for the admin settings
+    Serve an HTML fragment containing the admin settings modal.
     """
 
     if not admin.is_superuser:

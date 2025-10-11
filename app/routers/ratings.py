@@ -25,9 +25,13 @@ router = APIRouter(
 
 
 @router.post("/", response_class=HTMLResponse)
-async def create_rating(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def create_rating(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Handles the creation of a new rating.
+    Create a new rating for the given Twist.
     """
     try:
         result = await session.scalars(
@@ -85,8 +89,8 @@ async def create_rating(request: Request, twist_id: int, session: AsyncSession =
 
     # Set a header to trigger a client-side event after the swap, passing a message
     events = {
-        "closeModal": "",
-        "flashMessage": "Twist rated successfully!"
+        "flashMessage": "Twist rated successfully!",
+        "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/ratings/dropdown.html", {
         "request": request,
@@ -98,9 +102,14 @@ async def create_rating(request: Request, twist_id: int, session: AsyncSession =
 
 
 @router.delete("/{rating_id}", response_class=HTMLResponse)
-async def delete_rating(request: Request, twist_id: int, rating_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def delete_rating(
+    request: Request,
+    twist_id: int,
+    rating_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Deletes a twist rating.
+    Delete a rating from the given Twist.
     """
     try:
         result = await session.scalars(
@@ -142,9 +151,13 @@ async def delete_rating(request: Request, twist_id: int, rating_id: int, session
 
 
 @router.get("/templates/dropdown", tags=["Templates"], response_class=HTMLResponse)
-async def render_dropdown(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_dropdown(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Gets the average ratings for a twist and returns an HTML fragment for the HTMX-powered dropdown.
+    Serve an HTML fragment containing a dropdown with the average ratings for a given Twist.
     """
     try:
         result = await session.execute(
@@ -164,9 +177,13 @@ async def render_dropdown(request: Request, twist_id: int, session: AsyncSession
 
 
 @router.get("/templates/rate-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_rate_modal(request: Request, twist_id: int, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_rate_modal(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Gets the details for a twist and returns an HTML form fragment for the HTMX-powered modal.
+    Serve an HTML fragment containing a modal to rate a given Twist.
     """
     try:
         result = await session.execute(
@@ -191,9 +208,13 @@ async def render_rate_modal(request: Request, twist_id: int, session: AsyncSessi
 
 
 @router.get("/templates/view-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_view_modal(twist_id: int, request: Request, session: AsyncSession = Depends(get_db)) -> HTMLResponse:
+async def render_view_modal(
+    request: Request,
+    twist_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
     """
-    Gets the ratings for a twist and returns an HTML fragment for the HTMX-powered modal.
+    Serve an HTML fragment containing a modal to view the ratings for a given Twist.
     """
     try:
         result = await session.scalars(

@@ -25,7 +25,7 @@ async def login(
     strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
 ) -> HTMLResponse:
     """
-    Logs a user in and updates the auth widget.
+    Login and serve an HTML fragment containing the auth widget.
     """
     user = await user_manager.authenticate(credentials)
 
@@ -34,8 +34,8 @@ async def login(
         raise_http("Invalid credentials or deactivated account", status_code=401)
 
     events = {
-        "closeModal": "",
-        "flashMessage": f"Welcome back, {user.name}!"
+        "flashMessage": f"Welcome back, {user.name}!",
+        "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
         "request": request,
@@ -62,7 +62,7 @@ async def logout(
     strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
 ) -> HTMLResponse:
     """
-    Logs a user out and updates the auth widget.
+    Logout and serve an HTML fragment containing the auth widget.
     """
     flash_message = "You have been logged out"
 
@@ -84,13 +84,13 @@ async def logout(
     return response
 
 
-@router.get("/reset-password", response_class=HTMLResponse)
+@router.get("/reset-password", tags=["Templates"], response_class=HTMLResponse)
 async def render_set_password_page(
     request: Request,
     token: str
 ):
     """
-    Displays the page for a user to set their password.
+    Serve the password reset page.
     """
 
     return templates.TemplateResponse("reset_password.html", {
@@ -108,7 +108,7 @@ async def reset_password(
     user_manager: UserManager = Depends(get_user_manager),
 ):
     """
-    Handles the password set form submission.
+    Reset a user password by token, then redirect to the main page of MotoTwist.
     """
     if password != password_confirmation:
         raise_http("Passwords do not match", status_code=422)
