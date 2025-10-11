@@ -1,0 +1,133 @@
+from fastapi import APIRouter, Depends, Form, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
+from fastapi_users.authentication import RedisStrategy
+from fastapi_users.exceptions import InvalidResetPasswordToken, UserInactive, UserNotExists
+import json
+import uuid
+
+from app.models import User
+from app.users import auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy, UserManager
+from app.utility import *
+
+templates = Jinja2Templates(directory="templates")
+router = APIRouter(
+    prefix="",
+    tags=["Authentication"]
+)
+
+@router.post("/login", response_class=HTMLResponse)
+async def login(
+    request: Request,
+    credentials: OAuth2PasswordRequestForm = Depends(),
+    user_manager: UserManager = Depends(get_user_manager),
+    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+) -> HTMLResponse:
+    """
+    Login and serve an HTML fragment containing the auth widget.
+    """
+    user = await user_manager.authenticate(credentials)
+
+    # Handle failed login
+    if not user or not user.is_active:
+        raise_http("Invalid credentials or deactivated account", status_code=401)
+
+    events = {
+        "flashMessage": f"Welcome back, {user.name}!",
+        "closeModal": ""
+    }
+    response = templates.TemplateResponse("fragments/auth/widget.html", {
+        "request": request,
+        "user": user
+    })
+
+    # Create the session cookie and attach it to a response
+    cookie_response = await auth_backend.login(strategy, user)
+
+    # Copy cookie into template response
+    cookie = cookie_response.headers.get("Set-Cookie")
+    if cookie:
+        response.headers["Set-Cookie"] = cookie
+
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+
+@router.get("/logout", response_class=HTMLResponse)
+async def logout(
+    request: Request,
+    response: Response,
+    user: User | None = Depends(current_active_user_optional),
+    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+) -> HTMLResponse:
+    """
+    Logout and serve an HTML fragment containing the auth widget.
+    """
+    flash_message = "You have been logged out"
+
+    if user:
+        # Get the session token from the request cookie
+        token = request.cookies.get("mototwist")
+        if token:
+            await auth_backend.logout(strategy, user, token)
+            flash_message = f"See you soon, {user.name}!"
+
+    events = {
+        "flashMessage": flash_message
+    }
+    response = templates.TemplateResponse("fragments/auth/widget.html", {
+        "request": request,
+        "user": None
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+
+@router.get("/register", tags=["Templates"], response_class=HTMLResponse)
+async def render_register_page(request: Request) -> HTMLResponse:
+    """
+    Serve the register page.
+    """
+
+    return templates.TemplateResponse("register.html", {
+        "request": request
+    })
+
+
+@router.post("/reset-password", response_class=RedirectResponse)
+async def reset_password(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    password_confirmation: str = Form(...),
+    user_manager: UserManager = Depends(get_user_manager),
+) -> RedirectResponse:
+    """
+    Reset a user password by token, then redirect to the main page of MotoTwist.
+    """
+    if password != password_confirmation:
+        raise_http("Passwords do not match", status_code=422)
+
+    try:
+        await user_manager.reset_password(token, password, request=request)
+    except (InvalidResetPasswordToken, UserInactive, UserNotExists):
+        raise_http("This link is invalid or has expired", status_code=400)
+
+    request.session["flash"] = "Password updated!"
+    return RedirectResponse(url="/", status_code=303)
+
+
+@router.get("/reset-password", tags=["Templates"], response_class=HTMLResponse)
+async def render_reset_password_page(
+    request: Request,
+    token: str
+) -> HTMLResponse:
+    """
+    Serve the password reset page.
+    """
+
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token
+    })

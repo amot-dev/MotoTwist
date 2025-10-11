@@ -1,6 +1,10 @@
 # MotoTwist
 
-A self-hosted, Dockerized service to store, rate, and view your favorite motorcycle roads from GPX files.
+_Track the Thrill. Rate the Road._
+
+MotoTwist is the ultimate companion for every motorcycle enthusiast. Discover, track, and save your most epic journeys. MotoTwist allows you to rate routes on key criteria like scenery, road quality, and twistiness. Or, for the offroad enthusiasts, you can rate them on surface consistency, technicality, and general flow.
+
+Share your favorite roads with a community of fellow riders and find your next great adventure, recommended by those who've ridden it before.
 
 
 ## Getting Started
@@ -38,13 +42,21 @@ Below is an overview of all available environment variables for MotoTwist.
 
 | Variable | Description | Default   |
 | - | - | - |
-| `TWIST_SIMPLIFICATION_TOLERANCE_M` | Sets the simplification tolerance for new Twist routes. A higher value (e.g., `"50m"`) removes more points and reduces storage size. Set to `"0m"` to disable. | `"30m"`   |
-| `SESSION_SECRET_KEY` | A long, random string used to cryptographically sign session cookies, preventing tampering. **This must be changed for production!** | `"changethis"` |
+| `MOTOTWIST_BASE_URL` | The base URL at which MotoTwist is expecting to be hosted. | **This must be changed for production!** | `"http://localhost:8000"` |
+| `MOTOTWIST_SECRET_KEY` | A long, random string used to cryptographically sign session cookies, preventing tampering. **This must be changed for production!** | `"changethis"` |
 | `OSM_URL` | The URL template for the OpenStreetMap tile server, which provides the visual base map. | `"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"` |
 | `OSRM_URL` | The base URL for the OSRM routing engine, used for calculating routes for new Twists. | `"https://router.project-osrm.org"` |
+| `TWIST_SIMPLIFICATION_TOLERANCE_M` | Sets the simplification tolerance for new Twist routes. A higher value (e.g., `"50m"`) removes more points and reduces storage size. Set to `"0m"` to disable. | `"30m"`   |
 
 > [!WARNING]
 > Keep in mind the [OSM Tile Policy](https://operations.osmfoundation.org/policies/tiles/) and [OSRM Usage Policy](https://map.project-osrm.org/about.html) if you do not plan on changing OSM_URL and/or OSRM_URL.
+
+#### User Options
+| Variable | Description | Default   |
+| - | - | - |
+| `MOTOTWIST_ADMIN_EMAIL` | The email to use for creating the initial admin user. Only affects initial container setup. **This should be changed for production!** | `"admin@admin.com"` |
+| `MOTOTWIST_ADMIN_PASSWORD` | The password to assign to the initial admin user. Only affects initial container setup. Do not set to final wanted password. | `"password"` |
+| `ALLOW_USER_REGISTRATION` | Whether or not users are allowed to register for your instance. If `False`, users may only be created by an administrator. | `False` |
 
 #### Database Options
 
@@ -57,6 +69,7 @@ These variables are required to connect to the PostgreSQL database.
 | `POSTGRES_DB` | The name of the database to connect to. | `"mototwist"` |
 | `POSTGRES_USER` | The username for the database connection. | `"mototwist"` |
 | `POSTGRES_PASSWORD` | The password for the database connection. **This must be changed for production!** | `"changethis"` |
+| `REDIS_URL` | The URL to use to connect to Redis. Do not change unless you have an external instance. | `"redis://redis:6379"` |
 
 #### Developer Options
 
@@ -66,6 +79,7 @@ These settings are useful for local development and debugging.
 | - | - | - |
 | `LOG_LEVEL` | Sets the application's logging level. Common values are `DEBUG`, `INFO`, `WARNING`. | `INFO` |
 | `UVICORN_RELOAD` | If set to `true`, the server will automatically restart when code changes are detected. (Also requires mounting the source as a bind mount). | `false` |
+| `MOTOTWIST_UPSTREAM` | Sets the repository to check updates from. Modify the default if you are making a fork. | `"amot-dev/mototwist"` |
 
 ### Usage
 
@@ -132,10 +146,16 @@ Follow these steps to set up and run the application in development mode.
 5.  **Start Developing:**
     More thorough documentation for this is coming (maybe), but I'm sure you can figure it out.
 
+> [!TIP]
+> You may run mototwist in an interactive terminal with:
+> ```bash
+> docker compose run --service-ports mototwist
+> ```
+
 6.  **Migrate the database if needed:**
     If you make any model changes, you'll need to make a migration from them. All migrations are applied to the database on container restart.
     ```bash
-    docker compose exec mototwist alembic revision --autogenerate -m "Your very descriptive message"
+    docker compose run --rm mototwist create-migration "Your very descriptive message"
     ```
 
 > [!TIP]

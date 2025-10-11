@@ -1,0 +1,44 @@
+{% from "fragments/_macros.html" import render_rating %}
+
+{# This is the entire inner content of the dropdown #}
+<h4>Average Rating</h4>
+<a id="modal-rate-twist-button"
+    href="#modal-rate-twist"
+    class="button button-block"
+    hx-get="/twists/{{ twist_id }}/ratings/templates/rate-modal"
+    hx-target="#modal-rate-twist"
+    hx-swap="innerHTML">
+
+    Rate
+</a>
+
+<ul>
+{% if average_ratings %}
+    {% for criterion, data in average_ratings.items() %}
+    {{ render_rating(criterion, data.rating, data.desc) }}
+    {% endfor %}
+{% else %}
+    <li>No ratings yet</li>
+{% endif %}
+</ul>
+
+{# Conditionally show the 'See all' link #}
+<a id="modal-view-twist-ratings-button"
+    href="#modal-view-twist-ratings"
+    class="button button-link {% if not average_ratings %}invisible{% endif %}"
+    hx-get="/twists/{{ twist_id }}/ratings/templates/view-modal"
+    hx-target="#modal-view-twist-ratings"
+    hx-swap="innerHTML">
+
+    See all
+</a>
+
+<a id="modal-delete-twist-button"
+    href="#modal-delete-twist"
+    class="button button-link"
+    hx-get="/twists/{{ twist_id }}/templates/delete-modal"
+    hx-target="#modal-delete-twist"
+    hx-swap="innerHTML">
+
+    <i class="fa-solid fa-trash"></i>
+</a>

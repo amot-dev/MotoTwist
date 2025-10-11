@@ -1,0 +1,31 @@
+<div id="auth-widget" class="{% if user %}auth-dropdown{% endif %}">
+    {% if user %}
+    <button class="button button-block auth-display">{{ user.name }}</button>
+    <div class="auth-dropdown-menu">
+        <a href="#modal-profile"
+            hx-get="/users/templates/profile-modal"
+            hx-target="#modal-profile"
+            hx-swap="innerHTML">
+
+            Profile
+        </a>
+        {% if user.is_superuser %}
+        <a href="#modal-admin-settings"
+            hx-get="/admin/templates/settings-modal"
+            hx-target="#modal-admin-settings"
+            hx-swap="innerHTML">
+
+            Admin Settings
+        </a>
+        {% endif %}
+        <a hx-get="/logout"
+            hx-target="#auth-widget"
+            hx-swap="outerHTML">
+
+            Logout
+        </a>
+    </div>
+    {% else %}
+    <a href="#modal-login" class="button button-block button-login">Login</a>
+    {% endif %}
+</div>

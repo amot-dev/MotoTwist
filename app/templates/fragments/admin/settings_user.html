@@ -1,0 +1,44 @@
+<div id="user-{{ user.id }}" class="user-row scroll-shut-on-delete">
+    <div class="user-info">
+        <span class="user-name">{{ user.name }}</span>
+        <span class="user-email">{{ user.email }}</span>
+        
+        {% if reset_password_link %}
+        <div class="link-display-container">
+            <input type="text"
+                class="password-link-input"
+                id="password-link-for-{{ user.id }}"
+                value="{{ reset_password_link }}"
+                readonly
+                title="Reset password link">
+            <button class="button-copy-input"
+                data-target-id="password-link-for-{{ user.id }}"
+                title="Copy to clipboard">
+
+                <i class="fa-solid fa-copy"></i>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    <div class="user-controls">
+        <a class="user-control-icon" title="Toggle Active Status"
+            hx-ext="morph"
+            hx-post="/admin/users/{{ user.id }}/toggle/active"
+            hx-target="closest .user-row" hx-swap="morph:outerHTML">
+            <i class="fa-solid fa-lg {% if user.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+        </a>
+        <a class="user-control-icon" title="Toggle Admin Status"
+            hx-ext="morph"
+            hx-post="/admin/users/{{ user.id }}/toggle/admin"
+            hx-target="closest .user-row" hx-swap="morph:outerHTML">
+            <i class="fa-solid fa-lg {% if user.is_superuser %}fa-user-shield{% else %}fa-user{% endif %}"></i>
+        </a>
+
+        <button class="button button-small button-block button-delete"
+                hx-delete="/admin/users/{{ user.id }}"
+                hx-target="closest .user-row" hx-swap="outerHTML"
+                hx-confirm="Are you sure you want to delete user {{ user.email }}?">
+            Delete
+        </button>
+    </div>
+</div>

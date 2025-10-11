@@ -16,12 +16,6 @@ L.tileLayer(OSM_URL, {
 // Object to store the map layers
 const mapLayers = {};
 
-// Get the computed styles from the root element (the <html> tag)
-const rootStyles = getComputedStyle(document.documentElement);
-const accentBlue = rootStyles.getPropertyValue('--accent-blue').trim();
-const accentBlueHoverLight = rootStyles.getPropertyValue('--accent-blue-hover-light').trim();
-const accentOrange = rootStyles.getPropertyValue('--accent-orange').trim();
-
 const startIcon = new L.Icon({
     iconUrl: '/static/images/marker-icon-green.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -76,7 +70,6 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
         // Create the waypoint markers
         const waypointMarkers = data.waypoints.map((point, index) => {
             let icon = waypointIcon;
-            let zIndexOffset = 0;
             const totalPoints = data.waypoints.length;
 
             if (totalPoints === 1 || index === 0) icon = startIcon;
@@ -172,6 +165,15 @@ function applyVisibilityFromStorage() {
     });
 }
 
+
+// Listen for the custom event sent from the server when a modal needs to be closed
+document.body.addEventListener('closeModal', () => {
+    location.hash='';
+    forms = document.querySelectorAll('form')
+    forms.forEach(form => form.reset());
+    stopTwistCreation();
+});
+
 // Listen for the custom event sent from the server after the twist list is initially loaded
 document.body.addEventListener('twistsLoaded', () => {
     applyVisibilityFromStorage();
@@ -207,21 +209,21 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
         setLayerVisibility(twistId, !twistItem.classList.contains('is-visible'));
     } else if (event.target.closest('.twist-header')) {
         // Clicked on the twist name
-        const ratingDropdown = twistItem.querySelector('.rating-dropdown');
-        const isCurrentlyOpen = ratingDropdown.classList.contains('is-open');
+        const ratingsDropdown = twistItem.querySelector('.ratings-dropdown');
+        const isCurrentlyOpen = ratingsDropdown.classList.contains('is-open');
 
         // Hide all rating dropdowns
-        const allDropdowns = twistItem.closest('#twist-list').querySelectorAll('.rating-dropdown');
-        allDropdowns.forEach(container => {
+        const allRatingsDropdowns = twistItem.closest('#twist-list').querySelectorAll('.ratings-dropdown');
+        allRatingsDropdowns.forEach(container => {
             container.classList.remove('is-open');
         });
 
         // Show current rating dropdown if it was hidden
         if (!isCurrentlyOpen) {
-            ratingDropdown.classList.add('is-open');
+            ratingsDropdown.classList.add('is-open');
 
             // Load content if needed
-            if (ratingDropdown.querySelector('.loading')) {
+            if (ratingsDropdown.querySelector('.loading')) {
                 const twistHeader = twistItem.querySelector('.twist-header')
                 htmx.trigger(twistHeader, 'load-ratings');
             }
@@ -431,6 +433,9 @@ async function updateRoute() {
  * and the route line from the map and resetting UI elements.
  */
 function stopTwistCreation() {
+    // Immediate return if not creating Twist
+    if (!mapContainer.classList.contains('creating-twist')) return;
+
     mapContainer.classList.remove('creating-twist');
 
     waypointMarkers.forEach(marker => map.removeLayer(marker));
@@ -551,8 +556,8 @@ map.on('click', function(e) {
 
     // Override XHR send to intercept outgoing requests
     XMLHttpRequest.prototype.send = function(body) {
-        // Check if this is a POST request to /twist
-        if (this._url && this._url.endsWith('/twist') && this._method === 'POST') {
+        // Check if this is a POST request to /twists
+        if (this._url && this._url.endsWith('/twists') && this._method === 'POST') {
             // Serialize JSON
             bodyJSON = JSON.parse(body);
 
@@ -582,10 +587,3 @@ map.on('click', function(e) {
         return originalOpen.apply(this, arguments);
     };
 })();
-
-// HTMX hook for cleanup, only listening on the Twist form
-twistForm.addEventListener('htmx:afterRequest', function() {
-    setTimeout(() => {
-        stopTwistCreation();
-    }, 100);
-});

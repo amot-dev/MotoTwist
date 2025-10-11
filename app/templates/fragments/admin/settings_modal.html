@@ -1,0 +1,43 @@
+{% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
+
+{% call render_modal_content("Admin Settings") %}
+    <h2>General</h2>
+    <div>
+        <p>All general settings are configured with Environment Variables</p>
+    </div>
+
+    <hr>
+
+    <h2>Users</h2>
+    <div id="user-list-container">
+        {% for user in users %}
+            {% include "fragments/admin/settings_user.html" %}
+        {% endfor %}
+
+        {# Form to add a new user #}
+        <form id="add-user-form" class="user-row"
+              hx-post="/admin/users"
+              hx-target="this" hx-swap="beforebegin"
+              hx-on::after-request="this.reset()">
+            <div class="user-info">
+                <input type="text" name="name" placeholder="Name" required>
+                <input type="email" name="email" placeholder="Email Address" required>
+            </div>
+            <div class="user-controls">
+
+                {# Admin Toggle Icon for New User #}
+                <div class="user-control-icon" title="Set Admin Status">
+                    <input type="checkbox" name="is_superuser" value="true" id="new-user-superuser-check" class="gone">
+                    <label for="new-user-superuser-check">
+                        <i class="fa-solid fa-lg fa-user color-regular"></i>
+                        <i class="fa-solid fa-lg fa-user-shield color-admin"></i>
+                    </label>
+                </div>
+
+                <button type="submit" class="button-block button-small">Create</button>
+            </div>
+        </form>
+
+        <span id="change-password-link-display" class="gone"></span>
+    </div>
+{% endcall %}

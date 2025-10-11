@@ -9,11 +9,14 @@
     --accent-blue-hover: #0081C7;
     --accent-blue-hover-light: #4dc4ff;
     --accent-blue-dark: #00598C;
+    --accent-blue-dark-hover: #004168;
     --accent-orange: #E8751A;
     --accent-orange-hover: #BF6216;
     --accent-orange-hover-light: #F5A665;
     --button-cancel: #6c757d;
     --button-cancel-hover: #5a6268;
+    --accent-yellow: #D4A017;
+    --accent-yellow-hover: #B28714;
 
     /* Borders & Shadows */
     --border-gray: #555;
@@ -114,6 +117,11 @@ ul {
     text-decoration: none;
 }
 
+.button-small {
+    padding: var(--padding-sm) var(--padding-md);
+    font-size: 0.9rem;
+}
+
 .button-link {
     color: var(--accent);
 
@@ -125,6 +133,7 @@ ul {
 }
 
 .button-block {
+    display: inline-block;
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-md) var(--padding-lg);
@@ -154,6 +163,104 @@ ul {
 .button-delete:hover {
     background-color: var(--accent-orange-hover);
 }
+
+.button-deactivate {
+    background-color: var(--accent-yellow);
+}
+.button-deactivate:hover {
+    background-color: var(--accent-yellow-hover);
+}
+
+
+/* --- Controls --- */
+
+#top-right-controls {
+    position: fixed;
+    z-index: 1000;
+    top: var(--padding-sm);
+    right: var(--padding-sm);
+}
+
+/* Make direct children sit side-by-side */
+#top-right-controls > * {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: var(--padding-sm); /* Space between items */
+}
+
+#top-right-controls > *:first-child {
+    margin-left: 0; /* Remove space from first item */
+}
+
+#auth-widget {
+    position: relative;
+}
+
+.auth-dropdown-menu {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 100%; /* Position directly below the parent button */
+    left: 0;
+    width: 100%;
+    box-shadow: var(--shadow-soft);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    padding: 0;
+    background-color: var(--accent-blue-dark);
+}
+
+/* Show the menu when hovering over the dropdown container */
+.auth-dropdown:hover .auth-dropdown-menu {
+    display: block;
+}
+
+.auth-dropdown-menu a {
+    display: block;
+    padding: var(--padding-md);
+    text-align: center; /* Match the button's text alignment */
+    text-decoration: none;
+    color: var(--text-offwhite);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+
+.auth-dropdown-menu a:hover {
+  background-color: var(--accent-blue-dark-hover);
+}
+
+.auth-display {
+    min-width: 140px;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+
+    transition: background-color var(--transition-fast), border-radius var(--transition-fast);
+}
+
+.auth-dropdown:hover .auth-display {
+    background-color: var(--accent-blue-hover);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.button-login {
+    vertical-align: middle;
+}
+
+#modal-about-button {
+    padding: 0;
+    cursor: default;
+    background: transparent;
+}
+#modal-about-button img {
+    border-radius: 50%;
+    height: 46px;
+    color: var(--accent-blue);
+    cursor: pointer;
+}
+
 
 /* --- Leaflet Popups --- */
 .leaflet-popup-content-wrapper {
@@ -322,9 +429,9 @@ ul {
 }
 
 
-/* --- Rating Dropdown --- */
+/* --- Ratings Dropdown --- */
 
-.rating-dropdown {
+.ratings-dropdown {
     position: relative;
     overflow: hidden;
     max-height: 0;
@@ -335,22 +442,22 @@ ul {
 
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
-.rating-dropdown.is-open {
+.ratings-dropdown.is-open {
     max-height: 500px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
-.rating-dropdown h4 {
+.ratings-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
     margin-bottom: var(--padding-sm);
 }
 
-.rating-dropdown .button {
+.ratings-dropdown .button {
     font-size: 0.8rem;
 }
 
-.rating-dropdown #modal-rate-twist-button {
+.ratings-dropdown #modal-rate-twist-button {
     position: absolute;
     top: var(--padding-sm);
     right: var(--padding-lg);
@@ -362,18 +469,18 @@ ul {
 
     transition: background-color 0.2s ease;
 }
-.rating-dropdown #modal-rate-twist-button:hover {
+.ratings-dropdown #modal-rate-twist-button:hover {
     background-color: var(--accent-hover);
 }
 
-.rating-dropdown li {
+.ratings-dropdown li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
 }
 
-.rating-dropdown #modal-delete-twist-button {
+.ratings-dropdown #modal-delete-twist-button {
     position: absolute;
     bottom: var(--padding-md);
     right: var(--padding-lg);
@@ -386,8 +493,8 @@ ul {
 .rating-slider {
     position: relative;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     height: 2rem;
     width: 100%;
     border-radius: var(--radius-lg);
@@ -401,8 +508,8 @@ ul {
     position: absolute;
     z-index: 1;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     top: 0;
     left: 0;
     width: 100%;
@@ -439,7 +546,7 @@ ul {
 }
 
 
-/* --- Modal & Form Styles --- */
+/* --- Modal General --- */
 
 .modal {
     display: none;
@@ -453,10 +560,17 @@ ul {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
+
+    /* Initial state of animation control variable --- */
+    --content-animation-name: animatetop;
 }
-.modal:not(.modal-dynamic):target,
-.modal.modal-dynamic:has(.modal-content):target {
+.modal:has(.modal-content):target {
     display: flex;
+
+    /*  Set the animation ONCE when the modal opens.
+        It runs for 1ms, uses 'forwards' to make the variable change stick,
+        and then it's done forever for this modal instance. */
+    animation: set-animation-played 1ms forwards;
 }
 
 .modal-content {
@@ -472,7 +586,7 @@ ul {
     color: var(--text-offwhite);
     background-color: var(--panel-slate);
 
-    animation: animatetop 0.4s;
+    animation: var(--content-animation-name) 0.4s;
 }
 @keyframes animatetop {
     from {
@@ -482,6 +596,12 @@ ul {
     to {
         top: 0;
         opacity: 1;
+    }
+}
+@keyframes no-animation { from {} to {} }
+@keyframes set-animation-played {
+    to {
+        --content-animation-name: no-animation;
     }
 }
 
@@ -516,6 +636,8 @@ ul {
     transition: background-color var(--transition-fast);
 }
 
+.modal-content input[type="email"],
+.modal-content input[type="password"],
 .modal-content input[type="text"],
 .modal-content input[type="file"],
 .modal-content input[type="date"] {
@@ -554,8 +676,194 @@ ul {
     cursor: not-allowed;
 }
 
+.modal-content .danger-zone {
+    margin-top: 2rem;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    background-color: var(--bg-charcoal);
+}
 
-/* --- Rate Twist --- */
+.danger-zone h3 {
+  animation-name: wave-color;
+  animation-duration: 3s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes wave-color {
+  0%, 100% {
+    color: var(--accent-yellow);
+  }
+  50% {
+    color: var(--accent-orange);
+  }
+}
+
+
+/* --- Modal Login --- */
+#modal-login .button-link {
+    --accent: var(--accent-blue);
+    --accent-hover-light: var(--accent-blue-hover-light);
+
+    font-size: 0.8rem;
+}
+
+#modal-login span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+
+/* --- Modal About --- */
+
+.about-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-lg); /* Create space between sections */
+}
+
+.app-tagline {
+    margin-top: var(--padding-sm);
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.info-list {
+    margin-bottom: calc(var(--padding-lg) * 1.5);
+}
+
+.info-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--panel-slate-hover);
+    padding: var(--padding-md) 0;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-list li span {
+    color: var(--text-muted);
+}
+
+.info-list li .button-link {
+    --accent: var(--accent-blue);
+    --accent-hover-light: var(--accent-blue-hover-light);
+}
+
+.support-info {
+    text-align: center;
+}
+
+
+/* --- User Management List --- */
+
+#user-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-sm);
+}
+
+.user-row {
+    display: flex;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    background-color: var(--bg-charcoal);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: var(--padding-xs);
+    min-width: 0; /* Prevents flexbox overflow */
+    margin-right: var(--padding-lg);
+}
+
+.user-name {
+    font-weight: bold;
+}
+
+.user-email {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.user-controls {
+    display: flex;
+    flex-shrink: 0; /* Prevent controls from shrinking */
+    gap: var(--padding-md);
+    align-items: center;
+}
+
+.user-control-icon {
+    color: var(--text-muted);
+    cursor: pointer;
+
+    transition: color var(--transition-fast);
+}
+.user-control-icon:hover {
+    color: var(--text-offwhite);
+}
+.user-control-icon .fa-toggle-on {
+    color: var(--accent-blue);
+}
+.user-control-icon .fa-user-shield {
+    color: var(--accent-orange);
+}
+
+.link-display-container {
+    display: flex;
+    margin-top: var(--padding-sm);
+}
+
+.password-link-input {
+    font-family: monospace;
+}
+
+.button-copy-input {
+    border: var(--border-default);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--panel-slate);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+.button-copy-input:hover {
+    background-color: var(--panel-slate-hover);
+}
+.button-copy-input.copied {
+    background-color: var(--accent-blue-dark);
+    color: white;
+    cursor: default;
+}
+
+#add-user-form {
+    border: 2px dashed var(--border-gray);
+    background-color: transparent;
+}
+
+#add-user-form label {
+    cursor: pointer;
+}
+
+#add-user-form .fa-user-shield {
+    display: none; /* Hide the 'admin' icon by default */
+}
+#add-user-form input[type="checkbox"]:checked + label .fa-user {
+    display: none; /* Hide the 'regular' icon when checked */
+}
+#add-user-form input[type="checkbox"]:checked + label .fa-user-shield {
+    display: inline-block; /* Show the 'admin' icon when checked */
+}
+
+
+/* --- Modal Rate Twist --- */
 .rate-form[data-paved="true" i] {
   --accent: var(--accent-blue);
 }
@@ -569,7 +877,7 @@ ul {
 }
 
 
-/* --- Twist Ratings --- */
+/* --- Modal View Twist Ratings --- */
 
 #rating-list {
     overflow-y: auto;
@@ -607,6 +915,17 @@ ul {
     position: absolute;
     top: var(--padding-lg);
     right: var(--padding-lg);
+}
+
+
+/* --- Reset Password Page --- */
+
+.centered-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100vh;
 }
 
 
