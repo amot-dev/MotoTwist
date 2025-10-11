@@ -101,9 +101,6 @@ These settings are useful for local development and debugging.
     e)  **Deleting Waypoints:**
         Finally, any waypoint can be deleted. Keep in mind that at least two waypoints are required to create a Twist.
 
-> [!WARNING]
-> Twist routes are currently limited to 1024KB, including all data. See [#14](https://github.com/amot-dev/mototwist/issues/14) for more details.
-
 2.  **Entering Twist Details:**
     Once your route is ready, additional details can be specified for the Twist, including the name and whether it is paved or unpaved.
 
