@@ -3,14 +3,14 @@
         <span class="user-name">{{ user.name }}</span>
         <span class="user-email">{{ user.email }}</span>
         
-        {% if change_password_link %}
+        {% if reset_password_link %}
         <div class="link-display-container">
             <input type="text"
                 class="password-link-input"
                 id="password-link-for-{{ user.id }}"
-                value="{{ change_password_link }}"
+                value="{{ reset_password_link }}"
                 readonly
-                title="Password set link">
+                title="Reset password link">
             <button class="button-copy-input"
                 data-target-id="password-link-for-{{ user.id }}"
                 title="Copy to clipboard">

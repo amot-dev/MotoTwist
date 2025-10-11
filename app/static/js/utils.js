@@ -1,3 +1,9 @@
+// Get the computed styles from the root element (the <html> tag)
+const rootStyles = getComputedStyle(document.documentElement);
+const accentBlue = rootStyles.getPropertyValue('--accent-blue').trim();
+const accentBlueHoverLight = rootStyles.getPropertyValue('--accent-blue-hover-light').trim();
+const accentOrange = rootStyles.getPropertyValue('--accent-orange').trim();
+
 /**
  * Displays a message in the flash message element for a set duration.
  * The function makes the flash element visible, sets its content,
@@ -55,6 +61,20 @@ document.body.addEventListener('htmx:responseError', function(event) {
 
     // Display the flash with an orange accent
     flash(errorMessage, 5000, backgroundColor=accentOrange);
+});
+
+// Check if the server loaded the page with a flash message to display
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if the data attribute exists
+    flashMessage = document.querySelector('.flash-message')
+    const message = flashMessage.dataset.flashMessage;
+
+    if (message) {
+        flash(message, 3000);
+
+        // Cleanup dataset
+        delete flashElement.dataset.flashMessage;
+    }
 });
 
 document.body.addEventListener('click', function(event) {

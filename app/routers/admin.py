@@ -71,7 +71,7 @@ async def create_user(
     response = templates.TemplateResponse("fragments/admin/settings_user.html", {
         "request": request,
         "user": user,
-        "change_password_link": f"{settings.MOTOTWIST_BASE_URL}/set-password?token={user_manager.generated_token}"
+        "reset_password_link": f"{settings.MOTOTWIST_BASE_URL}/reset-password?token={user_manager.generated_token}"
     })
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response

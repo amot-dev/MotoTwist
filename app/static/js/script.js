@@ -16,12 +16,6 @@ L.tileLayer(OSM_URL, {
 // Object to store the map layers
 const mapLayers = {};
 
-// Get the computed styles from the root element (the <html> tag)
-const rootStyles = getComputedStyle(document.documentElement);
-const accentBlue = rootStyles.getPropertyValue('--accent-blue').trim();
-const accentBlueHoverLight = rootStyles.getPropertyValue('--accent-blue-hover-light').trim();
-const accentOrange = rootStyles.getPropertyValue('--accent-orange').trim();
-
 const startIcon = new L.Icon({
     iconUrl: '/static/images/marker-icon-green.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',

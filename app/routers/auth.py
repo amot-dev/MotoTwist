@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from fastapi_users.authentication import RedisStrategy
+from fastapi_users.exceptions import InvalidResetPasswordToken, UserInactive, UserNotExists
 import json
 import uuid
 
@@ -79,3 +80,41 @@ async def logout(
     })
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def render_set_password_page(
+    request: Request,
+    token: str
+):
+    """
+    Displays the page for a user to set their password.
+    """
+
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token
+    })
+
+
+@router.post("/reset-password", response_class=HTMLResponse)
+async def reset_password(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    password_confirmation: str = Form(...),
+    user_manager: UserManager = Depends(get_user_manager),
+):
+    """
+    Handles the password set form submission.
+    """
+    if password != password_confirmation:
+        raise_http("Passwords do not match", status_code=422)
+
+    try:
+        await user_manager.reset_password(token, password, request=request)
+    except (InvalidResetPasswordToken, UserInactive, UserNotExists):
+        raise_http("This link is invalid or has expired", status_code=400)
+
+    request.session["flash"] = "Password updated successfully!"
+    return RedirectResponse(url="/", status_code=303)

@@ -8,6 +8,7 @@ import httpx
 import json
 import os
 from sqlalchemy import func, select
+from starlette.middleware.sessions import SessionMiddleware
 import sys
 from time import time
 from typing import Awaitable, Callable
@@ -76,6 +77,8 @@ async def log_process_time(request: Request, call_next: Callable[[Request], Awai
     return response
 
 
+app.add_middleware(SessionMiddleware, secret_key=settings.MOTOTWIST_SECRET_KEY)
+
 app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(ratings.router)
@@ -84,12 +87,15 @@ app.include_router(users.router)
 
 
 @app.get("/", tags=["Index", "Templates"], response_class=HTMLResponse)
-async def render_index(request: Request, user: User | None = Depends(current_user_optional)) -> HTMLResponse:
+async def render_index_page(request: Request, user: User | None = Depends(current_user_optional)) -> HTMLResponse:
     """
     Serves the main page of the application.
     """
+    # Add a flash message if it exists in the session
+    flash_message: str = request.session.pop("flash", None)
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "flash_message": flash_message,
         "version": settings.MOTOTWIST_VERSION,
         "upstream": settings.MOTOTWIST_UPSTREAM,
         "user": user,

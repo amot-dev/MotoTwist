@@ -1,13 +1,7 @@
 {% extends "base.html" %}
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
-{% block body_attributes %}
-    {% if new_twist %}data-new-twist="{{ new_twist }}"{% endif %}
-{% endblock %}
-
 {% block content %}
-<div class="flash-message"></div>
-
 <div id="sidebar">
     <div id="twist-list-container">
         <h1>MotoTwist</h1>
@@ -148,4 +142,14 @@
 <div id="modal-delete-twist" class="modal modal-dynamic">
     <p>Loading form...</p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
+        integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+    </script>
+    <script src="{{ url_for('static', path='/js/script.js') }}"></script>
 {% endblock %}
