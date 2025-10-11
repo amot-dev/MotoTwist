@@ -54,6 +54,14 @@
                 <input type="password" id="password" name="password" required>
             </div>
 
+            {% if can_register %}
+            <a href="/register" class="button button-link">
+                Don't have an account? Register!
+            </a>
+            {% else %}
+            <span class="explainer-text">Contact an administrator to create an account.</span>
+            {% endif %}
+
             {{ render_form_buttons(submit_text="Login") }}
         </form>
     {% endcall %}

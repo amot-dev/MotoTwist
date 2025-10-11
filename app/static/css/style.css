@@ -700,6 +700,20 @@ ul {
 }
 
 
+/* --- Modal Login --- */
+#modal-login .button-link {
+    --accent: var(--accent-blue);
+    --accent-hover-light: var(--accent-blue-hover-light);
+
+    font-size: 0.8rem;
+}
+
+#modal-login span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+
 /* --- Modal About --- */
 
 .about-content {

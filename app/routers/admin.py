@@ -45,7 +45,6 @@ async def create_user(
 
     try:
         await user_manager.get_by_email(email)
-        print("HUH")
         raise_http("This email address is already in use", status_code=409)
     except UserNotExists:
         pass

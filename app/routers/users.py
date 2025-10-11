@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
 
 from app.config import logger
 from app.models import User
-from app.schemas import UserUpdate
+from app.schemas import UserCreate, UserUpdate
 from app.settings import *
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import *
@@ -17,6 +17,45 @@ router = APIRouter(
     prefix="/users",
     tags=["User Management"]
 )
+
+
+@router.post("/", response_class=RedirectResponse)
+async def create_user(
+    request: Request,
+    name: str | None = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    password_confirmation: str = Form(...),
+    user_manager: UserManager = Depends(get_user_manager)
+) -> RedirectResponse:
+    """
+    Create a new user. Self-serve.
+    """
+    try:
+        await user_manager.get_by_email(email)
+        raise_http("This email address is already in use", status_code=409)
+    except UserNotExists:
+        pass
+
+    if password != password_confirmation:
+        raise_http("Passwords do not match", status_code=422)
+
+    user_data = UserCreate(
+        name=name,
+        email=email.lower(),
+        password=password,
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+
+    try:
+        await user_manager.create(user_data, request=request)
+    except InvalidPasswordException as e:
+        raise_http("Invalid password", status_code=422, exception=e)
+
+    request.session["flash"] = "User created!"
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.put("/", response_class=HTMLResponse)

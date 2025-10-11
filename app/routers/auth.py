@@ -84,29 +84,25 @@ async def logout(
     return response
 
 
-@router.get("/reset-password", tags=["Templates"], response_class=HTMLResponse)
-async def render_set_password_page(
-    request: Request,
-    token: str
-):
+@router.get("/register", tags=["Templates"], response_class=HTMLResponse)
+async def render_register_page(request: Request) -> HTMLResponse:
     """
-    Serve the password reset page.
+    Serve the register page.
     """
 
-    return templates.TemplateResponse("reset_password.html", {
-        "request": request,
-        "token": token
+    return templates.TemplateResponse("register.html", {
+        "request": request
     })
 
 
-@router.post("/reset-password", response_class=HTMLResponse)
+@router.post("/reset-password", response_class=RedirectResponse)
 async def reset_password(
     request: Request,
     token: str = Form(...),
     password: str = Form(...),
     password_confirmation: str = Form(...),
     user_manager: UserManager = Depends(get_user_manager),
-):
+) -> RedirectResponse:
     """
     Reset a user password by token, then redirect to the main page of MotoTwist.
     """
@@ -118,5 +114,20 @@ async def reset_password(
     except (InvalidResetPasswordToken, UserInactive, UserNotExists):
         raise_http("This link is invalid or has expired", status_code=400)
 
-    request.session["flash"] = "Password updated successfully!"
+    request.session["flash"] = "Password updated!"
     return RedirectResponse(url="/", status_code=303)
+
+
+@router.get("/reset-password", tags=["Templates"], response_class=HTMLResponse)
+async def render_reset_password_page(
+    request: Request,
+    token: str
+) -> HTMLResponse:
+    """
+    Serve the password reset page.
+    """
+
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token
+    })

@@ -12,18 +12,20 @@ class Settings(BaseSettings):
     # Configure Pydantic to load from a .env file if it exists
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    MOTOTWIST_VERSION: str = "dev"
-    MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
 
-    LOG_LEVEL: str = "INFO"
+    # Application Options
     MOTOTWIST_BASE_URL: str = "http://localhost:8000"
     MOTOTWIST_SECRET_KEY: str = "mototwist"
-    MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"
-    MOTOTWIST_ADMIN_PASSWORD: str = "password"
     OSM_URL: str = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
     OSRM_URL: str = "https://router.project-osrm.org"
     TWIST_SIMPLIFICATION_TOLERANCE_M: int = Field(default=0)
 
+    # User Options
+    MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"
+    MOTOTWIST_ADMIN_PASSWORD: str = "password"
+    ALLOW_USER_REGISTRATION: bool = False
+
+    # Database Options
     POSTGRES_HOST: str = "db"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "mototwist"
@@ -31,6 +33,14 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "password"
 
     REDIS_URL: str = "redis://redis:6379"
+
+    # Developer Options
+    LOG_LEVEL: str = "INFO"
+    MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
+
+    # Do not change unless you want to be rate-limited by the GitHub API during development
+    # This is set properly by GitHub Actions during the release flow
+    MOTOTWIST_VERSION: str = "dev"
 
 
     @computed_field

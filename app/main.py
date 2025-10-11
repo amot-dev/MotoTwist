@@ -103,12 +103,14 @@ async def render_index_page(
     """
     # Add a flash message if it exists in the session
     flash_message: str = request.session.pop("flash", None)
+    print(f"HEY: {settings.ALLOW_USER_REGISTRATION}")
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "user": user,
         "flash_message": flash_message,
+        "can_register": settings.ALLOW_USER_REGISTRATION,
         "version": settings.MOTOTWIST_VERSION,
         "upstream": settings.MOTOTWIST_UPSTREAM,
-        "user": user,
         "osm_url": settings.OSM_URL,
         "osrm_url": settings.OSRM_URL
     })
