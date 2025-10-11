@@ -28,5 +28,31 @@
     </div>
 
     {{ render_form_buttons(submit_text="Save") }}
+
+    <div class="danger-zone">
+        <h3>Danger Zone!</h3>
+
+        <p>
+            These actions are irreversible and will affect your account's status.
+            Please proceed with caution.
+        </p>
+
+        <div class="button-group">
+            <button type="button" class="button button-block button-deactivate"
+                    hx-post="/users/deactivate"
+                    hx-target="#auth-widget"
+                    hx-swap="outerHTML"
+                    hx-confirm="Are you sure you want to deactivate your account? This action can only be undone by an administrator.">
+                Deactivate Account
+            </button>
+            <button type="button" class="button button-block button-delete"
+                    hx-delete="/users"
+                    hx-target="#auth-widget"
+                    hx-swap="outerHTML"
+                    hx-confirm="Are you sure you want to permanently delete your account? This action cannot be undone.">
+                Delete Account
+            </button>
+        </div>
+    </div>
 </form>
 {% endcall %}

@@ -15,6 +15,8 @@
     --accent-orange-hover-light: #F5A665;
     --button-cancel: #6c757d;
     --button-cancel-hover: #5a6268;
+    --accent-yellow: #D4A017;
+    --accent-yellow-hover: #B28714;
 
     /* Borders & Shadows */
     --border-gray: #555;
@@ -160,6 +162,13 @@ ul {
 }
 .button-delete:hover {
     background-color: var(--accent-orange-hover);
+}
+
+.button-deactivate {
+    background-color: var(--accent-yellow);
+}
+.button-deactivate:hover {
+    background-color: var(--accent-yellow-hover);
 }
 
 
@@ -665,6 +674,29 @@ ul {
     opacity: 0.6;
     background-color: var(--accent-blue);
     cursor: not-allowed;
+}
+
+.modal-content .danger-zone {
+    margin-top: 2rem;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    background-color: var(--bg-charcoal);
+}
+
+.danger-zone h3 {
+  animation-name: wave-color;
+  animation-duration: 3s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes wave-color {
+  0%, 100% {
+    color: var(--accent-yellow);
+  }
+  50% {
+    color: var(--accent-orange);
+  }
 }
 
 

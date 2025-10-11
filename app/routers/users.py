@@ -71,6 +71,46 @@ async def update_user(
     return response
 
 
+@router.delete("/", response_class=HTMLResponse)
+async def delete_user(
+    request: Request,
+    user: User = Depends(current_active_user),
+    user_manager: UserManager = Depends(get_user_manager),
+) -> HTMLResponse:
+    await user_manager.delete(user, request=request)
+
+    events = {
+        "flashMessage": "Account deleted!",
+        "closeModal": ""
+    }
+    response = templates.TemplateResponse("fragments/auth/widget.html", {
+        "request": request,
+        "user": None
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+
+@router.post("/deactivate", response_class=HTMLResponse)
+async def deactivate_user(
+    request: Request,
+    user: User = Depends(current_active_user),
+    user_manager: UserManager = Depends(get_user_manager),
+) -> HTMLResponse:
+    await user_manager.update(UserUpdate(is_active=False), user, request=request)
+
+    events = {
+        "flashMessage": "Account deactivated!",
+        "closeModal": ""
+    }
+    response = templates.TemplateResponse("fragments/auth/widget.html", {
+        "request": request,
+        "user": None
+    })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
+
+
 @router.get("/templates/profile-modal", tags=["Templates"], response_class=HTMLResponse)
 async def render_profile_modal(request: Request, user: User = Depends(current_active_user), session: AsyncSession = Depends(get_db)) -> HTMLResponse:
     """

@@ -31,7 +31,7 @@ async def login(
 
     # Handle failed login
     if not user or not user.is_active:
-        raise_http("Invalid email or password", status_code=401)
+        raise_http("Invalid credentials or deactivated account", status_code=401)
 
     events = {
         "closeModal": "",
