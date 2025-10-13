@@ -353,6 +353,10 @@ ul {
     flex-grow: 1;
 }
 
+#twist-list-container h4 {
+    color: var(--text-muted);
+}
+
 .create-twist-button {
     display: block;
     width: 100%;
@@ -432,7 +436,6 @@ ul {
 /* --- Ratings Dropdown --- */
 
 .ratings-dropdown {
-    position: relative;
     overflow: hidden;
     max-height: 0;
     border-top: var(--border-default);
@@ -447,6 +450,16 @@ ul {
     padding: var(--padding-md) var(--padding-lg);
 }
 
+.ratings-dropdown .author {
+    margin-top: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted)
+}
+
+.ratings-dropdown .averages {
+    position: relative;
+}
+
 .ratings-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
@@ -459,8 +472,8 @@ ul {
 
 .ratings-dropdown #modal-rate-twist-button {
     position: absolute;
-    top: var(--padding-sm);
-    right: var(--padding-lg);
+    top: 0;
+    right: 0;
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-xs) var(--padding-md);
@@ -482,8 +495,8 @@ ul {
 
 .ratings-dropdown #modal-delete-twist-button {
     position: absolute;
-    bottom: var(--padding-md);
-    right: var(--padding-lg);
+    bottom: 0;
+    right: 0;
 }
 
 .rating-slider-container {
@@ -909,6 +922,11 @@ ul {
     border-bottom: var(--border-default);
     padding-bottom: var(--padding-md);
     color: var(--accent);
+}
+
+.rating-card .author {
+    font-weight: normal;
+    color: var(--text-muted)
 }
 
 .rating-card .button-link {

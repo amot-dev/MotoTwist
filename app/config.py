@@ -1,7 +1,7 @@
 import logging.config
 from typing import Any
 
-from settings import settings
+from app.settings import settings
 
 # Configure logging
 LOGGING_CONFIG: dict[str, Any] = {

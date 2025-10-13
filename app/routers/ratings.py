@@ -11,9 +11,11 @@ from sqlalchemy.orm import load_only, selectinload
 
 from app.config import logger
 from app.database import get_db
-from app.models import Twist, PavedRating, UnpavedRating
+from app.models import Twist, PavedRating, UnpavedRating, User
+from app.services.ratings import *
 from app.settings import *
 from app.schemas import RatingListItem
+from app.users import current_active_user, current_active_user_optional
 from app.utility import *
 
 
@@ -28,16 +30,21 @@ router = APIRouter(
 async def create_rating(
     request: Request,
     twist_id: int,
+    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Create a new rating for the given Twist.
     """
     try:
-        result = await session.scalars(
-            select(Twist).where(Twist.id == twist_id).options(
-                load_only(Twist.id, Twist.name, Twist.is_paved)
+        result = await session.execute(
+            select(
+                Twist.is_paved,
+                Twist.author_id,
+                User.name.label("author_name")
             )
+            .join(Twist.author)
+            .where(Twist.id == twist_id)
         )
         twist = result.one()
     except NoResultFound:
@@ -45,7 +52,7 @@ async def create_rating(
     except MultipleResultsFound:
         raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
-    logger.debug(f"Attempting to rate Twist '{twist}'")
+    logger.debug(f"Attempting to rate Twist with id '{twist_id}'")
     form_data = await request.form()
 
     if twist.is_paved:
@@ -82,7 +89,7 @@ async def create_rating(
         raise_http("No valid rating data submitted", status_code=422)
 
     # Create the new rating instance, linking it to the twist
-    new_rating = Rating(**new_rating_data, twist_id=twist_id)
+    new_rating = Rating(**new_rating_data, author=user, twist_id=twist_id)
     session.add(new_rating)
     await session.commit()
     logger.debug(f"Created rating '{new_rating}'")
@@ -95,7 +102,9 @@ async def create_rating(
     response = templates.TemplateResponse("fragments/ratings/dropdown.html", {
         "request": request,
         "twist_id": twist_id,
-        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
+        "twist_author_name": twist.author_name,
+        "can_delete": user.id == twist.author_id,
+        "average_ratings": await calculate_average_rating(session, twist_id, twist.is_paved, round_to=1)
     })
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
@@ -106,6 +115,7 @@ async def delete_rating(
     request: Request,
     twist_id: int,
     rating_id: int,
+    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
@@ -123,11 +133,26 @@ async def delete_rating(
 
     Rating = PavedRating if twist_is_paved else UnpavedRating
 
+    if not user.is_superuser:
+        try:
+            result = await session.scalars(
+                select(Rating.author_id).where(Rating.id == rating_id)
+            )
+            author_id = result.one()
+        except NoResultFound:
+            raise_http(f"Rating with id '{rating_id}' not found for Twist with id '{twist_id}'", status_code=404)
+        except MultipleResultsFound:
+            raise_http(f"Multiple Ratings with id '{rating_id}' found for Twist with id '{twist_id}'", status_code=500)
+
+        if user.id != author_id:
+            raise_http("You do not have permission to delete this Rating", status_code=403)
+
+    # Delete the Rating
     result = await session.execute(
         delete(Rating).where(Rating.id == rating_id, Rating.twist_id == twist_id)
     )
     if result.rowcount == 0:
-        raise_http("Rating with id '{rating_id}' not found for Twist with id '{twist_id}'", status_code=404)
+        raise_http(f"Rating with id '{rating_id}' not found for Twist with id '{twist_id}'", status_code=404)
 
     await session.commit()
     logger.debug(f"Deleted rating with id '{rating_id}' from Twist with id '{twist_id}'")
@@ -154,6 +179,7 @@ async def delete_rating(
 async def render_dropdown(
     request: Request,
     twist_id: int,
+    user: User | None = Depends(current_active_user_optional),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
@@ -161,7 +187,13 @@ async def render_dropdown(
     """
     try:
         result = await session.execute(
-            select(Twist.id, Twist.is_paved).where(Twist.id == twist_id)
+            select(
+                Twist.is_paved,
+                Twist.author_id,
+                User.name.label("author_name")
+            )
+            .join(Twist.author)
+            .where(Twist.id == twist_id)
         )
         twist = result.one()
     except NoResultFound:
@@ -172,7 +204,9 @@ async def render_dropdown(
     return templates.TemplateResponse("fragments/ratings/dropdown.html", {
         "request": request,
         "twist_id": twist_id,
-        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
+        "twist_author_name": twist.author_name,
+        "can_delete": user.id == twist.author_id if user else False,
+        "average_ratings": await calculate_average_rating(session, twist_id, twist.is_paved, round_to=1)
     })
 
 
@@ -211,6 +245,7 @@ async def render_rate_modal(
 async def render_view_modal(
     request: Request,
     twist_id: int,
+    user: User | None = Depends(current_active_user_optional),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
@@ -219,9 +254,13 @@ async def render_view_modal(
     try:
         result = await session.scalars(
             select(Twist).where(Twist.id == twist_id).options(
-                load_only(Twist.name, Twist.is_paved).
-                selectinload(Twist.paved_ratings),
+                load_only(Twist.name, Twist.is_paved),
+                selectinload(Twist.paved_ratings)
+                        .selectinload(PavedRating.author)
+                        .load_only(User.name),
                 selectinload(Twist.unpaved_ratings)
+                    .selectinload(UnpavedRating.author)
+                    .load_only(User.name)
             )
         )
         twist = result.one()
@@ -254,6 +293,8 @@ async def render_view_modal(
 
         ratings_for_template.append({
             "id": rating.id,
+            "author_name": rating.author.name,
+            "can_delete": user.id == rating.author_id if user else False,
             "formatted_date": formatted_date,
             "ratings": ratings_dict
         })

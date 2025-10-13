@@ -169,7 +169,7 @@ function applyVisibilityFromStorage() {
 // Listen for the custom event sent from the server when a modal needs to be closed
 document.body.addEventListener('closeModal', () => {
     location.hash='';
-    forms = document.querySelectorAll('form')
+    forms = document.querySelectorAll('form');
     forms.forEach(form => form.reset());
     stopTwistCreation();
 });

@@ -14,14 +14,14 @@ from time import time
 from typing import Awaitable, Callable
 import uvicorn
 
-from config import logger
-from database import apply_migrations, create_automigration, get_db, wait_for_db
-from models import User
+from app.config import logger
+from app.database import apply_migrations, create_automigration, get_db, wait_for_db
+from app.models import User
 from app.routers import admin, auth, ratings, twists, users
-from settings import *
-from schemas import UserCreate
-from users import current_active_user_optional, get_user_db, UserManager
-from utility import *
+from app.settings import *
+from app.schemas import UserCreate
+from app.users import current_active_user_optional, get_user_db, UserManager
+from app.utility import *
 
 
 @asynccontextmanager

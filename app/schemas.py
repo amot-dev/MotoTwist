@@ -29,6 +29,8 @@ class RatingCriterion(TypedDict):
 
 class RatingListItem(TypedDict):
     id: int
+    author_name: str
+    can_delete: bool
     formatted_date: str
     ratings: dict[str, int]
 
@@ -59,3 +61,10 @@ class TwistCreate(BaseModel):
 class TwistGeometryData(TypedDict):
     waypoints: list[WaypointDict]
     route_geometry: list[CoordinateDict]
+
+
+class TwistListItem(TypedDict):
+    id: int
+    name: str
+    is_paved: bool
+    is_author: bool

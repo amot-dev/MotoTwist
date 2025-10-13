@@ -5,12 +5,15 @@ import json
 from sqlalchemy import delete, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import cast
 
 from app.config import logger
 from app.database import get_db
-from app.models import Twist
+from app.models import Twist, User
+from app.services.twists import *
 from app.settings import *
 from app.schemas import CoordinateDict, TwistCreate, TwistGeometryData, WaypointDict
+from app.users import current_active_user, current_active_user_optional
 from app.utility import *
 
 
@@ -25,6 +28,7 @@ router = APIRouter(
 async def create_twist(
     request: Request,
     twist_data: TwistCreate,
+    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
@@ -45,6 +49,7 @@ async def create_twist(
 
     # Create the new Twist
     twist = Twist(
+        author=user,
         name=twist_data.name,
         is_paved=twist_data.is_paved,
         waypoints=waypoints_for_db,
@@ -53,13 +58,10 @@ async def create_twist(
     )
     session.add(twist)
     await session.commit()
-    logger.debug(f"Created Twist '{twist}'")
+    logger.debug(f"Created Twist '{twist}' for User '{user.id}'")
 
     # Render the twist list fragment with the new data
-    results = await session.execute(
-        select(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name)
-    )
-    twists = results.all()
+    twists = await get_twists_for_list(session, user)
 
     events = {
         "flashMessage": "Twist created successfully!",
@@ -78,16 +80,34 @@ async def create_twist(
 async def delete_twist(
     request: Request,
     twist_id: int,
+    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Delete a Twist and all related ratings.
     """
+
+    # If not admin, check if the user authored the Twist (and can delete it)
+    if not user.is_superuser:
+        try:
+            result = await session.scalars(
+                select(Twist.author_id).where(Twist.id == twist_id)
+            )
+            author_id = result.one()
+        except NoResultFound:
+            raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+        except MultipleResultsFound:
+            raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
+
+        if user.id != author_id:
+            raise_http("You do not have permission to delete this Twist", status_code=403)
+
+    # Delete the Twist
     result = await session.execute(
         delete(Twist).where(Twist.id == twist_id)
     )
     if result.rowcount == 0:
-        raise_http("Twist not found", status_code=404)
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
 
     await session.commit()
     logger.debug(f"Deleted Twist with id '{twist_id}'")
@@ -121,7 +141,7 @@ async def get_twist_geometry(
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
-        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
+        raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
 
     return {
         "waypoints": twist.waypoints,
@@ -132,15 +152,13 @@ async def get_twist_geometry(
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
 async def render_list(
     request: Request,
+    user: User | None = Depends(current_active_user_optional),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Serve an HTML fragment containing the sorted list of Twists.
     """
-    results = await session.execute(
-        select(Twist.id, Twist.name, Twist.is_paved).order_by(Twist.name)
-    )
-    twists = results.all()
+    twists = await get_twists_for_list(session, user)
 
     # Set a header to trigger a client-side event after the swap
     events = {
@@ -171,7 +189,7 @@ async def render_delete_modal(
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
-        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
+        raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
 
     return templates.TemplateResponse("fragments/twists/delete_modal.html", {
         "request": request,

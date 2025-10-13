@@ -5,12 +5,16 @@
 <div id="sidebar">
     <div id="twist-list-container">
         <h1>MotoTwist</h1>
+        {% if user %}
         <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
         <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
         <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+        {% else %}
+        <h4>Register or Login to create Twists!</h4>
+        {% endif %}
 
         <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
-            <p>Loading twists...</p>
+            <p>Loading Twists...</p>
         </ul>
     </div>
 </div>
@@ -103,11 +107,11 @@
     hx-trigger="updateProfileModal from:body"
     hx-swap="innerHTML">
 
-    <p>Loading profile...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-admin-settings" class="modal modal-dynamic">
-    <p>Loading admin settings...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-create-twist" class="modal">
@@ -140,15 +144,15 @@
 </div>
 
 <div id="modal-rate-twist" class="modal modal-dynamic">
-    <p>Loading form...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-view-twist-ratings" class="modal modal-dynamic">
-    <p>Loading ratings...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-delete-twist" class="modal modal-dynamic">
-    <p>Loading form...</p>
+    <p>Loading...</p>
 </div>
 {% endblock %}
 
