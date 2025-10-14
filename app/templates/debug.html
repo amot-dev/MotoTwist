@@ -29,12 +29,13 @@
              Loading a new state will destroy the existing state.
         </p>
 
+        <h2>Database State</h2>
         <form method="POST" action="/debug/load" enctype="multipart/form-data">
             <div class="form-group">
                 <input type="file" id="json-file" name="json_file" accept=".json,application/json" required>
             </div>
             <div class="button-group">
-                <span class="debug-label">Upload database state as JSON File</span>
+                <span class="debug-label">Load database state from JSON File</span>
                 <button type="submit" class="button button-block">Load State</button>
             </div>
         </form>
@@ -42,6 +43,29 @@
             <div class="button-group">
                 <span class="debug-label">Save the database state to a JSON file</span>
                 <button type="submit" class="button button-block">Save State</button>
+            </div>
+        </form>
+        <h2>Rating Data</h2>
+        <form action="/debug/seed-ratings" method="post">
+            <div class="form-group">
+                <label for="rating_count">General Rating Count</label>
+                <input type="number" id="rating_count" name="rating_count" value="100" required>
+            </div>
+            <div class="form-group">
+                <label for="popular_twist_name">Popular Twist Name</label>
+                <input type="text" id="popular_twist_name" name="popular_twist_name" required>
+            </div>
+            <div class="form-group">
+                <label for="popular_rating_count">Popular Twist Rating Count</label>
+                <input type="number" id="popular_rating_count" name="popular_rating_count" value="100" required>
+            </div>
+            <div class="form-group">
+                <label for="distribution_focus">Distribution Focus (Higher = more concentrated)</label>
+                <input type="number" step="0.1" id="distribution_focus" name="distribution_focus" value="2.5" required>
+            </div>
+            <div class="button-group">
+                <span class="debug-label">Create ratings based on the above parameters</span>
+                <button type="submit" class="button button-block">Seed Data</button>
             </div>
         </form>
         <form method="GET" action="/">

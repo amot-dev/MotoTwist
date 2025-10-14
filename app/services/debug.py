@@ -1,0 +1,96 @@
+from datetime import date
+from random import randint
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Type
+
+from app.models import PavedRating, Twist, UnpavedRating, User
+
+
+async def reset_id_sequences_for(
+    session: AsyncSession,
+    models: list[Type[Twist | PavedRating | UnpavedRating]]
+) -> None:
+    """
+    Reset the primary key ID sequences for a list of SQLAlchemy models.
+
+    :param session: The session to use for database transactions.
+    :param models: A list of the models for which to reset the ID sequences.
+    """
+    # For each model that uses an integer sequence for its primary key, we need to set it to the proper next value manually
+    for model in models:
+        table_name = model.__tablename__
+        # Set the value of the serial sequence for the table to the next available
+        # If the table has values, it's MAX(id)+1
+        # If the table is empty, it's 1
+        query = text(f"""
+            SELECT setval(
+                pg_get_serial_sequence(:table_name, 'id'),
+                COALESCE((SELECT MAX(id) FROM {table_name}), 1),
+                (MAX(id) IS NOT NULL)
+            ) FROM {table_name};
+        """)
+        await session.execute(query, {"table_name": table_name})
+    await session.commit()
+
+
+def create_random_rating(
+    twist: Twist,
+    author: User,
+    rating_date: date
+) -> PavedRating | UnpavedRating:
+    """
+    Create a rating object with randomly generated data.
+
+    The type of rating object returned (PavedRating or UnpavedRating)
+    depends on the provided Twist's `is_paved` attribute.
+
+    :param twist: The Twist object for which to create a rating.
+    :param author: The user who is the author of the rating.
+    :param rating_date: The date to assign to the rating.
+    :return: A new PavedRating or UnpavedRating object with random rating values.
+    """
+    if twist.is_paved:
+        return PavedRating(
+            author=author,
+            twist=twist,
+            rating_date=rating_date,
+            traffic=randint(0, 10),
+            scenery=randint(0, 10),
+            pavement=randint(0, 10),
+            twistyness=randint(0, 10),
+            intensity=randint(0, 10)
+        )
+    else:
+        return UnpavedRating(
+            author=author,
+            twist=twist,
+            rating_date=rating_date,
+            traffic=randint(0, 10),
+            scenery=randint(0, 10),
+            surface_consistency=randint(0, 10),
+            technicality=randint(0, 10),
+            flow=randint(0, 10)
+        )
+
+
+def generate_weights(num_items: int, focus: float) -> list[float]:
+    """
+    Generate a list of weights that form a 'peak' in the middle.
+
+    A higher focus value creates a steeper peak, concentrating the weights
+    around the center of the list.
+
+    :param num_items: The number of weights to generate.
+    :param focus: The exponent controlling the steepness of the weight distribution curve.
+    :return: A list of float values representing the weights.
+    """
+    center = (num_items - 1) / 2
+    weights: list[float] = []
+    for i in range(num_items):
+        distance_from_center = abs(i - center)
+        # The weight is calculated to decrease as distance from the center grows
+        # Raising to the power of 'focus' controls the curve's steepness
+        weight = (center - distance_from_center) ** focus
+        weights.append(weight)
+    return weights
