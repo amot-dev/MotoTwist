@@ -1,10 +1,11 @@
 from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.generics import GUID
-from sqlalchemy import Boolean, ForeignKey, Integer, SmallInteger, String, Date
+from sqlalchemy import Boolean, Date, ForeignKey, inspect, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Any
 from uuid import UUID
 
 from app.schemas import CoordinateDict, WaypointDict
@@ -13,7 +14,34 @@ from app.schemas import CoordinateDict, WaypointDict
 Base = declarative_base()
 
 
-class User(SQLAlchemyBaseUserTableUUID, Base):
+class SerializationMixin:
+    """Provides a `to_dict` method to SQLAlchemy models."""
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Converts the model instance into a dictionary,
+        serializing special types like UUID and date.
+        """
+        inspection_object = inspect(type(self))
+        assert inspection_object != None
+
+        columns = [c.name for c in inspection_object.columns]
+
+        data: dict[str, Any] = {}
+        for column in columns:
+            value = getattr(self, column)
+
+            # Handle special Python types
+            if isinstance(value, UUID):
+                data[column] = str(value)
+            elif isinstance(value, date):
+                data[column] = value.isoformat()
+            else:
+                data[column] = value
+
+        return data
+
+
+class User(SQLAlchemyBaseUserTableUUID, SerializationMixin, Base):
     __tablename__ = "users"
 
     # Data
@@ -25,7 +53,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     unpaved_ratings: Mapped[list["UnpavedRating"]] = relationship("UnpavedRating", back_populates="author")
 
 
-class Twist(Base):
+class Twist(SerializationMixin, Base):
     __tablename__ = "twists"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -50,7 +78,7 @@ class Twist(Base):
         return f"[{self.id}] {self.name} ({paved})"
 
 
-class PavedRating(Base):
+class PavedRating(SerializationMixin, Base):
     __tablename__ = "paved_ratings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -76,7 +104,7 @@ class PavedRating(Base):
         return f"[{self.id}] (Paved)"
 
 
-class UnpavedRating(Base):
+class UnpavedRating(SerializationMixin, Base):
     __tablename__ = "unpaved_ratings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

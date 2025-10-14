@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import UserNotExists
 import json
 from secrets import choice
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
 from string import ascii_letters, digits
@@ -15,9 +15,9 @@ from uuid import UUID
 from app.database import get_db
 from app.models import User
 from app.schemas import UserCreate, UserUpdate
-from app.settings import *
+from app.settings import settings
 from app.users import current_admin_user, get_user_manager, UserManager
-from app.utility import *
+from app.utility import raise_http
 
 
 templates = Jinja2Templates(directory="templates")

@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MotoTwist{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
+
+    {% if settings %}
     <script>
-        const OSM_URL = "{{ osm_url | safe }}";
-        const OSRM_URL = "{{ osrm_url | safe }}";
+        const OSM_URL = "{{ settings.OSM_URL | safe }}";
+        const OSRM_URL = "{{ settings.OSRM_URL | safe }}";
     </script>
+    {% endif %}
 
     {% block stylesheets %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"

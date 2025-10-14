@@ -5,7 +5,6 @@ from typing import cast
 
 from app.models import PavedRating, UnpavedRating
 from app.schemas import AverageRating, RatingCriterion
-from app.utility import *
 
 
 # Criteria columns

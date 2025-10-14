@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="centered-container">
+    <div class="modal-content">
+        <h1>Debug Menu</h1>
+
+        <p>
+            Currently, there
+            {% if user_count == 1 %} is 1 user
+            {% else %} are {{ user_count }} users
+            {% endif %}
+             ({{ admin_count }}
+            {% if admin_count == 1 %} is an administrator
+            {% else %} are administrators
+            {% endif %}
+             and {{ inactive_count }}
+            {% if inactive_count == 1 %} is inactive).
+            {% else %} are inactive).
+            {% endif %}
+             There
+            {% if twist_count == 1 %} is 1 Twist
+            {% else %} are {{ twist_count }} Twists
+            {% endif %}
+             and a total of {{ rating_count }}
+            {% if rating_count == 1 %} rating.
+            {% else %} ratings.
+            {% endif %}
+             Loading a new state will destroy the existing state.
+        </p>
+
+        <form method="POST" action="/debug/load" enctype="multipart/form-data">
+            <div class="form-group">
+                <input type="file" id="json-file" name="json_file" accept=".json,application/json" required>
+            </div>
+            <div class="button-group">
+                <span class="debug-label">Upload database state as JSON File</span>
+                <button type="submit" class="button button-block">Load State</button>
+            </div>
+        </form>
+        <form method="POST" action="/debug/save">
+            <div class="button-group">
+                <span class="debug-label">Save the database state to a JSON file</span>
+                <button type="submit" class="button button-block">Save State</button>
+            </div>
+        </form>
+        <form method="GET" action="/">
+            <div class="button-group">
+                <span class="debug-label">Return to MotoTwist</span>
+                <button type="submit" class="button button-block">Done</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

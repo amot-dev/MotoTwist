@@ -36,6 +36,9 @@
 </template>
 
 <div id="top-right-controls">
+    {% if settings.DEBUG_MODE %}
+    <a href="/debug" class="button button-block">Debug Menu</a>
+    {% endif %}
     {% include "fragments/auth/widget.html" %}
     <a id="modal-about-button" href="#modal-about" class="button button-block">
         <img src="{{ url_for('static', path='/images/favicon.ico') }}">
@@ -58,7 +61,7 @@
                 <input type="password" id="password" name="password" required>
             </div>
 
-            {% if can_register %}
+            {% if settings.ALLOW_USER_REGISTRATION %}
             <a href="/register" class="button button-link">
                 Don't have an account? Register!
             </a>
@@ -81,7 +84,7 @@
         <ul class="info-list">
             <li>
                 <span>Current Version</span>
-                <strong>{{ version }}</strong>
+                <strong>{{ settings.MOTOTWIST_VERSION }}</strong>
             </li>
             <li>
                 <span>Latest Version</span>
@@ -89,7 +92,7 @@
             </li>
             <li>
                 <span>Source Code</span>
-                <a href="https://github.com/{{ upstream }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
+                <a href="https://github.com/{{ settings.MOTOTWIST_UPSTREAM }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
             </li>
         </ul>
 

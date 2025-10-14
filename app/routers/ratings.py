@@ -12,11 +12,10 @@ from sqlalchemy.orm import load_only, selectinload
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, PavedRating, UnpavedRating, User
-from app.services.ratings import *
-from app.settings import *
+from app.services.ratings import calculate_average_rating, RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED
 from app.schemas import RatingListItem
 from app.users import current_active_user, current_active_user_optional
-from app.utility import *
+from app.utility import is_form_value_string, raise_http
 
 
 templates = Jinja2Templates(directory="templates")

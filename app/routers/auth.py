@@ -9,7 +9,7 @@ import uuid
 
 from app.models import User
 from app.users import auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy, UserManager
-from app.utility import *
+from app.utility import raise_http
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter(

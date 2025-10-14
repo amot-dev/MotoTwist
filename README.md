@@ -78,7 +78,8 @@ These settings are useful for local development and debugging.
 | Variable | Description | Default   |
 | - | - | - |
 | `LOG_LEVEL` | Sets the application's logging level. Common values are `DEBUG`, `INFO`, `WARNING`. | `INFO` |
-| `UVICORN_RELOAD` | If set to `true`, the server will automatically restart when code changes are detected. (Also requires mounting the source as a bind mount). | `false` |
+| `DEBUG_MODE` | Enables the Debug Menu for administrators. Useful for saving/loading the database state. | `False` |
+| `UVICORN_RELOAD` | If set to `true`, the server will automatically restart when code changes are detected. (Also requires mounting the source as a bind mount). | `False` |
 | `MOTOTWIST_UPSTREAM` | Sets the repository to check updates from. Modify the default if you are making a fork. | `"amot-dev/mototwist"` |
 
 ### Usage
