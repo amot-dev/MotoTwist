@@ -323,7 +323,7 @@ ul {
 }
 
 
-.popup-button-hide,
+.popup-button-edit,
 .popup-button-delete {
     border: none;
     border-radius: var(--radius-sm);
@@ -337,7 +337,7 @@ ul {
     transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.popup-button-hide:hover,
+.popup-button-edit:hover,
 .popup-button-delete:hover {
     background-color: var(--panel-slate-hover);
     color: var(--text-offwhite);

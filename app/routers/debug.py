@@ -5,10 +5,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from io import BytesIO
 import json
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
-from typing import cast
+from typing import cast, Type
 from uuid import UUID
 
 from app.database import get_db
@@ -134,9 +134,7 @@ async def load_state(
     contents = await json_file.read()
     data = json.loads(contents)
 
-    # await session.execute(delete(PavedRating))
-    # await session.execute(delete(UnpavedRating))
-    # await session.execute(delete(Twist))
+    # Removing users cascade deletes everything
     await session.execute(delete(User))
     
     users_data = data.get("users", [])
@@ -176,6 +174,25 @@ async def load_state(
     session.add_all(twists_to_create)
     session.add_all(paved_ratings_to_create)
     session.add_all(unpaved_ratings_to_create)
+
+    # Commit so the database has the new updated data
+    await session.commit()
+
+    # For each model that uses an integer sequence for its primary key, we need to set it to the proper next value manually
+    models_with_sequences: list[Type[Twist | PavedRating | UnpavedRating]] = [Twist, PavedRating, UnpavedRating]
+    for model in models_with_sequences:
+        table_name = model.__tablename__
+        # Set the value of the serial sequence for the table to the next available
+        # If the table has values, it's MAX(id)+1
+        # If the table is empty, it's 1
+        query = text(f"""
+            SELECT setval(
+                pg_get_serial_sequence(:table_name, 'id'),
+                COALESCE((SELECT MAX(id) FROM {table_name}), 1),
+                (MAX(id) IS NOT NULL)
+            ) FROM {table_name};
+        """)
+        await session.execute(query, {"table_name": table_name})
     await session.commit()
 
     request.session["flash"] = "Data loaded!"

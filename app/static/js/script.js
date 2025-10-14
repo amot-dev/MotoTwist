@@ -34,7 +34,7 @@ const waypointIcon = new L.Icon({
     iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
 });
 
-const hiddenIcon = new L.Icon({
+const shapingPointIcon = new L.Icon({
     iconUrl: '/static/images/marker-icon-grey.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     iconSize: [19, 31], iconAnchor: [10, 31], shadowSize: [31, 31]
@@ -68,9 +68,10 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
         routeLine.bindPopup(`<b>${twistName}</b>`);
 
         // Create the waypoint markers
-        const waypointMarkers = data.waypoints.map((point, index) => {
+        const namedWaypoints = data.waypoints.filter(wp => wp.name.length > 0);
+        const waypointMarkers = namedWaypoints.map((point, index) => {
             let icon = waypointIcon;
-            const totalPoints = data.waypoints.length;
+            const totalPoints = namedWaypoints.length;
 
             if (totalPoints === 1 || index === 0) icon = startIcon;
             else if (index === totalPoints - 1) icon = endIcon;
@@ -257,43 +258,22 @@ let routeRequestController;
 let newRouteLine = null;
 
 /**
- * Updates a container element with a new message paragraph.
- * @param {HTMLElement} element The container element to update.
- * @param {string} message The text content for the new paragraph.
- * @param {'w' | 'a'} mode 'w' to write (overwrite), 'a' to append. Defaults to 'w'.
- */
-function writeToStatus(element, message, mode = 'w') {
-    // If mode is 'write', clear the container first.
-    if (mode === 'w') {
-    element.innerHTML = '';
-    }
-
-    // Create a new paragraph, set its text, and append it.
-    const p = document.createElement('p');
-    p.textContent = message;
-    element.appendChild(p);
-}
-
-/**
- * Sets the visibility icon for a waypoint's hide button based on its isHidden property.
+ * Configures whether or not a shaping point can be edited, based off the user action and the existing text.
  * @param {object} waypoint The waypoint object.
- * @param {HTMLElement} hideIcon The <i> element for the icon.
+ * @param {HTMLElement} editIcon The <i> element for the icon.
  */
-function configureHiddenWaypointPopup(waypoint, hideIcon, nameInput) {
-    if (waypoint.isHidden) {
-        hideIcon.classList.remove('fa-solid');
-        hideIcon.classList.add('fa-regular');
-
+function configureShapingPointPopup(fromClick, editIcon, nameInput) {
+    // If text exists or we've just clicked on the edit button, enable editing
+    if (fromClick || nameInput.value.length > 0) {
+        // Re-enable the input
+        nameInput.disabled = false;
+        nameInputTemplate = document.querySelector('#create-waypoint-popup-template').content.querySelector('input')
+        nameInput.placeholder = nameInputTemplate.placeholder;
+    } else {
         // Disable the input and set its text
         nameInput.disabled = true;
-        nameInput.value = 'Shaping Point';
-    } else {
-        hideIcon.classList.remove('fa-regular');
-        hideIcon.classList.add('fa-solid');
-
-        // Re-enable the input and restore its original name (if any)
-        nameInput.disabled = false;
-        nameInput.value = waypoint.name;
+        nameInput.placeholder = 'Shaping Point';
+        nameInput.title = 'Shaping Points are stored for routing but not displayed'
     }
 }
 
@@ -312,8 +292,8 @@ function createPopupContent(marker) {
     // Create a fresh clone of the template
     const popupContent = createWaypointPopupTemplate.cloneNode(true);
     const nameInput = popupContent.querySelector('.create-waypoint-name-input');
-    const hideButton = popupContent.querySelector('.popup-button-hide');
-    const hideIcon = hideButton.querySelector('i');
+    const editButton = popupContent.querySelector('.popup-button-edit');
+    const editIcon = editButton.querySelector('i');
     const deleteButton = popupContent.querySelector('.popup-button-delete');
 
     // Input for the waypoint name
@@ -327,21 +307,25 @@ function createPopupContent(marker) {
         if (event.key === 'Enter') {
             event.preventDefault();
             map.closePopup();
+
+            // Update icon
+            updateMarkerIcon(marker, waypoint, index, totalMarkers);
         }
     });
 
-    // Toggle visibility of the hide button for start/end markers
+    // Toggle visibility of the edit button for start/end markers
     const isStart = index === 0;
     const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
-    hideButton.classList.toggle('gone', isStart || isEnd);
+    editButton.classList.toggle('gone', isStart || isEnd);
 
-    configureHiddenWaypointPopup(waypoint, hideIcon, nameInput)
+    // Set midpoints as shaping points
+    if (!(isStart || isEnd)) {
+        configureShapingPointPopup(false, editIcon, nameInput)
+    }
 
-    // Hide button
-    hideButton.addEventListener('click', () => {
-        waypoint.isHidden = !waypoint.isHidden;
-        configureHiddenWaypointPopup(waypoint, hideIcon, nameInput)
-        updateMarkerIcons();
+    // Edit button
+    editButton.addEventListener('click', () => {
+        configureShapingPointPopup(true, editIcon, nameInput)
     });
 
     // Delete button
@@ -361,26 +345,35 @@ function createPopupContent(marker) {
 }
 
 /**
+ * Updates a single waypoint marker icon on the map to reflect its
+ * current status.
+ *
+ * @param {L.Marker} marker The marker to update.
+ * @param {object} waypoint The corresponding waypoint data object.
+ * @param {number} index The index of the marker in the array.
+ * @param {number} totalMarkers The total number of markers.
+ */
+function updateMarkerIcon(marker, waypoint, index, totalMarkers) {
+    const isStart = totalMarkers === 1 || index === 0;
+    const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
+
+    // Set map icon based on position and presence of name
+    if (isStart) marker.setIcon(startIcon);
+    else if (isEnd) marker.setIcon(endIcon);
+    else if (waypoint.name.length === 0) marker.setIcon(shapingPointIcon);
+    else marker.setIcon(waypointIcon);
+}
+
+/**
  * Updates all waypoint marker icons on the map to reflect their current
- * status (start, end, intermediate, or hidden).
+ * status (start, end, shaping, named waypoint).
  */
 function updateMarkerIcons() {
     const totalMarkers = waypointMarkers.length;
 
     waypointMarkers.forEach((marker, index) => {
         const waypoint = waypoints[index];
-
-        // Update map marker icon
-        const isStart = totalMarkers === 1 || index === 0;
-        const isEnd = index === totalMarkers - 1 && totalMarkers > 1;
-        if (waypoint.isHidden) {
-            marker.setIcon(hiddenIcon);
-        } else {
-            // Set map icon based on position
-            if (isStart) marker.setIcon(startIcon);
-            else if (isEnd) marker.setIcon(endIcon);
-            else marker.setIcon(waypointIcon);
-        }
+        updateMarkerIcon(marker, waypoint, index, totalMarkers);
     });
 }
 
@@ -426,6 +419,24 @@ async function updateRoute() {
             flash("Error drawing route", 5000, { backgroundColor: accentOrange });
         }
     }
+}
+
+/**
+ * Updates a container element with a new message paragraph.
+ * @param {HTMLElement} element The container element to update.
+ * @param {string} message The text content for the new paragraph.
+ * @param {'w' | 'a'} mode 'w' to write (overwrite), 'a' to append. Defaults to 'w'.
+ */
+function writeToStatus(element, message, mode = 'w') {
+    // If mode is 'write', clear the container first.
+    if (mode === 'w') {
+    element.innerHTML = '';
+    }
+
+    // Create a new paragraph, set its text, and append it.
+    const p = document.createElement('p');
+    p.textContent = message;
+    element.appendChild(p);
 }
 
 /**
@@ -476,39 +487,44 @@ finalizeTwistButton.addEventListener('click', () => {
     const statusIndicator = document.querySelector('#route-status-indicator');
 
     // Check if there's a route to save
-    const waypointsToSend = waypoints.filter(wp => !wp.isHidden);
-    if (waypointsToSend.length > 1 && newRouteLine) {
-        const routeLatLngs = newRouteLine.getLatLngs();
+    const namedWaypoints = waypoints.filter(wp => wp.name.length > 0);
+    const shapingPoints = waypoints.filter(wp => wp.name.length === 0);
+    if (waypoints.length > 1 && newRouteLine) {
+        if (waypoints.at(0).name.length > 0 && waypoints.at(-1).name.length > 0) {
+            const routeLatLngs = newRouteLine.getLatLngs();
 
-        // Enable submission of form
-        const submitButton = twistForm.querySelector('[type="submit"]');
-        submitButton.disabled = false;
+            // Enable submission of form
+            const submitButton = twistForm.querySelector('[type="submit"]');
+            submitButton.disabled = false;
 
-        // Write success status
-        writeToStatus(
-            statusIndicator,
-            `✅ Route captured with ${waypointsToSend.length} waypoints and ${routeLatLngs.length} geometry points.`
-        );
+            // Write success status
+            writeToStatus(
+                statusIndicator,
+                `✅ Route captured with ${namedWaypoints.length} waypoints and ${routeLatLngs.length} geometry points.`
+            );
 
-        // Warn about unnamed waypoints on a new line
-        const unnamedCount = waypointsToSend.filter(wp => !wp.name).length;
-        if (unnamedCount > 0) {
-            const noun = unnamedCount === 1 ? "waypoint" : "waypoints";
-            const verb = unnamedCount === 1 ? "remains" : "remain";
-            const message = `⚠️ ${unnamedCount} ${noun} ${verb} unnamed.`;
+            // Inform about shaping points on a new line
+            if (shapingPoints.length > 0) {
+                const noun = shapingPoints.length === 1 ? "shaping point" : "shaping points";
+                const message = `ℹ️ ${shapingPoints.length} ${noun} will be stored for routing but not displayed.`;
 
-            writeToStatus(statusIndicator, message, "a");
+                writeToStatus(statusIndicator, message, "a");
+            }
+        } else {
+            // Handle case where user finalizes without naming start or end
+            writeToStatus(
+                statusIndicator,
+                '⚠️ Start/End waypoint(s) remain unnamed.'
+            );
         }
-        statusIndicator.classList.remove('gone');
-
     } else {
         // Handle case where user finalizes without a valid route
         writeToStatus(
             statusIndicator,
             '⚠️ No valid route was created.'
         );
-        statusIndicator.classList.remove('gone');
     }
+    statusIndicator.classList.remove('gone');
 });
 
 // Handle cancellation of route geometry recording
@@ -524,7 +540,6 @@ map.on('click', function(e) {
     const newWaypoint = {
         latlng: e.latlng,
         name: '',
-        isHidden: false
     };
     waypoints.push(newWaypoint);
 
@@ -562,8 +577,7 @@ map.on('click', function(e) {
             bodyJSON = JSON.parse(body);
 
             // Build payload
-            const waypointsToSend = waypoints.filter(wp => !wp.isHidden);
-            bodyJSON.waypoints = waypointsToSend.map(wp => ({
+            bodyJSON.waypoints = waypoints.map(wp => ({
                 lat: wp.latlng.lat,
                 lng: wp.latlng.lng,
                 name: wp.name
