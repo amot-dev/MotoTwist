@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, AsyncGenerator
 from uuid import UUID
 
-from config import logger
-from database import get_db
-from models import User
-from settings import settings
-from schemas import UserCreate
+from app.config import logger
+from app.database import get_db
+from app.models import User
+from app.schemas.users import UserCreate
+from app.settings import settings
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):

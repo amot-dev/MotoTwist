@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # Developer Options
     LOG_LEVEL: str = "INFO"
+    DEBUG_MODE: bool = False
     MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
 
     # Do not change unless you want to be rate-limited by the GitHub API during development

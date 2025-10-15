@@ -14,14 +14,14 @@ from time import time
 from typing import Awaitable, Callable
 import uvicorn
 
-from config import logger
-from database import apply_migrations, create_automigration, get_db, wait_for_db
-from models import User
-from app.routers import admin, auth, ratings, twists, users
-from settings import *
-from schemas import UserCreate
-from users import current_active_user_optional, get_user_db, UserManager
-from utility import *
+from app.config import logger
+from app.database import apply_migrations, create_automigration, get_db, wait_for_db
+from app.models import User
+from app.routers import admin, auth, debug, ratings, twists, users
+from app.schemas.users import UserCreate
+from app.settings import Settings, settings
+from app.users import current_active_user_optional, get_user_db, UserManager
+from app.utility import raise_http
 
 
 @asynccontextmanager
@@ -84,6 +84,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.MOTOTWIST_SECRET_KEY)
 
 app.include_router(admin.router)
 app.include_router(auth.router)
+app.include_router(debug.router)
 app.include_router(ratings.router)
 app.include_router(twists.router)
 app.include_router(users.router)
@@ -103,16 +104,11 @@ async def render_index_page(
     """
     # Add a flash message if it exists in the session
     flash_message: str = request.session.pop("flash", None)
-    print(f"HEY: {settings.ALLOW_USER_REGISTRATION}")
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": user,
         "flash_message": flash_message,
-        "can_register": settings.ALLOW_USER_REGISTRATION,
-        "version": settings.MOTOTWIST_VERSION,
-        "upstream": settings.MOTOTWIST_UPSTREAM,
-        "osm_url": settings.OSM_URL,
-        "osrm_url": settings.OSRM_URL
+        "settings": settings
     })
 
 

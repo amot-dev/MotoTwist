@@ -3,16 +3,73 @@
 
 {% block content %}
 <div id="sidebar">
-    <div id="twist-list-container">
-        <h1>MotoTwist</h1>
-        <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
-        <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
-        <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+    <h1>MotoTwist</h1>
+    {% if user %}
+    <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+    <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+    <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+    {% else %}
+    <h4>Register or Login to create Twists!</h4>
+    {% endif %}
 
-        <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
-            <p>Loading twists...</p>
-        </ul>
-    </div>
+    <form id="twist-filters"
+        hx-get="/twists/templates/list"
+        hx-target="#twist-list"
+        hx-swap="innerHTML"
+        hx-trigger="change, keyup changed delay:500ms from:#twist-search-input, search from:#twist-search-input"
+        hx-indicator=".htmx-indicator">
+
+        <div class="search-container">
+            <input id="twist-search-input" class="search-input"
+                type="search" name="search" placeholder="Search"
+            >
+            <span id="search-indicator" class="htmx-indicator">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+        </div>
+
+        <details class="filter-dropdown">
+            <summary>
+                <span>
+                    <i class="fa-solid fa-filter"></i> Filters
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon"></i>
+            </summary>
+
+            <div class="filter-panel">
+                <fieldset class="filter-fieldset">
+                    <div class="filter-group" title="Filter between all or your Twists">
+                        <input type="radio" id="own_all" name="ownership" value="all" checked>
+                        <label for="own_all">All Twists</label>
+                        <input type="radio" id="own_own" name="ownership" value="own">
+                        <label for="own_own">My Twists</label>
+                    </div>
+
+                    <div class="filter-group" title="Filter between all Twists or those you haven't rated">
+                        <input type="radio" id="rated_all" name="rated" value="all" checked>
+                        <label for="rated_all">All</label>
+                        <input type="radio" id="rated_rated" name="rated" value="rated">
+                        <label for="rated_rated">Rated</label>
+                        <input type="radio" id="rated_unrated" name="rated" value="unrated">
+                        <label for="rated_unrated">Unrated</label>
+                    </div>
+
+                    <div class="filter-group" title="Filter between all, visible, or hidden Twists">
+                        <input type="radio" id="vis_all" name="visibility" value="all" checked>
+                        <label for="vis_all">All</label>
+                        <input type="radio" id="vis_visible" name="visibility" value="visible">
+                        <label for="vis_visible">Visible</label>
+                        <input type="radio" id="vis_hidden" name="visibility" value="hidden">
+                        <label for="vis_hidden">Hidden</label>
+                    </div>
+                </fieldset>
+            </div>
+        </details>
+    </form>
+
+    <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
+        <p>Loading Twists...</p>
+    </ul>
 </div>
 
 <div id="map"></div>
@@ -21,8 +78,8 @@
     <div class="create-waypoint-popup">
         <input type="text" class="create-waypoint-name-input" placeholder="Waypoint Name">
         <div class="popup-buttons">
-            <button class="popup-button-hide" title="Hide/Show Waypoint">
-                <i class="far fa-solid fa-flag"></i>
+            <button class="popup-button-edit" title="Edit Waypoint">
+                <i class="fa-regular fa-edit"></i>
             </button>
             <button class="popup-button-delete" title="Delete Waypoint">
                 <i class="fa-solid fa-trash"></i>
@@ -32,6 +89,9 @@
 </template>
 
 <div id="top-right-controls">
+    {% if settings.DEBUG_MODE and user and user.is_superuser %}
+    <a href="/debug" class="button button-block">Debug Menu</a>
+    {% endif %}
     {% include "fragments/auth/widget.html" %}
     <a id="modal-about-button" href="#modal-about" class="button button-block">
         <img src="{{ url_for('static', path='/images/favicon.ico') }}">
@@ -54,7 +114,7 @@
                 <input type="password" id="password" name="password" required>
             </div>
 
-            {% if can_register %}
+            {% if settings.ALLOW_USER_REGISTRATION %}
             <a href="/register" class="button button-link">
                 Don't have an account? Register!
             </a>
@@ -77,7 +137,7 @@
         <ul class="info-list">
             <li>
                 <span>Current Version</span>
-                <strong>{{ version }}</strong>
+                <strong>{{ settings.MOTOTWIST_VERSION }}</strong>
             </li>
             <li>
                 <span>Latest Version</span>
@@ -85,7 +145,7 @@
             </li>
             <li>
                 <span>Source Code</span>
-                <a href="https://github.com/{{ upstream }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
+                <a href="https://github.com/{{ settings.MOTOTWIST_UPSTREAM }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
             </li>
         </ul>
 
@@ -103,18 +163,18 @@
     hx-trigger="updateProfileModal from:body"
     hx-swap="innerHTML">
 
-    <p>Loading profile...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-admin-settings" class="modal modal-dynamic">
-    <p>Loading admin settings...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-create-twist" class="modal">
     {% call render_modal_content("New Twist") %}
     <form hx-post="/twists"
         hx-target="#twist-list"
-        hx-swap="innerHTML"
+        hx-swap="afterbegin"
         hx-ext="json-enc">
 
         <div class="form-group">
@@ -140,15 +200,15 @@
 </div>
 
 <div id="modal-rate-twist" class="modal modal-dynamic">
-    <p>Loading form...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-view-twist-ratings" class="modal modal-dynamic">
-    <p>Loading ratings...</p>
+    <p>Loading...</p>
 </div>
 
 <div id="modal-delete-twist" class="modal modal-dynamic">
-    <p>Loading form...</p>
+    <p>Loading...</p>
 </div>
 {% endblock %}
 

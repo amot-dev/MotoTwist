@@ -55,17 +55,6 @@ body {
     background-color: var(--bg-charcoal);
 }
 
-#sidebar {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    width: 300px;
-    box-shadow: var(--shadow-soft);
-    border-right: var(--border-default);
-    padding: var(--padding-lg);
-    background-color: var(--panel-slate);
-}
-
 #map {
     flex-grow: 1;
 }
@@ -97,7 +86,7 @@ ul {
 }
 
 .scroll-shut-on-delete {
-  max-height: 500px;
+  max-height: 1000px;
   overflow: hidden;
 
   transition: max-height 0.5s ease-in-out, 
@@ -323,7 +312,7 @@ ul {
 }
 
 
-.popup-button-hide,
+.popup-button-edit,
 .popup-button-delete {
     border: none;
     border-radius: var(--radius-sm);
@@ -337,7 +326,7 @@ ul {
     transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.popup-button-hide:hover,
+.popup-button-edit:hover,
 .popup-button-delete:hover {
     background-color: var(--panel-slate-hover);
     color: var(--text-offwhite);
@@ -347,10 +336,20 @@ ul {
 }
 
 
-/* --- Twist List --- */
+/* --- Sidebar --- */
 
-#twist-list-container {
-    flex-grow: 1;
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    box-shadow: var(--shadow-soft);
+    border-right: var(--border-default);
+    padding: var(--padding-lg);
+    background-color: var(--panel-slate);
+}
+
+#sidebar h4 {
+    color: var(--text-muted);
 }
 
 .create-twist-button {
@@ -379,6 +378,128 @@ ul {
 }
 .create-twist-button.button-cancel:hover {
     background-color: var(--button-cancel-hover);
+}
+
+
+/* --- Twist Filters --- */
+
+#twist-filters {
+    margin-bottom: var(--padding-lg);
+}
+
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--padding-lg);
+}
+
+.search-input {
+    width: 100%;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--bg-charcoal);
+}
+
+#search-indicator {
+    position: absolute;
+    right: var(--padding-md);
+    color: var(--text-muted);
+}
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-dropdown summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    list-style: none; /* Hide the default marker in some browsers */
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-offwhite);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+
+.chevron-icon {
+    transition: transform var(--transition-fast);
+}
+
+.filter-dropdown[open] .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.filter-panel {
+    border: var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--padding-md);
+    background-color: var(--panel-slate);
+}
+
+.filter-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-lg);
+    border: none;
+    padding: 0;
+}
+
+.filter-group {
+    display: flex;
+}
+
+.filter-group input[type="radio"] {
+    position: fixed;
+    opacity: 0;
+    width: 0;
+}
+
+.filter-group label {
+    flex-grow: 1;
+    padding: var(--padding-sm);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background-color: var(--panel-slate-hover);
+    cursor: pointer;
+
+    transition: all var(--transition-fast);
+}
+
+.filter-group label:first-of-type {
+    border-radius: 100px 0 0 100px; /* Pill shape */
+}
+
+.filter-group label:last-of-type {
+    border-radius: 0 100px 100px 0; /* Pill shape */
+}
+
+.filter-group label:hover {
+    color: var(--text-offwhite);
+    background-color: var(--border-gray);
+}
+
+.filter-group input[type="radio"]:checked + label {
+    font-weight: bold;
+    color: white;
+    background-color: var(--accent-blue);
+}
+
+
+/* --- Twist List --- */
+
+#twist-list {
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 .twist-item {
@@ -429,10 +550,9 @@ ul {
 }
 
 
-/* --- Ratings Dropdown --- */
+/* --- Twists Dropdown --- */
 
-.ratings-dropdown {
-    position: relative;
+.twist-dropdown {
     overflow: hidden;
     max-height: 0;
     border-top: var(--border-default);
@@ -442,25 +562,35 @@ ul {
 
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
-.ratings-dropdown.is-open {
-    max-height: 500px;
+.twist-dropdown.is-open {
+    max-height: 1000px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
-.ratings-dropdown h4 {
+.twist-dropdown .author {
+    margin-top: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted)
+}
+
+.twist-dropdown .averages {
+    position: relative;
+}
+
+.twist-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
     margin-bottom: var(--padding-sm);
 }
 
-.ratings-dropdown .button {
+.twist-dropdown .button {
     font-size: 0.8rem;
 }
 
-.ratings-dropdown #modal-rate-twist-button {
+.twist-dropdown #modal-rate-twist-button {
     position: absolute;
-    top: var(--padding-sm);
-    right: var(--padding-lg);
+    top: 0;
+    right: 0;
     border: none;
     border-radius: var(--radius-sm);
     padding: var(--padding-xs) var(--padding-md);
@@ -469,21 +599,21 @@ ul {
 
     transition: background-color 0.2s ease;
 }
-.ratings-dropdown #modal-rate-twist-button:hover {
+.twist-dropdown #modal-rate-twist-button:hover {
     background-color: var(--accent-hover);
 }
 
-.ratings-dropdown li {
+.twist-dropdown li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
 }
 
-.ratings-dropdown #modal-delete-twist-button {
+.twist-dropdown #modal-delete-twist-button {
     position: absolute;
-    bottom: var(--padding-md);
-    right: var(--padding-lg);
+    bottom: 0;
+    right: 0;
 }
 
 .rating-slider-container {
@@ -639,6 +769,7 @@ ul {
 .modal-content input[type="email"],
 .modal-content input[type="password"],
 .modal-content input[type="text"],
+.modal-content input[type="number"],
 .modal-content input[type="file"],
 .modal-content input[type="date"] {
     width: 100%;
@@ -911,6 +1042,11 @@ ul {
     color: var(--accent);
 }
 
+.rating-card .author {
+    font-weight: normal;
+    color: var(--text-muted)
+}
+
 .rating-card .button-link {
     position: absolute;
     top: var(--padding-lg);
@@ -918,7 +1054,7 @@ ul {
 }
 
 
-/* --- Reset Password Page --- */
+/* --- Single Container Pages --- */
 
 .centered-container {
     display: flex;
@@ -926,6 +1062,10 @@ ul {
     justify-content: center;
     width: 100%;
     height: 100vh;
+}
+
+.centered-container .debug-label {
+    flex-grow: 1;
 }
 
 

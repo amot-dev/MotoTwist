@@ -3,7 +3,7 @@
 {% call render_modal_content("Rate " ~ twist.name) %}
 <form class="rate-form" hx-post="/twists/{{ twist.id }}/ratings"
     hx-ext="morph"
-    hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .ratings-dropdown"
+    hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .twist-dropdown"
     hx-swap="morph:innerHTML"
     data-paved="{{ twist.is_paved | lower }}">
 

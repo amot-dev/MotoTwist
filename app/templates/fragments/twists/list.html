@@ -1,19 +1,26 @@
 {% for twist in twists %}
 <li class="twist-item scroll-shut-on-delete" data-twist-id="{{ twist.id }}" data-paved="{{ twist.is_paved }}">
     <div class="twist-header"
-        hx-get="/twists/{{ twist.id }}/ratings/templates/dropdown"
-        hx-target="next .ratings-dropdown"
+        hx-get="/twists/{{ twist.id }}/templates/dropdown"
+        hx-target="next .twist-dropdown"
         hx-swap="innerHTML"
-        hx-trigger="load-ratings">
+        hx-trigger="load-twist-dropdown">
 
         <span class="twist-name">{{ twist.name }}</span>
+        <span>
+            {% if twist.viewer_is_author %}
+            <i class="fa-solid fa-user"></i>
+            {% else %}
+            <i class="fa-regular fa-user"></i>
+            {% endif %}
+        </span>
         <span class="visibility-toggle" title="Toggle visibility">
             <i class="far fa-eye"></i>
         </span>
     </div>
-    <div class="ratings-dropdown"
+    <div class="twist-dropdown"
         hx-ext="morph"
-        hx-get="/twists/{{ twist.id }}/ratings/templates/dropdown"
+        hx-get="/twists/{{ twist.id }}/templates/dropdown"
         hx-trigger="ratingDeleted-{{ twist.id }} from:body"
         hx-target="this"
         hx-swap="morph:innerHTML">
