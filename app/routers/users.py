@@ -6,7 +6,7 @@ import json
 
 from app.config import logger
 from app.models import User
-from app.schemas import UserCreate, UserUpdate
+from app.schemas.users import UserCreate, UserUpdate
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import raise_http
 

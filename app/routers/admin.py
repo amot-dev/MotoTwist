@@ -14,7 +14,7 @@ from uuid import UUID
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserUpdate
+from app.schemas.users import UserCreate, UserUpdate
 from app.settings import settings
 from app.users import current_admin_user, get_user_manager, UserManager
 from app.utility import raise_http

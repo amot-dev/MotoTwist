@@ -1,8 +1,6 @@
-from datetime import date, timedelta
+from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from humanize import ordinal
 import json
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
@@ -12,13 +10,13 @@ from sqlalchemy.orm import load_only, selectinload
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, PavedRating, UnpavedRating, User
-from app.services.ratings import calculate_average_rating, RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED
-from app.schemas import RatingListItem
+from app.schemas.twists import TwistBasic, TwistDropdown
+from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED, render_rate_modal, render_view_modal
+from app.services.twists import render_twist_dropdown
 from app.users import current_active_user, current_active_user_optional
 from app.utility import is_form_value_string, raise_http
 
 
-templates = Jinja2Templates(directory="templates")
 router = APIRouter(
     prefix="/twists/{twist_id}/ratings",
     tags=["Ratings"]
@@ -37,15 +35,11 @@ async def create_rating(
     """
     try:
         result = await session.execute(
-            select(
-                Twist.is_paved,
-                Twist.author_id,
-                User.name.label("author_name")
-            )
+            select(*TwistDropdown.fields)
             .join(Twist.author)
             .where(Twist.id == twist_id)
         )
-        twist = result.one()
+        twist = TwistDropdown.model_validate(result.one())
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
@@ -60,10 +54,10 @@ async def create_rating(
     else:
         Rating = UnpavedRating
         criteria_list = RATING_CRITERIA_UNPAVED
-    valid_criteria = {criteria["name"] for criteria in criteria_list}
+    valid_criteria = {criteria.name for criteria in criteria_list}
 
     # Build the dictionary for the new rating object
-    new_rating_data: dict[str, date | int] = {}
+    new_rating_data: dict[str, int | date | User] = {}
     for key, value in form_data.items():
         if not is_form_value_string(value):
             raise_http(f"Invalid value for '{key.replace("_", " ").title()}' criterion", status_code=422)
@@ -88,23 +82,20 @@ async def create_rating(
         raise_http("No valid rating data submitted", status_code=422)
 
     # Create the new rating instance, linking it to the twist
-    new_rating = Rating(**new_rating_data, author=user, twist_id=twist_id)
+    new_rating_data.update({
+        "author": user,
+        "twist_id": twist.id
+    })
+    new_rating = Rating(**new_rating_data)
     session.add(new_rating)
     await session.commit()
     logger.debug(f"Created rating '{new_rating}'")
 
-    # Set a header to trigger a client-side event after the swap, passing a message
     events = {
         "flashMessage": "Twist rated successfully!",
         "closeModal": ""
     }
-    response = templates.TemplateResponse("fragments/ratings/dropdown.html", {
-        "request": request,
-        "twist_id": twist_id,
-        "twist_author_name": twist.author_name,
-        "can_delete": user.id == twist.author_id,
-        "average_ratings": await calculate_average_rating(session, twist_id, twist.is_paved, round_to=1)
-    })
+    response = await render_twist_dropdown(request, session, user, twist)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
@@ -166,7 +157,6 @@ async def delete_rating(
     else:
         response = HTMLResponse(content="<p>No ratings yet</p>")
 
-    # Set a header to trigger a client-side event after the swap, passing a message
     events = {
         "flashMessage": "Rating removed successfully!"
     }
@@ -174,43 +164,8 @@ async def delete_rating(
     return response
 
 
-@router.get("/templates/dropdown", tags=["Templates"], response_class=HTMLResponse)
-async def render_dropdown(
-    request: Request,
-    twist_id: int,
-    user: User | None = Depends(current_active_user_optional),
-    session: AsyncSession = Depends(get_db)
-) -> HTMLResponse:
-    """
-    Serve an HTML fragment containing a dropdown with the average ratings for a given Twist.
-    """
-    try:
-        result = await session.execute(
-            select(
-                Twist.is_paved,
-                Twist.author_id,
-                User.name.label("author_name")
-            )
-            .join(Twist.author)
-            .where(Twist.id == twist_id)
-        )
-        twist = result.one()
-    except NoResultFound:
-        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
-    except MultipleResultsFound:
-        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
-
-    return templates.TemplateResponse("fragments/ratings/dropdown.html", {
-        "request": request,
-        "twist_id": twist_id,
-        "twist_author_name": twist.author_name,
-        "can_delete": user.id == twist.author_id if user else False,
-        "average_ratings": await calculate_average_rating(session, twist_id, twist.is_paved, round_to=1)
-    })
-
-
 @router.get("/templates/rate-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_rate_modal(
+async def serve_rate_modal(
     request: Request,
     twist_id: int,
     session: AsyncSession = Depends(get_db)
@@ -220,28 +175,19 @@ async def render_rate_modal(
     """
     try:
         result = await session.execute(
-            select(Twist.id, Twist.name, Twist.is_paved).where(Twist.id == twist_id)
+            select(*TwistBasic.fields).where(Twist.id == twist_id)
         )
-        twist = result.one()
+        twist = TwistBasic.model_validate(result.one())
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
         raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
-    today = date.today()
-    tomorrow = today + timedelta(days=1)
-
-    return templates.TemplateResponse("fragments/ratings/rate_modal.html", {
-        "request": request,
-        "twist": twist,
-        "today": today,
-        "tomorrow": tomorrow,
-        "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED
-    })
+    return await render_rate_modal(request, twist, date.today())
 
 
 @router.get("/templates/view-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_view_modal(
+async def serve_view_modal(
     request: Request,
     twist_id: int,
     user: User | None = Depends(current_active_user_optional),
@@ -274,33 +220,8 @@ async def render_view_modal(
     else:
         ratings = twist.unpaved_ratings
         criteria_list = RATING_CRITERIA_UNPAVED
-    criteria_names = {criteria["name"] for criteria in criteria_list}
 
     # Sort ratings with most recent first
     sorted_ratings = sorted(ratings, key=lambda r: r.rating_date, reverse=True) if ratings else []
 
-    # Structure data for the template
-    ratings_for_template: list[RatingListItem] = []
-    for rating in sorted_ratings:
-        ratings_dict = {
-            key: value for key, value in rating.__dict__.items()
-            if key in criteria_names and isinstance(value, int)
-        }
-        # Pre-format the date for easier display in the template
-        ordinal_day = ordinal(rating.rating_date.day)
-        formatted_date = rating.rating_date.strftime(f"%B {ordinal_day}, %Y")
-
-        ratings_for_template.append({
-            "id": rating.id,
-            "author_name": rating.author.name,
-            "can_delete": user.id == rating.author_id if user else False,
-            "formatted_date": formatted_date,
-            "ratings": ratings_dict
-        })
-
-    # Pass the request, twist, and ratings to the template
-    return templates.TemplateResponse("fragments/ratings/view_modal.html", {
-        "request": request,
-        "twist": twist,
-        "ratings": ratings_for_template
-    })
+    return await render_view_modal(request, user, twist, sorted_ratings, criteria_list)

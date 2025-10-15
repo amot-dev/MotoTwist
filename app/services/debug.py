@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Type
 
 from app.models import PavedRating, Twist, UnpavedRating, User
+from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED
 
 
 async def reset_id_sequences_for(
@@ -50,28 +51,26 @@ def create_random_rating(
     :param rating_date: The date to assign to the rating.
     :return: A new PavedRating or UnpavedRating object with random rating values.
     """
+    # Determine the correct Rating class and criteria list based on the twist's surface
     if twist.is_paved:
-        return PavedRating(
-            author=author,
-            twist=twist,
-            rating_date=rating_date,
-            traffic=randint(0, 10),
-            scenery=randint(0, 10),
-            pavement=randint(0, 10),
-            twistyness=randint(0, 10),
-            intensity=randint(0, 10)
-        )
+        Rating = PavedRating
+        criteria_list = RATING_CRITERIA_PAVED
     else:
-        return UnpavedRating(
-            author=author,
-            twist=twist,
-            rating_date=rating_date,
-            traffic=randint(0, 10),
-            scenery=randint(0, 10),
-            surface_consistency=randint(0, 10),
-            technicality=randint(0, 10),
-            flow=randint(0, 10)
-        )
+        Rating = UnpavedRating
+        criteria_list = RATING_CRITERIA_UNPAVED
+
+    # Build the dictionary for the new rating object
+    rating_data: dict[str, User | Twist | date | int] = {
+        "author": author,
+        "twist": twist,
+        "rating_date": rating_date,
+    }
+
+    # Dynamically add random ratings for each criterion
+    for criterion in criteria_list:
+        rating_data[criterion["name"]] = randint(0, 10)
+
+    return Rating(**rating_data)
 
 
 def generate_weights(num_items: int, focus: float) -> list[float]:

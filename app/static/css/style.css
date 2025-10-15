@@ -433,9 +433,9 @@ ul {
 }
 
 
-/* --- Ratings Dropdown --- */
+/* --- Twists Dropdown --- */
 
-.ratings-dropdown {
+.twist-dropdown {
     overflow: hidden;
     max-height: 0;
     border-top: var(--border-default);
@@ -445,32 +445,32 @@ ul {
 
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
-.ratings-dropdown.is-open {
+.twist-dropdown.is-open {
     max-height: 500px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
-.ratings-dropdown .author {
+.twist-dropdown .author {
     margin-top: 0;
     font-size: 0.8rem;
     color: var(--text-muted)
 }
 
-.ratings-dropdown .averages {
+.twist-dropdown .averages {
     position: relative;
 }
 
-.ratings-dropdown h4 {
+.twist-dropdown h4 {
     color: var(--accent);
     margin-top: 0;
     margin-bottom: var(--padding-sm);
 }
 
-.ratings-dropdown .button {
+.twist-dropdown .button {
     font-size: 0.8rem;
 }
 
-.ratings-dropdown #modal-rate-twist-button {
+.twist-dropdown #modal-rate-twist-button {
     position: absolute;
     top: 0;
     right: 0;
@@ -482,18 +482,18 @@ ul {
 
     transition: background-color 0.2s ease;
 }
-.ratings-dropdown #modal-rate-twist-button:hover {
+.twist-dropdown #modal-rate-twist-button:hover {
     background-color: var(--accent-hover);
 }
 
-.ratings-dropdown li {
+.twist-dropdown li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
 }
 
-.ratings-dropdown #modal-delete-twist-button {
+.twist-dropdown #modal-delete-twist-button {
     position: absolute;
     bottom: 0;
     right: 0;

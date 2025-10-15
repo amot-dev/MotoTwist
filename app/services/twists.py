@@ -1,45 +1,17 @@
 from copy import deepcopy
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from sqlalchemy import literal, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
 from app.models import Twist, User
+from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistListItem, Waypoint
+from app.services.ratings import calculate_average_rating
 from app.settings import settings
-from app.schemas import Coordinate, TwistListItem, Waypoint
-
-
-async def get_twists_for_list(session: AsyncSession, user: User) -> list[TwistListItem]:
-    """
-    Get the Twists in proper format to be consumed by the Twist List template.
-
-    :param session: The session to use for database transactions.
-    :param user: The user initiating the request.
-    :return: A list of TwistListItems containing the required data.
-    """
-    if user:
-        is_author_expression = (Twist.author_id == user.id)
-    else:
-        is_author_expression = literal(False)
-
-    results = await session.execute(
-        select(
-            Twist.id,
-            Twist.name,
-            Twist.is_paved,
-            is_author_expression.label("is_author")
-        )
-        .order_by(Twist.name)
-    )
-    return [
-        TwistListItem(
-            id=result.id,
-            name=result.name,
-            is_paved=result.is_paved,
-            is_author=result.is_author
-        ) for result in results.all()
-    ]
 
 
 def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coordinate]) -> list[Waypoint]:
@@ -110,3 +82,59 @@ def simplify_route(coordinates: list[Coordinate]) -> list[Coordinate]:
     simplified_coordinates = [Coordinate(lat=x, lng=y) for x, y in simplified_line.coords]
 
     return simplified_coordinates
+
+
+templates = Jinja2Templates(directory="templates")
+
+
+async def render_list(
+    request: Request,
+    session: AsyncSession,
+    user: User | None
+) -> HTMLResponse:
+    """
+     Build and returns the TemplateResponse for the Twist list.
+    """
+    results = await session.execute(
+        select(*TwistListItem.get_fields(user))
+        .order_by(Twist.name)
+    )
+
+    return templates.TemplateResponse("fragments/twists/list.html", {
+        "request": request,
+        "twists": [TwistListItem.model_validate(result) for result in results.all()]
+    })
+
+
+async def render_twist_dropdown(
+    request: Request,
+    session: AsyncSession,
+    user: User | None,
+    twist: TwistDropdown,
+) -> HTMLResponse:
+    """
+    Build and returns the TemplateResponse for the Twist dropdown.
+    """
+    # Check if the user is allowed to delete the Twist
+    can_delete_twist = (user.is_superuser or user.id == twist.author_id) if user else False
+
+    return templates.TemplateResponse("fragments/twists/dropdown.html", {
+        "request": request,
+        "twist_id": twist.id,
+        "twist_author_name": twist.author_name,
+        "can_delete_twist": can_delete_twist,
+        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
+    })
+
+
+async def render_delete_modal(
+    request: Request,
+    twist: TwistBasic
+) -> HTMLResponse:
+    """
+     Build and returns the TemplateResponse for the Twist delete modal.
+    """
+    return templates.TemplateResponse("fragments/twists/delete_modal.html", {
+        "request": request,
+        "twist": twist
+    })

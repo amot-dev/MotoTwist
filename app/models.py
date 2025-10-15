@@ -1,14 +1,16 @@
 from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.generics import GUID
+from pydantic import BaseModel
 from sqlalchemy import Boolean, Date, ForeignKey, inspect, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Any
+from sqlalchemy.types import TypeDecorator
+from typing import Any, Type
 from uuid import UUID
 
-from app.schemas import CoordinateDict, WaypointDict
+from app.schemas.types import Coordinate, Waypoint
 
 
 Base = declarative_base()
@@ -41,6 +43,39 @@ class SerializationMixin:
         return data
 
 
+class PydanticJSONB(TypeDecorator[list[BaseModel]]):
+    """
+    A SQLAlchemy TypeDecorator to store lists of Pydantic models as JSONB.
+
+    Usage:
+    waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJson(Waypoint))
+    """
+    impl = JSONB
+    cache_ok = True
+
+    def __init__(self, pydantic_type: Type[BaseModel], *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.pydantic_type = pydantic_type
+
+    def process_bind_param(self, value: list[BaseModel] | None, dialect: Any) -> list[dict[Any, Any]] | None:
+        """
+        Called when sending data TO the database.
+        Converts a list of Pydantic models to a list of dicts.
+        """
+        if value is None:
+            return None
+        return [item.model_dump(mode='json') for item in value]
+
+    def process_result_value(self, value: list[dict[Any, Any]] | None, dialect: Any) -> list[BaseModel] | None:
+        """
+        Called when receiving data FROM the database.
+        Converts a list of dicts back to a list of Pydantic models.
+        """
+        if value is None:
+            return None
+        return [self.pydantic_type.model_validate(item) for item in value]
+
+
 class User(SQLAlchemyBaseUserTableUUID, SerializationMixin, Base):
     __tablename__ = "users"
 
@@ -65,8 +100,8 @@ class Twist(SerializationMixin, Base):
     # Data
     name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     is_paved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    waypoints: Mapped[list[WaypointDict]] = mapped_column(JSONB, nullable=False)
-    route_geometry: Mapped[list[CoordinateDict]] = mapped_column(JSONB, nullable=False)
+    waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJSONB(Waypoint), nullable=False)
+    route_geometry: Mapped[list[Coordinate]] = mapped_column(PydanticJSONB(Coordinate), nullable=False)
     simplification_tolerance_m: Mapped[int] = mapped_column(SmallInteger)
 
     # Children

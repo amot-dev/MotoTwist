@@ -1,23 +1,20 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 import json
 from sqlalchemy import delete, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import cast
 
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, User
-from app.services.twists import get_twists_for_list, simplify_route, snap_waypoints_to_route
+from app.schemas.twists import TwistBasic, TwistDropdown, TwistCreateForm, TwistGeometry
+from app.services.twists import render_delete_modal, render_list, render_twist_dropdown, simplify_route, snap_waypoints_to_route
 from app.settings import settings
-from app.schemas import CoordinateDict, TwistCreate, TwistGeometryData, WaypointDict
 from app.users import current_active_user, current_active_user_optional
 from app.utility import raise_http
 
 
-templates = Jinja2Templates(directory="templates")
 router = APIRouter(
     prefix="/twists",
     tags=["Twists"]
@@ -27,51 +24,37 @@ router = APIRouter(
 @router.post("/", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
-    twist_data: TwistCreate,
+    twist_data: TwistCreateForm,
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Create a new Twist.
     """
+    # Process route and waypoints
     simplified_route = simplify_route(twist_data.route_geometry)
     snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
-    # Convert Pydantic model lists to dictionary lists before saving to JSONB columns
-    waypoints_for_db = [
-        cast(WaypointDict, wp.model_dump())
-        for wp in snapped_waypoints
-    ]
-    geometry_for_db = [
-        cast(CoordinateDict, coord.model_dump())
-        for coord in simplified_route
-    ]
-
     # Create the new Twist
-    twist = Twist(
-        author=user,
-        name=twist_data.name,
-        is_paved=twist_data.is_paved,
-        waypoints=waypoints_for_db,
-        route_geometry=geometry_for_db,
-        simplification_tolerance_m=settings.TWIST_SIMPLIFICATION_TOLERANCE_M
-    )
+    twist_dict = twist_data.model_dump()
+    twist_dict.update({
+        "author": user,
+        "waypoints": snapped_waypoints,
+        "route_geometry": simplified_route,
+        "simplification_tolerance_m": settings.TWIST_SIMPLIFICATION_TOLERANCE_M
+    })
+    twist = Twist(**twist_dict)
     session.add(twist)
     await session.commit()
     logger.debug(f"Created Twist '{twist}' for User '{user.id}'")
 
     # Render the twist list fragment with the new data
-    twists = await get_twists_for_list(session, user)
-
     events = {
         "flashMessage": "Twist created successfully!",
         "twistAdded":  str(twist.id),
         "closeModal": ""
     }
-    response = templates.TemplateResponse("fragments/twists/list.html", {
-        "request": request,
-        "twists": twists
-    })
+    response = await render_list(request, session, user)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
@@ -112,13 +95,12 @@ async def delete_twist(
     await session.commit()
     logger.debug(f"Deleted Twist with id '{twist_id}'")
 
+    # Empty response to "delete" the list item
     events = {
         "flashMessage": "Twist deleted successfully!",
         "twistDeleted":  str(twist_id),
         "closeModal": ""
     }
-
-    # Empty response to "delete" the list item
     response = HTMLResponse(content="")
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
@@ -129,28 +111,25 @@ async def get_twist_geometry(
     request: Request,
     twist_id: int,
     session: AsyncSession = Depends(get_db)
-) -> TwistGeometryData:
+) -> TwistGeometry:
     """
     Serve JSON containing the geometry data for a given Twist.
     """
     try:
         result = await session.execute(
-            select(Twist.waypoints, Twist.route_geometry).where(Twist.id == twist_id)
+            select(*TwistGeometry.fields).where(Twist.id == twist_id)
         )
-        twist = result.one()
+        twist_geometry = TwistGeometry.model_validate(result.one())
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
         raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
 
-    return {
-        "waypoints": twist.waypoints,
-        "route_geometry": twist.route_geometry
-    }
+    return twist_geometry
 
 
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
-async def render_list(
+async def serve_list(
     request: Request,
     user: User | None = Depends(current_active_user_optional),
     session: AsyncSession = Depends(get_db)
@@ -158,22 +137,41 @@ async def render_list(
     """
     Serve an HTML fragment containing the sorted list of Twists.
     """
-    twists = await get_twists_for_list(session, user)
-
-    # Set a header to trigger a client-side event after the swap
     events = {
         "twistsLoaded": ""
     }
-    response = templates.TemplateResponse("fragments/twists/list.html", {
-        "request": request,
-        "twists": twists
-    })
+    response = response = await render_list(request, session, user)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
 
+@router.get("/{twist_id}/templates/dropdown", tags=["Templates"], response_class=HTMLResponse)
+async def serve_dropdown(
+    request: Request,
+    twist_id: int,
+    user: User | None = Depends(current_active_user_optional),
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
+    """
+    Serve an HTML fragment containing the Twist dropdown for a given Twist.
+    """
+    try:
+        result = await session.execute(
+            select(*TwistDropdown.fields)
+            .join(Twist.author)
+            .where(Twist.id == twist_id)
+        )
+        twist = TwistDropdown.model_validate(result.one())
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
+
+    return await render_twist_dropdown(request, session, user, twist)
+
+
 @router.get("/{twist_id}/templates/delete-modal", tags=["Templates"], response_class=HTMLResponse)
-async def render_delete_modal(
+async def serve_delete_modal(
     request: Request,
     twist_id: int,
     session: AsyncSession = Depends(get_db)
@@ -183,15 +181,12 @@ async def render_delete_modal(
     """
     try:
         result = await session.execute(
-            select(Twist.id, Twist.name).where(Twist.id == twist_id)
+            select(*TwistBasic.fields).where(Twist.id == twist_id)
         )
-        twist = result.one()
+        twist = TwistBasic.model_validate(result.one())
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
         raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
 
-    return templates.TemplateResponse("fragments/twists/delete_modal.html", {
-        "request": request,
-        "twist": twist
-    })
+    return await render_delete_modal(request, twist)

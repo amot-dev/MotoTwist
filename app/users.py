@@ -10,8 +10,8 @@ from uuid import UUID
 from app.config import logger
 from app.database import get_db
 from app.models import User
+from app.schemas.users import UserCreate
 from app.settings import settings
-from app.schemas import UserCreate
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):

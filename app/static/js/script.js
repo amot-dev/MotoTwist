@@ -210,23 +210,23 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
         setLayerVisibility(twistId, !twistItem.classList.contains('is-visible'));
     } else if (event.target.closest('.twist-header')) {
         // Clicked on the twist name
-        const ratingsDropdown = twistItem.querySelector('.ratings-dropdown');
-        const isCurrentlyOpen = ratingsDropdown.classList.contains('is-open');
+        const twistDropdown = twistItem.querySelector('.twist-dropdown');
+        const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
 
         // Hide all rating dropdowns
-        const allRatingsDropdowns = twistItem.closest('#twist-list').querySelectorAll('.ratings-dropdown');
-        allRatingsDropdowns.forEach(container => {
+        const alltwistDropdowns = twistItem.closest('#twist-list').querySelectorAll('.twist-dropdown');
+        alltwistDropdowns.forEach(container => {
             container.classList.remove('is-open');
         });
 
         // Show current rating dropdown if it was hidden
         if (!isCurrentlyOpen) {
-            ratingsDropdown.classList.add('is-open');
+            twistDropdown.classList.add('is-open');
 
             // Load content if needed
-            if (ratingsDropdown.querySelector('.loading')) {
+            if (twistDropdown.querySelector('.loading')) {
                 const twistHeader = twistItem.querySelector('.twist-header')
-                htmx.trigger(twistHeader, 'load-ratings');
+                htmx.trigger(twistHeader, 'load-twist-dropdown');
             }
         }
 
