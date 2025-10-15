@@ -17,7 +17,7 @@
         {# Form to add a new user #}
         <form id="add-user-form" class="user-row"
               hx-post="/admin/users"
-              hx-target="this" hx-swap="beforebegin"
+              hx-swap="beforebegin"
               hx-on::after-request="this.reset()">
             <div class="user-info">
                 <input type="text" name="name" placeholder="Name" required>

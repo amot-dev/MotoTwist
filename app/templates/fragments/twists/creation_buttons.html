@@ -1,0 +1,12 @@
+<div hx-get="/twists/templates/creation-buttons"
+    hx-trigger="authChange from:body"
+    hx-swap="outerHTML">
+
+    {% if user %}
+    <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+    <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+    <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+    {% else %}
+    <h4>Register or Login to create Twists!</h4>
+    {% endif %}
+</div>

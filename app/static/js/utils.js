@@ -25,6 +25,7 @@ function flash(message, duration, backgroundColor=null, color=null) {
         flashElement.style.backgroundColor = backgroundColor;
         flashElement.style.borderColor = backgroundColor;
         flashElement.style.color = color;
+        flashElement.style.pointerEvents = "auto";
 
         // Set a timer to hide the message after the specified duration
         setTimeout(() => {
@@ -35,6 +36,7 @@ function flash(message, duration, backgroundColor=null, color=null) {
                 flashElement.style.backgroundColor = null;
                 flashElement.style.borderColor = null;
                 flashElement.style.color = null;
+                flashElement.style.pointerEvents = null;
             }, { once: true });
         }, duration);
     }

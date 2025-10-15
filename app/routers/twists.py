@@ -10,7 +10,7 @@ from app.config import logger
 from app.database import get_db
 from app.models import Twist, User
 from app.schemas.twists import TwistBasic, TwistCreateForm, TwistDropdown, TwistFilterParams, TwistGeometry
-from app.services.twists import render_delete_modal, render_list, render_single_list_item, render_twist_dropdown, simplify_route, snap_waypoints_to_route
+from app.services.twists import render_creation_buttons, render_delete_modal, render_list, render_single_list_item, render_twist_dropdown, simplify_route, snap_waypoints_to_route
 from app.settings import settings
 from app.users import current_active_user, current_active_user_optional
 from app.utility import raise_http
@@ -127,6 +127,17 @@ async def get_twist_geometry(
         raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
 
     return twist_geometry
+
+
+@router.get("/templates/creation-buttons", tags=["Templates"], response_class=HTMLResponse)
+async def serve_creation_buttons(
+    request: Request,
+    user: User | None = Depends(current_active_user_optional),
+) -> HTMLResponse:
+    """
+    Serve an HTML fragment containing the Twist creation buttons.
+    """
+    return await render_creation_buttons(request, user)
 
 
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)

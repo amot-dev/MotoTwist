@@ -1084,6 +1084,7 @@ ul {
     padding: var(--padding-md) var(--padding-lg);
     color: white;
     background-color: var(--accent-blue);
+    pointer-events: none;
 
     transition: opacity var(--transition-fade);
 }

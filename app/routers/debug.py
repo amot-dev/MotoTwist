@@ -15,7 +15,8 @@ from uuid import UUID
 from app.database import get_db
 from app.models import PavedRating, Twist, UnpavedRating, User
 from app.services.debug import create_random_rating, generate_weights, reset_id_sequences_for
-from app.users import current_admin_user
+from app.settings import settings
+from app.users import current_active_user_optional, current_admin_user
 from app.utility import raise_http
 
 
@@ -304,3 +305,18 @@ async def seed_ratings(
 
     request.session["flash"] = f"Database seeded with {len(ratings_to_add)} new ratings!"
     return RedirectResponse(url="/", status_code=303)
+
+
+@router.get("/templates/menu-button", tags=["Templates"], response_class=HTMLResponse)
+async def serve_menu_button(
+    request: Request,
+    user: User = Depends(current_active_user_optional),
+) -> HTMLResponse:
+    """
+    Serve an HTML fragment containing the debug menu button.
+    """
+    return templates.TemplateResponse("fragments/debug/menu_button.html", {
+        "request": request,
+        "user": user,
+        "settings": settings
+    })

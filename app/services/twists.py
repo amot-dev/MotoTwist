@@ -89,6 +89,19 @@ def simplify_route(coordinates: list[Coordinate]) -> list[Coordinate]:
 templates = Jinja2Templates(directory="templates")
 
 
+async def render_creation_buttons(
+    request: Request,
+    user: User | None,
+) -> HTMLResponse:
+    """
+     Build and return the TemplateResponse for the Twist creation buttons.
+    """
+    return templates.TemplateResponse("fragments/twists/creation_buttons.html", {
+        "request": request,
+        "user": user
+    })
+
+
 async def render_list(
     request: Request,
     session: AsyncSession,
@@ -96,7 +109,7 @@ async def render_list(
     filter: TwistFilterParams
 ) -> HTMLResponse:
     """
-     Build and returns the TemplateResponse for the Twist list.
+     Build and return the TemplateResponse for the Twist list.
     """
     statement = select(*TwistListItem.get_fields(user))
 
@@ -153,7 +166,7 @@ async def render_single_list_item(
     twist_id: int,
 ) -> HTMLResponse:
     """
-     Build and returns the TemplateResponse for the Twist list, for a single Twist.
+     Build and return the TemplateResponse for the Twist list, for a single Twist.
     """
     try:
         result = await session.execute(
@@ -178,7 +191,7 @@ async def render_twist_dropdown(
     twist: TwistDropdown,
 ) -> HTMLResponse:
     """
-    Build and returns the TemplateResponse for the Twist dropdown.
+    Build and return the TemplateResponse for the Twist dropdown.
     """
     # Check if the user is allowed to delete the Twist
     can_delete_twist = (user.is_superuser or user.id == twist.author_id) if user else False
@@ -197,7 +210,7 @@ async def render_delete_modal(
     twist: TwistBasic
 ) -> HTMLResponse:
     """
-     Build and returns the TemplateResponse for the Twist delete modal.
+     Build and return the TemplateResponse for the Twist delete modal.
     """
     return templates.TemplateResponse("fragments/twists/delete_modal.html", {
         "request": request,

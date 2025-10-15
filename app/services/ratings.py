@@ -74,7 +74,7 @@ async def render_rate_modal(
     today: date
 ) -> HTMLResponse:
     """
-    Build and returns the TemplateResponse for the rate modal.
+    Build and return the TemplateResponse for the rate modal.
     """
     tomorrow = today + timedelta(days=1)
 
@@ -95,7 +95,7 @@ async def render_view_modal(
     criteria_list: list[RatingCriterion]
 ) -> HTMLResponse:
     """
-    Build and returns the TemplateResponse for the rate modal.
+    Build and return the TemplateResponse for the rate modal.
     """
     criteria_names = {criteria.name for criteria in criteria_list}
 

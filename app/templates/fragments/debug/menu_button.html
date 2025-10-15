@@ -1,0 +1,9 @@
+<a href="/debug"
+   class="button button-block {% if not (settings.DEBUG_MODE and user and user.is_superuser) %}gone{% endif %}"
+
+   hx-get="/debug/templates/menu-button"
+   hx-trigger="authChange from:body"
+   hx-swap="outerHTML">
+
+    Debug Menu
+</a>

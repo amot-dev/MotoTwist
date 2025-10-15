@@ -68,7 +68,7 @@ def create_random_rating(
 
     # Dynamically add random ratings for each criterion
     for criterion in criteria_list:
-        rating_data[criterion["name"]] = randint(0, 10)
+        rating_data[criterion.name] = randint(0, 10)
 
     return Rating(**rating_data)
 

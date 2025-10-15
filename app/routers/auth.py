@@ -35,6 +35,7 @@ async def login(
 
     events = {
         "flashMessage": f"Welcome back, {user.name}!",
+        "authChange": "",
         "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
@@ -74,7 +75,8 @@ async def logout(
             flash_message = f"See you soon, {user.name}!"
 
     events = {
-        "flashMessage": flash_message
+        "flashMessage": flash_message,
+        "authChange": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
         "request": request,

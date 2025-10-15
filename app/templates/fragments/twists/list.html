@@ -22,10 +22,9 @@
         hx-ext="morph"
         hx-get="/twists/{{ twist.id }}/templates/dropdown"
         hx-trigger="ratingDeleted-{{ twist.id }} from:body"
-        hx-target="this"
         hx-swap="morph:innerHTML">
 
-        <p class="loading">Loading ratings...</p>
+        <p class="loading">Loading...</p>
     </div>
 </li>
 {% endfor %}
