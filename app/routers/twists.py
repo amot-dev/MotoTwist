@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 import json
 from sqlalchemy import delete, select
@@ -36,7 +36,7 @@ async def create_twist(
     snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
     # Create the new Twist
-    twist_dict = twist_data.model_dump()
+    twist_dict = twist_data.model_dump(exclude={"search"})
     twist_dict.update({
         "author": user,
         "waypoints": snapped_waypoints,
@@ -54,7 +54,7 @@ async def create_twist(
         "twistAdded":  str(twist.id),
         "closeModal": ""
     }
-    response = await render_list(request, session, user)
+    response = await render_list(request, session, user, twist_data.search)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
@@ -132,6 +132,7 @@ async def get_twist_geometry(
 async def serve_list(
     request: Request,
     user: User | None = Depends(current_active_user_optional),
+    search: str | None = Query(None, alias="search"),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
@@ -140,7 +141,7 @@ async def serve_list(
     events = {
         "twistsLoaded": ""
     }
-    response = response = await render_list(request, session, user)
+    response = response = await render_list(request, session, user, search)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 

@@ -12,6 +12,21 @@
     <h4>Register or Login to create Twists!</h4>
     {% endif %}
 
+    <div class="search-container">
+        <input id="twist-search-input" class="search-input"
+            type="search"
+            name="search"
+            placeholder="Search"
+            hx-get="/twists/templates/list"
+            hx-trigger="keyup changed delay:500ms, search"
+            hx-target="#twist-list"
+            hx-swap="innerHTML"
+            hx-indicator="#search-indicator">
+        <span id="search-indicator" class="htmx-indicator">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+        </span>
+    </div>
+
     <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
         <p>Loading Twists...</p>
     </ul>
@@ -34,7 +49,7 @@
 </template>
 
 <div id="top-right-controls">
-    {% if settings.DEBUG_MODE %}
+    {% if settings.DEBUG_MODE and user and user.is_superuser %}
     <a href="/debug" class="button button-block">Debug Menu</a>
     {% endif %}
     {% include "fragments/auth/widget.html" %}
@@ -120,7 +135,8 @@
     <form hx-post="/twists"
         hx-target="#twist-list"
         hx-swap="innerHTML"
-        hx-ext="json-enc">
+        hx-ext="json-enc"
+        hx-include="#twist-search-input">
 
         <div class="form-group">
             <label for="modal-name">Twist Name</label>

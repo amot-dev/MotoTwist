@@ -380,6 +380,30 @@ ul {
     background-color: var(--button-cancel-hover);
 }
 
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--padding-lg);
+}
+
+.search-input {
+    width: 100%;
+    border: var(--border-default);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    padding: var(--padding-md);
+    font-size: 1rem;
+    color: var(--text-offwhite);
+    background-color: var(--bg-charcoal);
+}
+
+#search-indicator {
+    position: absolute;
+    right: var(--padding-md);
+    color: var(--text-muted);
+}
+
 #twist-list {
     flex-grow: 1;
     overflow-y: auto;

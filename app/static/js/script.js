@@ -42,33 +42,31 @@ const shapingPointIcon = new L.Icon({
 
 /**
  * Loads a Twist's geometry data and adds it to the map as a new layer.
- * @param {string} twistId - The ID of the twist to load.
- * @param {string} twistName - The name of the twist for the popup.
- * @param {boolean} isPaved - Whether the road surface is paved.
+ * @param {string} twistId - The ID of the Twist to load.
  */
-async function loadTwistLayer(twistId, twistName, isPaved) {
+async function loadTwistLayer(twistId) {
     // If layer already exists, don't re-load it
     if (mapLayers[twistId]) return;
 
-    // Fetch route data
+    // Fetch Twist data
     try {
         const response = await fetch(`/twists/${twistId}/geometry`);
         if (!response.ok) {
             throw new Error(`Server responded with status: ${response.status}`);
         }
-        const data = await response.json();
+        const twist_data = await response.json();
 
         // Create the route line
-        const lineColor = isPaved ? accentBlue : accentOrange;
-        const routeLine = L.polyline(data.route_geometry, {
+        const lineColor = twist_data.is_paved ? accentBlue : accentOrange;
+        const routeLine = L.polyline(twist_data.route_geometry, {
             color: lineColor,
             weight: 5,
             opacity: 0.85
         });
-        routeLine.bindPopup(`<b>${twistName}</b>`);
+        routeLine.bindPopup(`<b>${twist_data.name}</b>`);
 
         // Create the waypoint markers
-        const namedWaypoints = data.waypoints.filter(wp => wp.name.length > 0);
+        const namedWaypoints = twist_data.waypoints.filter(wp => wp.name.length > 0);
         const waypointMarkers = namedWaypoints.map((point, index) => {
             let icon = waypointIcon;
             const totalPoints = namedWaypoints.length;
@@ -77,7 +75,7 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
             else if (index === totalPoints - 1) icon = endIcon;
 
             return L.marker(point, { icon: icon })
-                .bindPopup(`<b>${twistName}</b>${point.name ? `<br>${point.name}` : ''}`);
+                .bindPopup(`<b>${twist_data.name}</b>${point.name ? `<br>${point.name}` : ''}`);
         });
 
         // Group all layers together
@@ -85,14 +83,11 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
 
         // Store and add the complete layer to the map
         mapLayers[twistId] = twistLayer;
-        const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
-        if (twistItem && twistItem.classList.contains('is-visible')) {
-            twistLayer.addTo(map);
-        }
+        twistLayer.addTo(map);
 
     } catch (error) {
-        console.error(`Failed to load route for Twist '${twistName}':`, error);
-        flash(`Failed to load route for Twist '${twistName}'`)
+        console.error(`Failed to load route for Twist '${twistId}':`, error);
+        flash(`Failed to load route for Twist '${twistId}'`)
 
         // Ensure a failed layer doesn't stick around
         delete mapLayers[twistId];
@@ -100,65 +95,49 @@ async function loadTwistLayer(twistId, twistName, isPaved) {
 }
 
 /**
- * The master function to set the visibility state of a GPX layer and update its UI.
- * This removes duplicated logic from the toggle and restore functions.
- * @param {string} twistId - The ID of the twist to modify.
+ * Set the visibility state of a Twist layer and update its UI.
+ * @param {string} twistId - The ID of the Twist to modify.
  * @param {boolean} makeVisible - True to show the layer, false to hide it.
  */
 function setLayerVisibility(twistId, makeVisible) {
-    const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
     const layer = mapLayers[twistId];
 
-    // Unload if hiding or twist is missing
-    if (!makeVisible || !twistItem) {
+    // Unload if hiding
+    if (!makeVisible) {
         if (layer && map.hasLayer(layer)) {
             map.removeLayer(layer);
         }
-
-        // Delete layer and return if twist is missing
-        if (!twistItem) {
-            delete mapLayers[twistId];
-            return;
-        }
     }
 
-    // Load layer
+    // Load layer if showing
     if (makeVisible) {
         if (layer) {
             // Layer is already loaded, just add it back to the map
             layer.addTo(map);
         } else {
-            // First time showing this layer, load the GPX data
-            const isPaved = twistItem.dataset.paved === 'True';
-            const twistName = twistItem.querySelector('.twist-name').textContent;
-            loadTwistLayer(twistId, twistName, isPaved);
+            // First time showing this layer, load the Twist data
+            loadTwistLayer(twistId);
         }
     }
 
     // Use the second argument of classList.toggle() to set the state explicitly
-    const icon = twistItem.querySelector('.visibility-toggle i');
-    twistItem.classList.toggle('is-visible', makeVisible);
-    icon.classList.toggle('fa-eye', makeVisible);
-    icon.classList.toggle('fa-eye-slash', !makeVisible);
-
-    // Update the saved state
-    const visibleItems = document.querySelectorAll('.twist-item.is-visible');
-    const visibleIds = Array.from(visibleItems).map(item => item.dataset.twistId);
-    localStorage.setItem('visibleTwists', JSON.stringify(visibleIds));
+    const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
+    if (twistItem) {
+        const icon = twistItem.querySelector('.visibility-toggle i');
+        twistItem.classList.toggle('is-visible', makeVisible);
+        icon.classList.toggle('fa-eye', makeVisible);
+        icon.classList.toggle('fa-eye-slash', !makeVisible);
+    }
 }
 
 /**
- * Iterates over twists in the list and sets their visibility
+ * Iterates over Twists in the list and sets their visibility
  * based on what's saved in localStorage.
  */
 function applyVisibilityFromStorage() {
-    const twistList = document.getElementById('twist-list');
-    if (!twistList) return;
+    const visibleIdSet = getVisibleIdSet();
 
-    const visibleIdsFromStorage = JSON.parse(localStorage.getItem('visibleTwists')) || [];
-    const visibleIdSet = new Set(visibleIdsFromStorage);
-
-    const allTwistItems = twistList.querySelectorAll('.twist-item');
+    const allTwistItems = document.querySelectorAll('.twist-item');
     allTwistItems.forEach(item => {
         const twistId = item.dataset.twistId;
         const shouldBeVisible = visibleIdSet.has(twistId);
@@ -166,6 +145,62 @@ function applyVisibilityFromStorage() {
     });
 }
 
+/**
+ * Gets the current set of visible Twist IDs from localStorage.
+ * @returns {Set<string>} A Set of visible Twist IDs.
+ */
+function getVisibleIdSet() {
+    const visibleIdsFromStorage = JSON.parse(localStorage.getItem('visibleTwists')) || [];
+    return new Set(visibleIdsFromStorage);
+}
+
+/**
+ * Saves a Set of Twist IDs back to localStorage.
+ * @param {Set<string>} idSet - The Set of visible Twist IDs to save.
+ */
+function saveVisibleIdSet(idSet) {
+    localStorage.setItem('visibleTwists', JSON.stringify(Array.from(idSet)));
+}
+
+/**
+ * Toggles the visibility of a single Twist ID in localStorage.
+ * This is the main function for user clicks.
+ * @param {string} twistId - The ID of the Twist to toggle.
+ */
+function toggleVisibilityInStorage(twistId) {
+    const visibleIdSet = getVisibleIdSet();
+
+    if (visibleIdSet.has(twistId)) {
+        visibleIdSet.delete(twistId);
+    } else {
+        visibleIdSet.add(twistId);
+    }
+
+    saveVisibleIdSet(visibleIdSet);
+}
+
+/**
+ * Ensures a Twist is marked as visible in localStorage.
+ * Used when a new Twist is created.
+ * @param {string} twistId - The ID of the Twist to make visible.
+ */
+function addVisibilityToStorage(twistId) {
+    const visibleIdSet = getVisibleIdSet();
+    visibleIdSet.add(twistId);
+    saveVisibleIdSet(visibleIdSet);
+}
+
+
+/**
+ * Removes a Twist's visibility from localStorage.
+ * Used when a Twist is deleted.
+ * @param {string} twistId - The ID of the Twist to remove.
+ */
+function removeVisibilityFromStorage(twistId) {
+    const visibleIdSet = getVisibleIdSet();
+    visibleIdSet.delete(twistId);
+    saveVisibleIdSet(visibleIdSet);
+}
 
 // Listen for the custom event sent from the server when a modal needs to be closed
 document.body.addEventListener('closeModal', () => {
@@ -175,30 +210,32 @@ document.body.addEventListener('closeModal', () => {
     stopTwistCreation();
 });
 
-// Listen for the custom event sent from the server after the twist list is initially loaded
+// Listen for the custom event sent from the server after the Twist list is initially loaded
 document.body.addEventListener('twistsLoaded', () => {
     applyVisibilityFromStorage();
 });
 
-// Listen for the custom event sent from the server after a new twist is created
+// Listen for the custom event sent from the server after a new Twist is created
 document.body.addEventListener('twistAdded', (event) => {
     const newTwistId = event.detail.value;
     if (newTwistId) {
+        // The entire list is refreshed when a Twist is added
+        addVisibilityToStorage(newTwistId);
         applyVisibilityFromStorage();
-        setLayerVisibility(newTwistId, true);
     }
 });
 
-// Listen for the custom event sent from the server after a twist is deleted
+// Listen for the custom event sent from the server after a Twist is deleted
 document.body.addEventListener('twistDeleted', (event) => {
     const deletedTwistId = event.detail.value;
     if (deletedTwistId) {
-        applyVisibilityFromStorage();
+        // Only one entry is affected when a Twist is deleted
+        removeVisibilityFromStorage(deletedTwistId);
         setLayerVisibility(deletedTwistId, false);
     }
 });
 
-// Listen for clicks on twists
+// Listen for clicks on Twists
 document.getElementById('twist-list').addEventListener('click', function(event) {
     const twistItem = event.target.closest('.twist-item');
     if (!twistItem) return;
@@ -207,19 +244,20 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
 
     if (event.target.closest('.visibility-toggle')) {
         // Clicked on the eye icon
-        setLayerVisibility(twistId, !twistItem.classList.contains('is-visible'));
+        toggleVisibilityInStorage(twistId);
+        setLayerVisibility(twistId, getVisibleIdSet().has(twistId));
     } else if (event.target.closest('.twist-header')) {
-        // Clicked on the twist name
+        // Clicked on the Twist name
         const twistDropdown = twistItem.querySelector('.twist-dropdown');
         const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
 
-        // Hide all rating dropdowns
+        // Hide all Twist dropdowns
         const alltwistDropdowns = twistItem.closest('#twist-list').querySelectorAll('.twist-dropdown');
         alltwistDropdowns.forEach(container => {
             container.classList.remove('is-open');
         });
 
-        // Show current rating dropdown if it was hidden
+        // Show current Twist dropdown if it was hidden
         if (!isCurrentlyOpen) {
             twistDropdown.classList.add('is-open');
 
@@ -472,65 +510,71 @@ function stopTwistCreation() {
 }
 
 // Begin recording route geometry
-createTwistButton.addEventListener('click', () => {
-    mapContainer.classList.add('creating-twist');
-    flash('Click on the map to create a Twist!', 5000);
+if (createTwistButton) {
+    createTwistButton.addEventListener('click', () => {
+        mapContainer.classList.add('creating-twist');
+        flash('Click on the map to create a Twist!', 5000);
 
-    // Swap button visibility
-    createTwistButton.classList.add('gone');
-    finalizeTwistButton.classList.remove('gone');
-    cancelTwistButton.classList.remove('gone');
-});
+        // Swap button visibility
+        createTwistButton.classList.add('gone');
+        finalizeTwistButton.classList.remove('gone');
+        cancelTwistButton.classList.remove('gone');
+    });
+}
 
 // Handle saving of route geometry
-finalizeTwistButton.addEventListener('click', () => {
-    const statusIndicator = document.querySelector('#route-status-indicator');
+if (finalizeTwistButton) {
+    finalizeTwistButton.addEventListener('click', () => {
+        const statusIndicator = document.querySelector('#route-status-indicator');
 
-    // Check if there's a route to save
-    const namedWaypoints = waypoints.filter(wp => wp.name.length > 0);
-    const shapingPoints = waypoints.filter(wp => wp.name.length === 0);
-    if (waypoints.length > 1 && newRouteLine) {
-        if (waypoints.at(0).name.length > 0 && waypoints.at(-1).name.length > 0) {
-            const routeLatLngs = newRouteLine.getLatLngs();
+        // Check if there's a route to save
+        const namedWaypoints = waypoints.filter(wp => wp.name.length > 0);
+        const shapingPoints = waypoints.filter(wp => wp.name.length === 0);
+        if (waypoints.length > 1 && newRouteLine) {
+            if (waypoints.at(0).name.length > 0 && waypoints.at(-1).name.length > 0) {
+                const routeLatLngs = newRouteLine.getLatLngs();
 
-            // Enable submission of form
-            const submitButton = twistForm.querySelector('[type="submit"]');
-            submitButton.disabled = false;
+                // Enable submission of form
+                const submitButton = twistForm.querySelector('[type="submit"]');
+                submitButton.disabled = false;
 
-            // Write success status
-            writeToStatus(
-                statusIndicator,
-                `✅ Route captured with ${namedWaypoints.length} waypoints and ${routeLatLngs.length} geometry points.`
-            );
+                // Write success status
+                writeToStatus(
+                    statusIndicator,
+                    `✅ Route captured with ${namedWaypoints.length} waypoints and ${routeLatLngs.length} geometry points.`
+                );
 
-            // Inform about shaping points on a new line
-            if (shapingPoints.length > 0) {
-                const noun = shapingPoints.length === 1 ? "shaping point" : "shaping points";
-                const message = `ℹ️ ${shapingPoints.length} ${noun} will be stored for routing but not displayed.`;
+                // Inform about shaping points on a new line
+                if (shapingPoints.length > 0) {
+                    const noun = shapingPoints.length === 1 ? "shaping point" : "shaping points";
+                    const message = `ℹ️ ${shapingPoints.length} ${noun} will be stored for routing but not displayed.`;
 
-                writeToStatus(statusIndicator, message, "a");
+                    writeToStatus(statusIndicator, message, "a");
+                }
+            } else {
+                // Handle case where user finalizes without naming start or end
+                writeToStatus(
+                    statusIndicator,
+                    '⚠️ Start/End waypoint(s) remain unnamed.'
+                );
             }
         } else {
-            // Handle case where user finalizes without naming start or end
+            // Handle case where user finalizes without a valid route
             writeToStatus(
                 statusIndicator,
-                '⚠️ Start/End waypoint(s) remain unnamed.'
+                '⚠️ No valid route was created.'
             );
         }
-    } else {
-        // Handle case where user finalizes without a valid route
-        writeToStatus(
-            statusIndicator,
-            '⚠️ No valid route was created.'
-        );
-    }
-    statusIndicator.classList.remove('gone');
-});
+        statusIndicator.classList.remove('gone');
+    });
+}
 
 // Handle cancellation of route geometry recording
-cancelTwistButton.addEventListener('click', () => {
-    stopTwistCreation();
-});
+if (cancelTwistButton) {
+    cancelTwistButton.addEventListener('click', () => {
+        stopTwistCreation();
+    });
+}
 
 // Listen for map clicks when recording route geometry
 map.on('click', function(e) {

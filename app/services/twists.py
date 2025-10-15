@@ -90,15 +90,18 @@ templates = Jinja2Templates(directory="templates")
 async def render_list(
     request: Request,
     session: AsyncSession,
-    user: User | None
+    user: User | None,
+    search: str | None = None,
 ) -> HTMLResponse:
     """
      Build and returns the TemplateResponse for the Twist list.
     """
-    results = await session.execute(
-        select(*TwistListItem.get_fields(user))
-        .order_by(Twist.name)
-    )
+    # Build statement based off presence of search query
+    statement = select(*TwistListItem.get_fields(user)).order_by(Twist.name)
+    if search:
+        statement = statement.where(Twist.name.icontains(search))
+
+    results = await session.execute(statement)
 
     return templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,

@@ -14,14 +14,8 @@ class TwistCreateForm(BaseModel):
     waypoints: list[Waypoint] = Field(..., min_length=2)
     route_geometry: list[Coordinate]
 
-
-class TwistGeometry(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    fields: ClassVar = (Twist.waypoints, Twist.route_geometry)
-
-    waypoints: list[Waypoint]
-    route_geometry: list[Coordinate]
+    # Optional field to capture existing search for Twist list refresh
+    search: str | None = None
 
 
 class TwistBasic(BaseModel):
@@ -32,6 +26,15 @@ class TwistBasic(BaseModel):
     id: int
     name: str
     is_paved: bool
+
+
+class TwistGeometry(TwistBasic):
+    model_config = ConfigDict(from_attributes=True)
+
+    fields: ClassVar = TwistBasic.fields + (Twist.waypoints, Twist.route_geometry)
+
+    waypoints: list[Waypoint]
+    route_geometry: list[Coordinate]
 
 
 class TwistListItem(TwistBasic):
