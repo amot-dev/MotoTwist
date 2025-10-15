@@ -336,7 +336,7 @@ ul {
 }
 
 
-/* --- Twist List --- */
+/* --- Sidebar --- */
 
 #sidebar {
     display: flex;
@@ -380,6 +380,13 @@ ul {
     background-color: var(--button-cancel-hover);
 }
 
+
+/* --- Twist Filters --- */
+
+#twist-filters {
+    margin-bottom: var(--padding-lg);
+}
+
 .search-container {
     position: relative;
     display: flex;
@@ -403,6 +410,92 @@ ul {
     right: var(--padding-md);
     color: var(--text-muted);
 }
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-dropdown summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-md);
+    list-style: none; /* Hide the default marker in some browsers */
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-offwhite);
+    cursor: pointer;
+
+    transition: background-color var(--transition-fast);
+}
+
+.chevron-icon {
+    transition: transform var(--transition-fast);
+}
+
+.filter-dropdown[open] .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.filter-panel {
+    border: var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--padding-md);
+    background-color: var(--panel-slate);
+}
+
+.filter-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-lg);
+    border: none;
+    padding: 0;
+}
+
+.filter-group {
+    display: flex;
+}
+
+.filter-group input[type="radio"] {
+    position: fixed;
+    opacity: 0;
+    width: 0;
+}
+
+.filter-group label {
+    flex-grow: 1;
+    padding: var(--padding-sm);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background-color: var(--panel-slate-hover);
+    cursor: pointer;
+
+    transition: all var(--transition-fast);
+}
+
+.filter-group label:first-of-type {
+    border-radius: 100px 0 0 100px; /* Pill shape */
+}
+
+.filter-group label:last-of-type {
+    border-radius: 0 100px 100px 0; /* Pill shape */
+}
+
+.filter-group label:hover {
+    color: var(--text-offwhite);
+    background-color: var(--border-gray);
+}
+
+.filter-group input[type="radio"]:checked + label {
+    font-weight: bold;
+    color: white;
+    background-color: var(--accent-blue);
+}
+
+
+/* --- Twist List --- */
 
 #twist-list {
     flex-grow: 1;

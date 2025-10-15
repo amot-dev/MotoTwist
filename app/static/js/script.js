@@ -279,6 +279,18 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
     }
 });
 
+/* Includes visibleIds in query params */
+document.body.addEventListener('htmx:configRequest', function(event) {
+    // Check if this is a request to our list endpoint
+    if (event.detail.path === '/twists/templates/list') {
+        const visibleIds = Array.from(getVisibleIdSet());
+        if (visibleIds.length === 0) return;
+
+        event.detail.parameters['visible_ids'] = visibleIds;
+    }
+});
+
+
 /* New Twist Creation */
 const createTwistButton = document.querySelector('#start-new-twist');
 const finalizeTwistButton = document.querySelector('#finalize-new-twist')

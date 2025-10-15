@@ -12,20 +12,60 @@
     <h4>Register or Login to create Twists!</h4>
     {% endif %}
 
-    <div class="search-container">
-        <input id="twist-search-input" class="search-input"
-            type="search"
-            name="search"
-            placeholder="Search"
-            hx-get="/twists/templates/list"
-            hx-trigger="keyup changed delay:500ms, search"
-            hx-target="#twist-list"
-            hx-swap="innerHTML"
-            hx-indicator="#search-indicator">
-        <span id="search-indicator" class="htmx-indicator">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-        </span>
-    </div>
+    <form id="twist-filters"
+        hx-get="/twists/templates/list"
+        hx-target="#twist-list"
+        hx-swap="innerHTML"
+        hx-trigger="change, keyup changed delay:500ms from:#twist-search-input, search from:#twist-search-input"
+        hx-indicator=".htmx-indicator">
+
+        <div class="search-container">
+            <input id="twist-search-input" class="search-input"
+                type="search" name="search" placeholder="Search"
+            >
+            <span id="search-indicator" class="htmx-indicator">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+        </div>
+
+        <details class="filter-dropdown">
+            <summary>
+                <span>
+                    <i class="fa-solid fa-filter"></i> Filters
+                </span>
+                <i class="fa-solid fa-chevron-down chevron-icon"></i>
+            </summary>
+
+            <div class="filter-panel">
+                <fieldset class="filter-fieldset">
+                    <div class="filter-group" title="Filter between all or your Twists">
+                        <input type="radio" id="own_all" name="ownership" value="all" checked>
+                        <label for="own_all">All Twists</label>
+                        <input type="radio" id="own_own" name="ownership" value="own">
+                        <label for="own_own">My Twists</label>
+                    </div>
+
+                    <div class="filter-group" title="Filter between all Twists or those you haven't rated">
+                        <input type="radio" id="rated_all" name="rated" value="all" checked>
+                        <label for="rated_all">All</label>
+                        <input type="radio" id="rated_rated" name="rated" value="rated">
+                        <label for="rated_rated">Rated</label>
+                        <input type="radio" id="rated_unrated" name="rated" value="unrated">
+                        <label for="rated_unrated">Unrated</label>
+                    </div>
+
+                    <div class="filter-group" title="Filter between all, visible, or hidden Twists">
+                        <input type="radio" id="vis_all" name="visibility" value="all" checked>
+                        <label for="vis_all">All</label>
+                        <input type="radio" id="vis_visible" name="visibility" value="visible">
+                        <label for="vis_visible">Visible</label>
+                        <input type="radio" id="vis_hidden" name="visibility" value="hidden">
+                        <label for="vis_hidden">Hidden</label>
+                    </div>
+                </fieldset>
+            </div>
+        </details>
+    </form>
 
     <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
         <p>Loading Twists...</p>

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Label, literal
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from typing import ClassVar
+from typing import ClassVar, Literal
 from uuid import UUID
 
 from app.models import Twist, User
@@ -12,7 +12,16 @@ class TwistCreateForm(BaseModel):
     name: str
     is_paved: bool
     waypoints: list[Waypoint] = Field(..., min_length=2)
-    route_geometry: list[Coordinate]
+    route_geometry: list[Coordinate] = Field(..., min_length=2)
+
+
+class TwistFilterParams(BaseModel):
+    search: str | None = None
+    ownership: Literal["all", "own"] = "all"
+    rated: Literal["all", "rated", "unrated"] = "all"
+    visibility: Literal["all", "visible", "hidden"] = "all"
+
+    visible_ids: list[int] | None = None
 
 
 class TwistBasic(BaseModel):

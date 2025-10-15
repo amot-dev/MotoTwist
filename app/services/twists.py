@@ -4,13 +4,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from sqlalchemy import select
+from sqlalchemy import and_, false, or_, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
-from app.models import Twist, User
-from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistListItem, Waypoint
+from app.models import PavedRating, Twist, UnpavedRating, User
+from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistFilterParams, TwistListItem, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
 from app.utility import raise_http
@@ -93,17 +93,52 @@ async def render_list(
     request: Request,
     session: AsyncSession,
     user: User | None,
-    search: str | None = None,
+    filter: TwistFilterParams
 ) -> HTMLResponse:
     """
      Build and returns the TemplateResponse for the Twist list.
     """
-    # Build statement based off presence of search query
-    statement = select(*TwistListItem.get_fields(user)).order_by(Twist.name)
-    if search:
-        statement = statement.where(Twist.name.icontains(search))
+    statement = select(*TwistListItem.get_fields(user))
 
-    results = await session.execute(statement)
+    if filter.search:
+        statement = statement.where(Twist.name.icontains(filter.search))
+
+    if filter.ownership == "own":
+        statement = statement.where(Twist.author_id == user.id) if user else statement.where(false())
+
+    if filter.rated == "rated":
+        if user:
+            paved_rating_exists = select(PavedRating.id).where(
+                PavedRating.twist_id == Twist.id,
+                PavedRating.author_id == user.id
+            ).exists()
+            unpaved_rating_exists = select(UnpavedRating.id).where(
+                UnpavedRating.twist_id == Twist.id,
+                UnpavedRating.author_id == user.id
+            ).exists()
+            statement = statement.where(or_(paved_rating_exists, unpaved_rating_exists))
+        else:
+            statement = statement.where(false())
+
+    elif filter.rated == "unrated":
+        if user:
+            statement = statement.outerjoin(
+                PavedRating,
+                and_(PavedRating.twist_id == Twist.id, PavedRating.author_id == user.id)
+            ).outerjoin(
+                UnpavedRating,
+                and_(UnpavedRating.twist_id == Twist.id, UnpavedRating.author_id == user.id)
+            ).where(
+                and_(PavedRating.id.is_(None), UnpavedRating.id.is_(None))
+            )
+
+    if filter.visible_ids is not None:
+        if filter.visibility == "visible":
+            statement = statement.where(Twist.id.in_(filter.visible_ids))
+        elif filter.visibility == "hidden":
+            statement = statement.where(Twist.id.notin_(filter.visible_ids))
+
+    results = await session.execute(statement.order_by(Twist.name))
 
     return templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,
