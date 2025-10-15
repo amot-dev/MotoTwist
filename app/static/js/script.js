@@ -219,9 +219,8 @@ document.body.addEventListener('twistsLoaded', () => {
 document.body.addEventListener('twistAdded', (event) => {
     const newTwistId = event.detail.value;
     if (newTwistId) {
-        // The entire list is refreshed when a Twist is added
         addVisibilityToStorage(newTwistId);
-        applyVisibilityFromStorage();
+        setLayerVisibility(newTwistId, true);
     }
 });
 
@@ -229,7 +228,6 @@ document.body.addEventListener('twistAdded', (event) => {
 document.body.addEventListener('twistDeleted', (event) => {
     const deletedTwistId = event.detail.value;
     if (deletedTwistId) {
-        // Only one entry is affected when a Twist is deleted
         removeVisibilityFromStorage(deletedTwistId);
         setLayerVisibility(deletedTwistId, false);
     }

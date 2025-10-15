@@ -9,7 +9,7 @@ from app.config import logger
 from app.database import get_db
 from app.models import Twist, User
 from app.schemas.twists import TwistBasic, TwistDropdown, TwistCreateForm, TwistGeometry
-from app.services.twists import render_delete_modal, render_list, render_twist_dropdown, simplify_route, snap_waypoints_to_route
+from app.services.twists import render_delete_modal, render_list, render_single_list_item, render_twist_dropdown, simplify_route, snap_waypoints_to_route
 from app.settings import settings
 from app.users import current_active_user, current_active_user_optional
 from app.utility import raise_http
@@ -36,7 +36,7 @@ async def create_twist(
     snapped_waypoints = snap_waypoints_to_route(twist_data.waypoints, simplified_route)
 
     # Create the new Twist
-    twist_dict = twist_data.model_dump(exclude={"search"})
+    twist_dict = twist_data.model_dump()
     twist_dict.update({
         "author": user,
         "waypoints": snapped_waypoints,
@@ -54,7 +54,7 @@ async def create_twist(
         "twistAdded":  str(twist.id),
         "closeModal": ""
     }
-    response = await render_list(request, session, user, twist_data.search)
+    response = await render_single_list_item(request, session, user, twist.id)
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 

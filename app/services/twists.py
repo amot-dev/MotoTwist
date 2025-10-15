@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
@@ -12,6 +13,7 @@ from app.models import Twist, User
 from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistListItem, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
+from app.utility import raise_http
 
 
 def snap_waypoints_to_route(waypoints: list[Waypoint], route_geometry: list[Coordinate]) -> list[Waypoint]:
@@ -106,6 +108,31 @@ async def render_list(
     return templates.TemplateResponse("fragments/twists/list.html", {
         "request": request,
         "twists": [TwistListItem.model_validate(result) for result in results.all()]
+    })
+
+
+async def render_single_list_item(
+    request: Request,
+    session: AsyncSession,
+    user: User,
+    twist_id: int,
+) -> HTMLResponse:
+    """
+     Build and returns the TemplateResponse for the Twist list, for a single Twist.
+    """
+    try:
+        result = await session.execute(
+            select(*TwistListItem.get_fields(user)).where(Twist.id == twist_id)
+        )
+        twist_list_item = TwistListItem.model_validate(result.one())
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple Twists found for id '{twist_id}'", status_code=500)
+
+    return templates.TemplateResponse("fragments/twists/list.html", {
+        "request": request,
+        "twists": [twist_list_item]
     })
 
 

@@ -14,9 +14,6 @@ class TwistCreateForm(BaseModel):
     waypoints: list[Waypoint] = Field(..., min_length=2)
     route_geometry: list[Coordinate]
 
-    # Optional field to capture existing search for Twist list refresh
-    search: str | None = None
-
 
 class TwistBasic(BaseModel):
     model_config = ConfigDict(from_attributes=True)

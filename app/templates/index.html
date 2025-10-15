@@ -134,9 +134,8 @@
     {% call render_modal_content("New Twist") %}
     <form hx-post="/twists"
         hx-target="#twist-list"
-        hx-swap="innerHTML"
-        hx-ext="json-enc"
-        hx-include="#twist-search-input">
+        hx-swap="afterbegin"
+        hx-ext="json-enc">
 
         <div class="form-group">
             <label for="modal-name">Twist Name</label>
