@@ -53,7 +53,20 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
-app = FastAPI(lifespan=lifespan, openapi_tags=tags_metadata)
+app = FastAPI(
+    title="MotoTwist",
+    version=settings.MOTOTWIST_VERSION,
+    contact={
+        "name": "Alexander Mot",
+        "url": "https://github.com/amot-dev/mototwist/issues"
+    },
+    license_info={
+        "name": "GNU General Public License v3.0",
+        "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+    },
+    lifespan=lifespan,
+    openapi_tags=tags_metadata
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
