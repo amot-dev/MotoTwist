@@ -9,11 +9,12 @@ from random import choice, choices, randint
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
-from typing import cast
+from typing import Annotated, cast
 from uuid import UUID
 
 from app.database import get_db
 from app.models import PavedRating, Twist, UnpavedRating, User
+from app.schemas.debug import SeedRatingsForm
 from app.services.debug import create_random_rating, generate_weights, reset_id_sequences_for
 from app.settings import settings
 from app.users import current_active_user_optional, current_admin_user
@@ -27,7 +28,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("", tags=["Index", "Templates"], response_class=HTMLResponse)
 async def render_debug_page(
     request: Request,
     admin: User = Depends(current_admin_user),
@@ -192,17 +193,7 @@ async def load_state(
 @router.post("/seed-ratings", response_class=RedirectResponse)
 async def seed_ratings(
     request: Request,
-    rating_count: int = Form(..., gt=0),
-    popular_twist_name: str = Form(...),
-    popular_rating_count: int = Form(..., gt=0),
-    distribution_focus: float = Form(
-        default=2.0,
-        gt=1.0,
-        description=(
-            "Controls rating concentration. Higher values focus ratings on fewer twists,"
-            " leaving more unrated. A value of ~2 is a good start."
-        ),
-    ),
+    seed_data: Annotated[SeedRatingsForm, Form()],
     admin: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
@@ -249,14 +240,14 @@ async def seed_ratings(
     raters = [user for user in all_users if user.id != user_to_exclude.id]
 
     # Isolate the popular twist from the general pool
-    popular_twist = next((twist for twist in all_twists if twist.name == popular_twist_name), None)
+    popular_twist = next((twist for twist in all_twists if twist.name == seed_data.popular_twist_name), None)
     if not popular_twist:
-        raise_http(f"Twist '{popular_twist_name}' not found", 422)
+        raise_http(f"Twist '{seed_data.popular_twist_name}' not found", 422)
     general_twists = [twist for twist in all_twists if twist.id != popular_twist.id]
 
     # Generate a smaller pool of random dates to encourage date collisions
     start_date = date.today() - timedelta(days=730)  # ~2 years ago
-    total_ratings = rating_count + popular_rating_count
+    total_ratings = seed_data.rating_count + seed_data.popular_rating_count
     date_pool = [
         start_date + timedelta(days=randint(0, 730))
         for _ in range(total_ratings // 2)  # Create a pool half the size of ratings
@@ -266,7 +257,7 @@ async def seed_ratings(
     ratings_to_add: list[PavedRating | UnpavedRating] = []
 
     # Seed the "popular" twist
-    for _ in range(popular_rating_count):
+    for _ in range(seed_data.popular_rating_count):
         rating = create_random_rating(
             twist=popular_twist,
             author=choice(raters),
@@ -275,19 +266,19 @@ async def seed_ratings(
         ratings_to_add.append(rating)
 
     # Distribute the general ratings using weighted random choices
-    if rating_count > 0 and general_twists:
+    if seed_data.rating_count > 0 and general_twists:
         # Generate a list of weights to make twists in the center of the list more likely to be chosen
         # This is a poor man's numpy normal distribution
         twist_weights = generate_weights(
             num_items=len(general_twists),
-            focus=distribution_focus
+            focus=seed_data.distribution_focus
         )
 
         # Select all the twists at once based on the generated weights
         chosen_twists = choices(
             population=general_twists,
             weights=twist_weights,
-            k=rating_count
+            k=seed_data.rating_count
         )
 
         # For each Twist (Twists may appear in chosen_twists multiple times), create a rating

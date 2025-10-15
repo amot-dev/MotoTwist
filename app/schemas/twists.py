@@ -49,8 +49,11 @@ class TwistListItem(TwistBasic):
     @classmethod
     def get_fields(cls, user: User | None) -> tuple[InstrumentedAttribute[int], InstrumentedAttribute[str], InstrumentedAttribute[bool], Label[bool]]:
         """
-        Returns a tuple of all fields needed to populate this model,
+        Determine database fields needed to populate this model,
         including dynamic expressions based on the current user.
+
+        :param user: Optional user viewing the Twist list.
+        :return: A tuple of all database fields needed to populate this model.
         """
         if user:
             author_expression = (Twist.author_id == user.id)

@@ -14,14 +14,14 @@ from time import time
 from typing import Awaitable, Callable
 import uvicorn
 
-from app.config import logger
+from app.config import logger, tags_metadata
 from app.database import apply_migrations, create_automigration, get_db, wait_for_db
 from app.models import User
 from app.routers import admin, auth, debug, ratings, twists, users
 from app.schemas.users import UserCreate
 from app.settings import Settings, settings
 from app.users import current_active_user_optional, get_user_db, UserManager
-from app.utility import raise_http
+from app.utility import raise_http, sort_schema_names, update_schema_name
 
 
 @asynccontextmanager
@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, openapi_tags=tags_metadata)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -81,13 +81,6 @@ async def log_process_time(
 
 
 app.add_middleware(SessionMiddleware, secret_key=settings.MOTOTWIST_SECRET_KEY)
-
-app.include_router(admin.router)
-app.include_router(auth.router)
-app.include_router(debug.router)
-app.include_router(ratings.router)
-app.include_router(twists.router)
-app.include_router(users.router)
 
 
 @app.get("/", tags=["Index", "Templates"], response_class=HTMLResponse)
@@ -155,6 +148,17 @@ async def get_latest_version(request: Request) -> HTMLResponse:
         return response
     return HTMLResponse(content=f"<strong>{latest_version}</strong>")
 
+
+app.include_router(admin.router)
+app.include_router(auth.router)
+app.include_router(debug.router)
+app.include_router(ratings.router)
+app.include_router(twists.router)
+app.include_router(users.router)
+
+update_schema_name(app, auth.login, "UserLoginForm")
+update_schema_name(app, debug.load_state, "StateLoadUploadFile")
+sort_schema_names(app)
 
 if __name__ == "__main__":
     wait_for_db()

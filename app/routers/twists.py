@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_class=HTMLResponse)
+@router.post("", response_class=HTMLResponse)
 async def create_twist(
     request: Request,
     twist_data: TwistCreateForm,

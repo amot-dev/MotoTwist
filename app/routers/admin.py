@@ -9,11 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
 from string import ascii_letters, digits
-from typing import cast
+from typing import Annotated, cast
 from uuid import UUID
 
 from app.database import get_db
 from app.models import User
+from app.schemas.admin import UserCreateFormAdmin
 from app.schemas.users import UserCreate, UserUpdate
 from app.settings import settings
 from app.users import current_admin_user, get_user_manager, UserManager
@@ -30,9 +31,7 @@ router = APIRouter(
 @router.post("/users", response_class=HTMLResponse)
 async def create_user(
     request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    is_superuser: bool = Form(False),
+    user_form: Annotated[UserCreateFormAdmin, Form()],
     admin: User = Depends(current_admin_user),
     user_manager: UserManager = Depends(get_user_manager)
 ) -> HTMLResponse:
@@ -44,7 +43,7 @@ async def create_user(
         raise_http("Unauthorized", status_code=401)
 
     try:
-        await user_manager.get_by_email(email)
+        await user_manager.get_by_email(user_form.email)
         raise_http("This email address is already in use", status_code=409)
     except UserNotExists:
         pass
@@ -52,11 +51,11 @@ async def create_user(
     # Create the user with a long, random, unusable password. The user will never need to know this password
     placeholder_password = "".join(choice(ascii_letters + digits) for _ in range(32))
     user_data = UserCreate(
-        name=name,
-        email=email.lower(),
+        name=user_form.name,
+        email=user_form.email.lower(),
         password=placeholder_password,
         is_active=True,
-        is_superuser=is_superuser,
+        is_superuser=user_form.is_superuser,
         is_verified=True,
     )
     user = await user_manager.create(user_data, request=request)
@@ -65,7 +64,8 @@ async def create_user(
     await user_manager.forgot_password(user)
 
     events = {
-        "flashMessage": "User created!"
+        "flashMessage": "User created!",
+        "resetForm": ""
     }
     response = templates.TemplateResponse("fragments/admin/settings_user.html", {
         "request": request,

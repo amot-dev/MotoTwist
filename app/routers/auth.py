@@ -5,9 +5,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi_users.authentication import RedisStrategy
 from fastapi_users.exceptions import InvalidResetPasswordToken, UserInactive, UserNotExists
 import json
-import uuid
+from typing import Annotated
+from uuid import UUID
 
 from app.models import User
+from app.schemas.auth import ResetPasswordForm
 from app.users import auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy, UserManager
 from app.utility import raise_http
 
@@ -22,7 +24,7 @@ async def login(
     request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),
     user_manager: UserManager = Depends(get_user_manager),
-    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+    strategy: RedisStrategy[User, UUID] = Depends(get_redis_strategy),
 ) -> HTMLResponse:
     """
     Login and serve an HTML fragment containing the auth widget.
@@ -55,12 +57,12 @@ async def login(
     return response
 
 
-@router.get("/logout", response_class=HTMLResponse)
+@router.post("/logout", response_class=HTMLResponse)
 async def logout(
     request: Request,
     response: Response,
     user: User | None = Depends(current_active_user_optional),
-    strategy: RedisStrategy[User, uuid.UUID] = Depends(get_redis_strategy),
+    strategy: RedisStrategy[User, UUID] = Depends(get_redis_strategy),
 ) -> HTMLResponse:
     """
     Logout and serve an HTML fragment containing the auth widget.
@@ -86,7 +88,7 @@ async def logout(
     return response
 
 
-@router.get("/register", tags=["Templates"], response_class=HTMLResponse)
+@router.get("/register", tags=["Index", "Templates"], response_class=HTMLResponse)
 async def render_register_page(request: Request) -> HTMLResponse:
     """
     Serve the register page.
@@ -100,19 +102,17 @@ async def render_register_page(request: Request) -> HTMLResponse:
 @router.post("/reset-password", response_class=RedirectResponse)
 async def reset_password(
     request: Request,
-    token: str = Form(...),
-    password: str = Form(...),
-    password_confirmation: str = Form(...),
+    reset_form: Annotated[ResetPasswordForm, Form()],
     user_manager: UserManager = Depends(get_user_manager),
 ) -> RedirectResponse:
     """
     Reset a user password by token, then redirect to the main page of MotoTwist.
     """
-    if password != password_confirmation:
+    if reset_form.password != reset_form.password_confirmation:
         raise_http("Passwords do not match", status_code=422)
 
     try:
-        await user_manager.reset_password(token, password, request=request)
+        await user_manager.reset_password(reset_form.token, reset_form.password, request=request)
     except (InvalidResetPasswordToken, UserInactive, UserNotExists):
         raise_http("This link is invalid or has expired", status_code=400)
 
@@ -120,7 +120,7 @@ async def reset_password(
     return RedirectResponse(url="/", status_code=303)
 
 
-@router.get("/reset-password", tags=["Templates"], response_class=HTMLResponse)
+@router.get("/reset-password", tags=["Index", "Templates"], response_class=HTMLResponse)
 async def render_reset_password_page(
     request: Request,
     token: str

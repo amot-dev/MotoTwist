@@ -3,10 +3,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
+from typing import Annotated
 
 from app.config import logger
 from app.models import User
-from app.schemas.users import UserCreate, UserUpdate
+from app.schemas.users import UserCreate, UserCreateForm, UserUpdate, UserUpdateForm
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import raise_http
 
@@ -14,35 +15,32 @@ from app.utility import raise_http
 templates = Jinja2Templates(directory="templates")
 router = APIRouter(
     prefix="/users",
-    tags=["User Management"]
+    tags=["Users"]
 )
 
 
-@router.post("/", response_class=RedirectResponse)
+@router.post("", response_class=RedirectResponse)
 async def create_user(
     request: Request,
-    name: str | None = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    password_confirmation: str = Form(...),
+    user_form: Annotated[UserCreateForm, Form()],
     user_manager: UserManager = Depends(get_user_manager)
 ) -> RedirectResponse:
     """
     Create a new user. Self-serve.
     """
     try:
-        await user_manager.get_by_email(email)
+        await user_manager.get_by_email(user_form.email)
         raise_http("This email address is already in use", status_code=409)
     except UserNotExists:
         pass
 
-    if password != password_confirmation:
+    if user_form.password != user_form.password_confirmation:
         raise_http("Passwords do not match", status_code=422)
 
     user_data = UserCreate(
-        name=name,
-        email=email.lower(),
-        password=password,
+        name=user_form.name,
+        email=user_form.email.lower(),
+        password=user_form.password,
         is_active=True,
         is_superuser=False,
         is_verified=True,
@@ -57,13 +55,10 @@ async def create_user(
     return RedirectResponse(url="/", status_code=303)
 
 
-@router.put("/", response_class=HTMLResponse)
+@router.put("", response_class=HTMLResponse)
 async def update_user(
     request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str | None = Form(None),
-    password_confirmation: str | None = Form(None),
+    user_form: Annotated[UserUpdateForm, Form()],
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
 ) -> HTMLResponse:
@@ -72,24 +67,24 @@ async def update_user(
     """
     user_updates = UserUpdate()
 
-    if name and name != user.name:
-        logger.debug(f"Changing name for {user.id} from {user.name} to {name}")
-        user_updates.name = name
+    if user_form.name and user_form.name != user.name:
+        logger.debug(f"Changing name for {user.id} from {user.name} to {user_form.name}")
+        user_updates.name = user_form.name
 
-    if email and email.lower() != user.email:
+    if user_form.email and user_form.email.lower() != user.email:
         # Check if the new email is already taken by another user
         try:
-            await user_manager.get_by_email(email)
+            await user_manager.get_by_email(user_form.email)
             raise_http("This email address is already in use", status_code=409)
         except UserNotExists:
-            logger.debug(f"Changing email for {user.id} from {user.email} to {email.lower()}")
-            user_updates.email = email.lower()
+            logger.debug(f"Changing email for {user.id} from {user.email} to {user_form.email.lower()}")
+            user_updates.email = user_form.email.lower()
 
-    if password:
-        if password != password_confirmation:
+    if user_form.password:
+        if user_form.password != user_form.password_confirmation:
             raise_http("Passwords do not match", status_code=422)
         logger.debug(f"Changing password for {user.id}")
-        user_updates.password = password
+        user_updates.password = user_form.password
 
     # Commit changes only if there were changes
     if user_updates.model_dump(exclude_unset=True):

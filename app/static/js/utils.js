@@ -79,6 +79,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Listen for the custom event sent from the server when a form needs to be cleared
+document.body.addEventListener('resetForm', () => {
+    forms = document.querySelectorAll('form');
+    forms.forEach(form => form.reset());
+});
+
+// Listen for the custom event sent from the server when a modal needs to be closed
+document.body.addEventListener('closeModal', () => {
+    location.hash='';
+    forms = document.querySelectorAll('form');
+    forms.forEach(form => form.reset());
+    stopTwistCreation();
+});
+
+// Copy button
 document.body.addEventListener('click', function(event) {
     // Find the button that was clicked
     const copyButton = event.target.closest('.button-copy-input');

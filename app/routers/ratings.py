@@ -23,7 +23,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_class=HTMLResponse)
+@router.post("", response_class=HTMLResponse)
 async def create_rating(
     request: Request,
     twist_id: int,

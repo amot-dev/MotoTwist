@@ -137,8 +137,14 @@
             </li>
             <li>
                 <span>Source Code</span>
-                <a href="https://github.com/{{ settings.MOTOTWIST_UPSTREAM }}" target="_blank" class="button-link">View on GitHub <i class="icon-external-link"></i></a>
+                <a href="https://github.com/{{ settings.MOTOTWIST_UPSTREAM }}" target="_blank" class="button-link">View on GitHub</a>
             </li>
+            {% if settings.DEBUG_MODE %}
+            <li>
+                <span>API Docs</span>
+                <a href="/docs" target="_blank" class="button-link">View API Docs</a>
+            </li>
+            {% endif %}
         </ul>
 
         <div class="support-info">

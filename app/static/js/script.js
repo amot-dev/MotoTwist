@@ -202,14 +202,6 @@ function removeVisibilityFromStorage(twistId) {
     saveVisibleIdSet(visibleIdSet);
 }
 
-// Listen for the custom event sent from the server when a modal needs to be closed
-document.body.addEventListener('closeModal', () => {
-    location.hash='';
-    forms = document.querySelectorAll('form');
-    forms.forEach(form => form.reset());
-    stopTwistCreation();
-});
-
 // Listen for the custom event sent from the server after the Twist list is initially loaded
 document.body.addEventListener('twistsLoaded', () => {
     applyVisibilityFromStorage();
@@ -283,8 +275,12 @@ document.getElementById('twist-list').addEventListener('click', function(event) 
 document.body.addEventListener('htmx:configRequest', function(event) {
     // Check if this is a request to our list endpoint
     if (event.detail.path === '/twists/templates/list') {
+        // Skip adding if no visibleIds
         const visibleIds = Array.from(getVisibleIdSet());
         if (visibleIds.length === 0) return;
+
+        // No need to add visibleIds if not used
+        if (event.detail.parameters['visibility'] === 'all') return;
 
         event.detail.parameters['visible_ids'] = visibleIds;
     }

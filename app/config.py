@@ -37,3 +37,40 @@ logging.setLogRecordFactory(record_factory)
 
 # Set app logger
 logger = logging.getLogger("mototwist")
+
+
+# Configure documentation tag order
+tags_metadata = [
+    {
+        "name": "Index",
+        "description": "Main entry points.",
+    },
+    {
+        "name": "Administration",
+        "description": "Endpoints for administrative utilities.",
+    },
+    {
+        "name": "Authentication",
+        "description": "Endpoints for user login, registration, and token management.",
+    },
+    {
+        "name": "Debug",
+        "description": "Endpoints for debug utilities.",
+    },
+    {
+        "name": "Ratings",
+        "description": "Endpoints for Twist rating management.",
+    },
+    {
+        "name": "Twists",
+        "description": "Endpoints for Twist management.",
+    },
+    {
+        "name": "Users",
+        "description": "Endpoints for user account management.",
+    },
+    {
+        "name": "Templates",
+        "description": "Endpoints that serve HTML templates.",
+    },
+]
