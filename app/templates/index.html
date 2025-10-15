@@ -3,20 +3,18 @@
 
 {% block content %}
 <div id="sidebar">
-    <div id="twist-list-container">
-        <h1>MotoTwist</h1>
-        {% if user %}
-        <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
-        <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
-        <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
-        {% else %}
-        <h4>Register or Login to create Twists!</h4>
-        {% endif %}
+    <h1>MotoTwist</h1>
+    {% if user %}
+    <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
+    <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
+    <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+    {% else %}
+    <h4>Register or Login to create Twists!</h4>
+    {% endif %}
 
-        <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
-            <p>Loading Twists...</p>
-        </ul>
-    </div>
+    <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
+        <p>Loading Twists...</p>
+    </ul>
 </div>
 
 <div id="map"></div>

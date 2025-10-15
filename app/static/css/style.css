@@ -55,17 +55,6 @@ body {
     background-color: var(--bg-charcoal);
 }
 
-#sidebar {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    width: 300px;
-    box-shadow: var(--shadow-soft);
-    border-right: var(--border-default);
-    padding: var(--padding-lg);
-    background-color: var(--panel-slate);
-}
-
 #map {
     flex-grow: 1;
 }
@@ -97,7 +86,7 @@ ul {
 }
 
 .scroll-shut-on-delete {
-  max-height: 500px;
+  max-height: 1000px;
   overflow: hidden;
 
   transition: max-height 0.5s ease-in-out, 
@@ -349,11 +338,17 @@ ul {
 
 /* --- Twist List --- */
 
-#twist-list-container {
-    flex-grow: 1;
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    box-shadow: var(--shadow-soft);
+    border-right: var(--border-default);
+    padding: var(--padding-lg);
+    background-color: var(--panel-slate);
 }
 
-#twist-list-container h4 {
+#sidebar h4 {
     color: var(--text-muted);
 }
 
@@ -383,6 +378,11 @@ ul {
 }
 .create-twist-button.button-cancel:hover {
     background-color: var(--button-cancel-hover);
+}
+
+#twist-list {
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 .twist-item {
@@ -446,7 +446,7 @@ ul {
     transition: max-height var(--transition-fast), padding var(--transition-fast);
 }
 .twist-dropdown.is-open {
-    max-height: 500px;
+    max-height: 1000px;
     padding: var(--padding-md) var(--padding-lg);
 }
 
