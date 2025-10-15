@@ -13,7 +13,6 @@ ARG MOTOTWIST_VERSION=dev
 ENV MOTOTWIST_VERSION=${MOTOTWIST_VERSION}
 
 RUN adduser --system --group --no-create-home mototwist
-RUN mkdir /gpx && chown mototwist:mototwist /gpx
 
 WORKDIR /app
 ENV PYTHONPATH "/"
