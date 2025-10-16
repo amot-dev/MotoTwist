@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
 from app.models import PavedRating, Twist, UnpavedRating, User
-from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistFilterParams, TwistListItem, Waypoint
+from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistFilterParams, TwistListItem, TwistUltraBasic, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
 from app.utility import raise_http
@@ -196,12 +196,14 @@ async def render_twist_dropdown(
     # Check if the user is allowed to delete the Twist
     can_delete_twist = (user.is_superuser or user.id == twist.author_id) if user else False
 
+    twist_basic = TwistUltraBasic.model_validate(twist)
+
     return templates.TemplateResponse("fragments/twists/dropdown.html", {
         "request": request,
         "twist_id": twist.id,
         "twist_author_name": twist.author_name,
         "can_delete_twist": can_delete_twist,
-        "average_ratings": await calculate_average_rating(session, twist.id, twist.is_paved, round_to=1)
+        "average_ratings": await calculate_average_rating(session, user, twist_basic, "all", round_to=1)
     })
 
 

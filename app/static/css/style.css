@@ -106,11 +106,6 @@ ul {
     text-decoration: none;
 }
 
-.button-small {
-    padding: var(--padding-sm) var(--padding-md);
-    font-size: 0.9rem;
-}
-
 .button-link {
     color: var(--accent);
 
@@ -158,6 +153,16 @@ ul {
 }
 .button-deactivate:hover {
     background-color: var(--accent-yellow-hover);
+}
+
+.button-small {
+    padding: var(--padding-sm) var(--padding-md);
+    font-size: 0.9rem;
+}
+
+.button-very-small {
+    padding: var(--padding-xs) var(--padding-md);
+    font-size: 0.8rem;
 }
 
 
@@ -338,7 +343,7 @@ ul {
 
 /* --- Sidebar --- */
 
-#sidebar {
+aside {
     display: flex;
     flex-direction: column;
     width: 300px;
@@ -348,7 +353,7 @@ ul {
     background-color: var(--panel-slate);
 }
 
-#sidebar h4 {
+aside h4 {
     color: var(--text-muted);
 }
 
@@ -409,10 +414,6 @@ ul {
     position: absolute;
     right: var(--padding-md);
     color: var(--text-muted);
-}
-
-.filter-dropdown {
-    position: relative;
 }
 
 .filter-dropdown summary {
@@ -573,34 +574,39 @@ ul {
     color: var(--text-muted)
 }
 
-.twist-dropdown .averages {
-    position: relative;
+.twist-dropdown fieldset {
+    margin-bottom: var(--padding-md);
+}
+
+.twist-dropdown .filter-group label {
+    padding: var(--padding-xs);
+    font-size: 0.8rem;
+}
+
+.twist-dropdown .filter-group input[type="radio"]:checked + label {
+    background-color: var(--accent);
+}
+
+.twist-dropdown header, footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .twist-dropdown h4 {
     color: var(--accent);
-    margin-top: 0;
-    margin-bottom: var(--padding-sm);
+}
+
+.twist-dropdown .button-block {
+    background-color: var(--accent);
+}
+
+.twist-dropdown .no-ratings {
+    margin: 0;
 }
 
 .twist-dropdown .button {
     font-size: 0.8rem;
-}
-
-.twist-dropdown #modal-rate-twist-button {
-    position: absolute;
-    top: 0;
-    right: 0;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: var(--padding-xs) var(--padding-md);
-    color: white;
-    background-color: var(--accent);
-
-    transition: background-color 0.2s ease;
-}
-.twist-dropdown #modal-rate-twist-button:hover {
-    background-color: var(--accent-hover);
 }
 
 .twist-dropdown li {
@@ -608,12 +614,6 @@ ul {
     align-items: center;
     justify-content: space-between;
     padding: var(--padding-xs) 0;
-}
-
-.twist-dropdown #modal-delete-twist-button {
-    position: absolute;
-    bottom: 0;
-    right: 0;
 }
 
 .rating-slider-container {
@@ -1100,7 +1100,7 @@ ul {
         flex-direction: column;
     }
 
-    #sidebar {
+    aside {
         order: 2;
         width: 100%;
         height: 35vh;

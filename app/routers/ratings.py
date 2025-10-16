@@ -1,18 +1,18 @@
 from datetime import date
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 import json
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
+from typing import Literal
 
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, PavedRating, UnpavedRating, User
-from app.schemas.twists import TwistBasic, TwistDropdown
-from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED, render_rate_modal, render_view_modal
-from app.services.twists import render_twist_dropdown
+from app.schemas.twists import TwistBasic, TwistUltraBasic
+from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED, render_averages, render_rate_modal, render_view_modal
 from app.users import current_active_user, current_active_user_optional
 from app.utility import is_form_value_string, raise_http
 
@@ -33,13 +33,12 @@ async def create_rating(
     """
     Create a new rating for the given Twist.
     """
+    # TODO: make this use a Pydantic Model for the form
     try:
-        result = await session.execute(
-            select(*TwistDropdown.fields)
-            .join(Twist.author)
-            .where(Twist.id == twist_id)
+        result = await session.scalars(
+            select(Twist.is_paved).where(Twist.id == twist_id)
         )
-        twist = TwistDropdown.model_validate(result.one())
+        twist_is_paved = result.one()
     except NoResultFound:
         raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
     except MultipleResultsFound:
@@ -48,7 +47,7 @@ async def create_rating(
     logger.debug(f"Attempting to rate Twist with id '{twist_id}'")
     form_data = await request.form()
 
-    if twist.is_paved:
+    if twist_is_paved:
         Rating = PavedRating
         criteria_list = RATING_CRITERIA_PAVED
     else:
@@ -81,10 +80,10 @@ async def create_rating(
     if not any(key in valid_criteria for key in new_rating_data):
         raise_http("No valid rating data submitted", status_code=422)
 
-    # Create the new rating instance, linking it to the twist
+    # Create the new rating instance, linking it to the Twist
     new_rating_data.update({
         "author": user,
-        "twist_id": twist.id
+        "twist_id": twist_id
     })
     new_rating = Rating(**new_rating_data)
     session.add(new_rating)
@@ -93,9 +92,10 @@ async def create_rating(
 
     events = {
         "flashMessage": "Twist rated successfully!",
-        "closeModal": ""
+        "closeModal": "",
+        "refreshAverages": ""
     }
-    response = await render_twist_dropdown(request, session, user, twist)
+    response = HTMLResponse(content="")
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
 
@@ -162,6 +162,30 @@ async def delete_rating(
     }
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response
+
+
+@router.get("/templates/averages", tags=["Templates"], response_class=HTMLResponse)
+async def serve_averages(
+    request: Request,
+    twist_id: int,
+    ownership: Literal["all", "own"] = Query("all"),
+    user: User | None = Depends(current_active_user_optional),
+    session: AsyncSession = Depends(get_db)
+) -> HTMLResponse:
+    """
+    Serve an HTML fragment containing the ratings averages.
+    """
+    try:
+        result = await session.execute(
+            select(*TwistUltraBasic.fields).where(Twist.id == twist_id)
+        )
+        twist = TwistUltraBasic.model_validate(result.one())
+    except NoResultFound:
+        raise_http(f"Twist with id '{twist_id}' not found", status_code=404)
+    except MultipleResultsFound:
+        raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
+
+    return await render_averages(request, session, user, twist, ownership)
 
 
 @router.get("/templates/rate-modal", tags=["Templates"], response_class=HTMLResponse)

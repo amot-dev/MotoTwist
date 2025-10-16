@@ -1,43 +1,55 @@
-{% from "fragments/_macros.html" import render_rating %}
-
 <p class="author">Created by {{ twist_author_name }}</p>
-<div class="averages">
+<header>
     <h4>Average Rating</h4>
     <a id="modal-rate-twist-button"
         href="#modal-rate-twist"
-        class="button button-block"
+        class="button button-very-small button-block"
         hx-get="/twists/{{ twist_id }}/ratings/templates/rate-modal"
         hx-target="#modal-rate-twist"
         hx-swap="innerHTML">
 
         Rate
     </a>
+</header>
 
-    <ul>
+<form class="average-filters"
+    hx-get="/twists/{{ twist_id }}/ratings/templates/averages"
+    hx-ext="morph"
+    hx-target="next .averages-list"
+    hx-swap="morph:innerHTML"
+    hx-trigger="change, refreshAverages from:body">
+
+    <fieldset class="filter-fieldset">
+        <div class="filter-group" title="Filter between all or your Twists">
+            <input type="radio" id="own_all_ratings_in_{{ twist_id }}" name="ownership" value="all" checked>
+            <label for="own_all_ratings_in_{{ twist_id }}">All Ratings</label>
+            <input type="radio" id="own_own_ratings_in_{{ twist_id }}" name="ownership" value="own">
+            <label for="own_own_ratings_in_{{ twist_id }}">My Ratings</label>
+        </div>
+    </fieldset>
+</form>
+
+<ul class="averages-list">
+{% include "fragments/ratings/averages.html" %}
+</ul>
+
+<footer>
     {% if average_ratings %}
-        {% for criterion, data in average_ratings.items() %}
-        {{ render_rating(criterion, data.rating, data.desc) }}
-        {% endfor %}
-    {% else %}
-        <li>No ratings yet</li>
-    {% endif %}
-    </ul>
-
-    {# Conditionally show the 'See all' link #}
-    <a id="modal-view-twist-ratings-button"
+    <a class="view-twist-button button button-link"
         href="#modal-view-twist-ratings"
-        class="button button-link {% if not average_ratings %}invisible{% endif %}"
         hx-get="/twists/{{ twist_id }}/ratings/templates/view-modal"
         hx-target="#modal-view-twist-ratings"
         hx-swap="innerHTML">
 
         See all
     </a>
+    {% else %}
+    <p class="no-ratings">No ratings yet</p>
+    {% endif %}
 
     {% if can_delete_twist %}
-    <a id="modal-delete-twist-button"
+    <a class="delete-twist-button button button-link"
         href="#modal-delete-twist"
-        class="button button-link"
         hx-get="/twists/{{ twist_id }}/templates/delete-modal"
         hx-target="#modal-delete-twist"
         hx-swap="innerHTML">
@@ -45,4 +57,4 @@
         <i class="fa-solid fa-trash"></i>
     </a>
     {% endif %}
-</div>
+</footer>

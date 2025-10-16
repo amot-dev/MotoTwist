@@ -24,14 +24,21 @@ class TwistFilterParams(BaseModel):
     visible_ids: list[int] | None = None
 
 
-class TwistBasic(BaseModel):
+class TwistUltraBasic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    fields: ClassVar = (Twist.id, Twist.name, Twist.is_paved)
+    fields: ClassVar = (Twist.id, Twist.is_paved)
 
     id: int
-    name: str
     is_paved: bool
+
+
+class TwistBasic(TwistUltraBasic):
+    model_config = ConfigDict(from_attributes=True)
+
+    fields: ClassVar = TwistUltraBasic.fields + (Twist.name,)
+
+    name: str
 
 
 class TwistGeometry(TwistBasic):
@@ -47,7 +54,7 @@ class TwistListItem(TwistBasic):
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
-    def get_fields(cls, user: User | None) -> tuple[InstrumentedAttribute[int], InstrumentedAttribute[str], InstrumentedAttribute[bool], Label[bool]]:
+    def get_fields(cls, user: User | None) -> tuple[InstrumentedAttribute[int], InstrumentedAttribute[bool], InstrumentedAttribute[str], Label[bool]]:
         """
         Determine database fields needed to populate this model,
         including dynamic expressions based on the current user.
@@ -68,12 +75,10 @@ class TwistListItem(TwistBasic):
     viewer_is_author: bool
 
 
-class TwistDropdown(BaseModel):
+class TwistDropdown(TwistUltraBasic):
     model_config = ConfigDict(from_attributes=True)
 
-    fields: ClassVar = (Twist.id, Twist.is_paved, Twist.author_id, User.name.label("author_name"))
+    fields: ClassVar = TwistUltraBasic.fields + (Twist.author_id, User.name.label("author_name"))
 
-    id: int
     author_id: UUID
-    is_paved: bool
     author_name: str

@@ -91,7 +91,6 @@ def sort_schema_names(app: FastAPI):
     if all_schemas:
         # Sort the dictionary alphabetically by key (the schema name)
         sorted_schemas = dict(sorted(all_schemas.items()))
-        print(sorted_schemas)
         # Replace the old schemas with the newly sorted ones
         openapi_schema["components"]["schemas"] = sorted_schemas
 

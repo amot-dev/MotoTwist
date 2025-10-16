@@ -2,7 +2,7 @@
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
 {% block content %}
-<div id="sidebar">
+<aside>
     <h1>MotoTwist</h1>
     {% include "fragments/twists/creation_buttons.html" %}
 
@@ -33,28 +33,28 @@
             <div class="filter-panel">
                 <fieldset class="filter-fieldset">
                     <div class="filter-group" title="Filter between all or your Twists">
-                        <input type="radio" id="own_all" name="ownership" value="all" checked>
-                        <label for="own_all">All Twists</label>
-                        <input type="radio" id="own_own" name="ownership" value="own">
-                        <label for="own_own">My Twists</label>
+                        <input type="radio" id="own_all_twists" name="ownership" value="all" checked>
+                        <label for="own_all_twists">All Twists</label>
+                        <input type="radio" id="own_own_twists" name="ownership" value="own">
+                        <label for="own_own_twists">My Twists</label>
                     </div>
 
                     <div class="filter-group" title="Filter between all Twists or those you haven't rated">
-                        <input type="radio" id="rated_all" name="rated" value="all" checked>
-                        <label for="rated_all">All</label>
-                        <input type="radio" id="rated_rated" name="rated" value="rated">
-                        <label for="rated_rated">Rated</label>
-                        <input type="radio" id="rated_unrated" name="rated" value="unrated">
-                        <label for="rated_unrated">Unrated</label>
+                        <input type="radio" id="rated_all_twists" name="rated" value="all" checked>
+                        <label for="rated_all_twists">All</label>
+                        <input type="radio" id="rated_rated_twists" name="rated" value="rated">
+                        <label for="rated_rated_twists">Rated</label>
+                        <input type="radio" id="rated_unrated_twists" name="rated" value="unrated">
+                        <label for="rated_unrated_twists">Unrated</label>
                     </div>
 
                     <div class="filter-group" title="Filter between all, visible, or hidden Twists">
-                        <input type="radio" id="vis_all" name="visibility" value="all" checked>
-                        <label for="vis_all">All</label>
-                        <input type="radio" id="vis_visible" name="visibility" value="visible">
-                        <label for="vis_visible">Visible</label>
-                        <input type="radio" id="vis_hidden" name="visibility" value="hidden">
-                        <label for="vis_hidden">Hidden</label>
+                        <input type="radio" id="vis_all_twists" name="visibility" value="all" checked>
+                        <label for="vis_all_twists">All</label>
+                        <input type="radio" id="vis_visible_twists" name="visibility" value="visible">
+                        <label for="vis_visible_twists">Visible</label>
+                        <input type="radio" id="vis_hidden_twists" name="visibility" value="hidden">
+                        <label for="vis_hidden_twists">Hidden</label>
                     </div>
                 </fieldset>
             </div>
@@ -64,7 +64,7 @@
     <ul id="twist-list" hx-get="/twists/templates/list" hx-trigger="load" hx-swap="innerHTML">
         <p>Loading Twists...</p>
     </ul>
-</div>
+</aside>
 
 <div id="map"></div>
 

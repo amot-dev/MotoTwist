@@ -3,14 +3,14 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from humanize import ordinal
-from sqlalchemy import func, inspect, select
+from sqlalchemy import false, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapper
-from typing import cast
+from typing import cast, Literal
 
 from app.models import PavedRating, Twist, UnpavedRating, User
 from app.schemas.ratings import AverageRating, RatingCriterion, RatingListItem
-from app.schemas.twists import TwistBasic
+from app.schemas.twists import TwistBasic, TwistUltraBasic
 
 
 # Criteria columns
@@ -27,7 +27,13 @@ RATING_CRITERIA_UNPAVED: list[RatingCriterion] = [
 ]
 
 
-async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_is_paved: bool, round_to: int) -> dict[str, AverageRating]:
+async def calculate_average_rating(
+    session: AsyncSession,
+    user: User | None,
+    twist: TwistUltraBasic,
+    filter: Literal["all", "own"],
+    round_to: int
+) -> dict[str, AverageRating]:
     """
     Calculate the average ratings for a Twist.
 
@@ -37,7 +43,7 @@ async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_i
     :param round_to: The number of decimal places to round to.
     :return: A dictionary of each criteria and its average rating.
     """
-    if twist_is_paved:
+    if twist.is_paved:
         target_model = PavedRating
         criteria_list = RATING_CRITERIA_PAVED
     else:
@@ -49,9 +55,14 @@ async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_i
     descriptions = {criteria.name: criteria.desc for criteria in criteria_list}
 
     # Query averages for target ratings columns for this twist
-    query_expressions = [func.avg(col).label(col.key) for col in criteria_columns]
+    statement = select(*[func.avg(col).label(col.key) for col in criteria_columns]).where(target_model.twist_id == twist.id)
+
+    # Filtering
+    if filter == "own":
+        statement = statement.where(target_model.author_id == user.id) if user else statement.where(false())
+
     result = await session.execute(
-        select(*query_expressions).where(target_model.twist_id == twist_id)
+        statement
     )
     averages = result.first()
 
@@ -66,6 +77,22 @@ async def calculate_average_rating(session: AsyncSession, twist_id: int, twist_i
 
 
 templates = Jinja2Templates(directory="templates")
+
+
+async def render_averages(
+    request: Request,
+    session: AsyncSession,
+    user: User | None,
+    twist: TwistUltraBasic,
+    ownership: Literal["all", "own"] = "all",
+) -> HTMLResponse:
+    """
+    Build and return the TemplateResponse for the ratings averages.
+    """
+    return templates.TemplateResponse("fragments/ratings/averages.html", {
+        "request": request,
+        "average_ratings": await calculate_average_rating(session, user, twist, ownership, round_to=1)
+    })
 
 
 async def render_rate_modal(

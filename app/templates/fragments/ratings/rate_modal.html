@@ -1,11 +1,9 @@
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
 {% call render_modal_content("Rate " ~ twist.name) %}
-<form class="rate-form" hx-post="/twists/{{ twist.id }}/ratings"
-    hx-ext="morph"
-    hx-target=".twist-item[data-twist-id='{{ twist.id }}'] .twist-dropdown"
-    hx-swap="morph:innerHTML"
-    data-paved="{{ twist.is_paved | lower }}">
+<form class="rate-form" data-paved="{{ twist.is_paved | lower }}"
+    hx-post="/twists/{{ twist.id }}/ratings"
+    hx-swap="none">
 
     <div class="form-group">
         <label for="rating-date">Rating Date</label>
