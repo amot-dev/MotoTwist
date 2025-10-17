@@ -119,31 +119,27 @@ async def render_list(
     if filter.ownership == "own":
         statement = statement.where(Twist.author_id == user.id) if user else statement.where(false())
 
-    if filter.rated == "rated":
-        if user:
-            paved_rating_exists = select(PavedRating.id).where(
-                PavedRating.twist_id == Twist.id,
-                PavedRating.author_id == user.id
-            ).exists()
-            unpaved_rating_exists = select(UnpavedRating.id).where(
-                UnpavedRating.twist_id == Twist.id,
-                UnpavedRating.author_id == user.id
-            ).exists()
-            statement = statement.where(or_(paved_rating_exists, unpaved_rating_exists))
-        else:
-            statement = statement.where(false())
+    if user and filter.rated != "all":
+        paved_rating_exists = select(PavedRating.id).where(
+            PavedRating.twist_id == Twist.id,
+            PavedRating.author_id == user.id
+        ).exists()
+        unpaved_rating_exists = select(UnpavedRating.id).where(
+            UnpavedRating.twist_id == Twist.id,
+            UnpavedRating.author_id == user.id
+        ).exists()
 
-    elif filter.rated == "unrated":
-        if user:
-            statement = statement.outerjoin(
-                PavedRating,
-                and_(PavedRating.twist_id == Twist.id, PavedRating.author_id == user.id)
-            ).outerjoin(
-                UnpavedRating,
-                and_(UnpavedRating.twist_id == Twist.id, UnpavedRating.author_id == user.id)
-            ).where(
-                and_(PavedRating.id.is_(None), UnpavedRating.id.is_(None))
-            )
+        if filter.rated == "rated":
+            # Either exists
+            statement = statement.where(or_(paved_rating_exists, unpaved_rating_exists))
+
+        elif filter.rated == "unrated":
+            # Neither exists
+            statement = statement.where(and_(~paved_rating_exists, ~unpaved_rating_exists))
+
+    elif not user and filter.rated == "rated":
+        # If user is not logged in, they can't have rated Twists
+        statement = statement.where(false())
 
     if filter.visible_ids is not None:
         if filter.visibility == "visible":

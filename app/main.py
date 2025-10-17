@@ -4,14 +4,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import httpx
+from httpx import AsyncClient, HTTPStatusError
 import json
-import os
+from pydantic_core import ErrorDetails
 from sqlalchemy import func, select
 from starlette.middleware.sessions import SessionMiddleware
 import sys
 from time import time
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, cast
 import uvicorn
 
 from app.config import logger, tags_metadata
@@ -21,7 +21,7 @@ from app.routers import admin, auth, debug, ratings, twists, users
 from app.schemas.users import UserCreate
 from app.settings import Settings, settings
 from app.users import current_active_user_optional, get_user_db, UserManager
-from app.utility import raise_http, sort_schema_names, update_schema_name
+from app.utility import format_loc_for_user, raise_http, sort_schema_names, update_schema_name
 
 
 @asynccontextmanager
@@ -76,7 +76,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """
     Catches Pydantic's validation errors and returns a neat HTTPException.
     """
-    raise_http("Error validating data", status_code=422, exception=exc)
+    first_error = cast(ErrorDetails, exc.errors()[0])
+    raise_http(f"{first_error["msg"]} ({format_loc_for_user(first_error["loc"])})", status_code=422, exception=exc)
 
 
 @app.middleware("http")
@@ -136,12 +137,12 @@ async def get_latest_version(request: Request) -> HTMLResponse:
     url = f"https://api.github.com/repos/{settings.MOTOTWIST_UPSTREAM}/releases/latest"
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with AsyncClient() as client:
             response = await client.get(url, follow_redirects=True)
             response.raise_for_status()  # Raise an exception for 4XX/5XX responses
             data = response.json()
             latest_version = data.get("tag_name")
-    except httpx.HTTPStatusError as e:
+    except HTTPStatusError as e:
         # Handle cases where the repo is not found or there are no releases
         raise_http("Could not read latest version from GitHub API",
             status_code=e.response.status_code,
@@ -197,6 +198,6 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=(os.environ.get("UVICORN_RELOAD", "FALSE").upper() == "TRUE"),
+        reload=settings.UVICORN_RELOAD,
         log_config=None # Explicitly disable Uvicorn's default logging config
     )

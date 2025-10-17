@@ -35,6 +35,38 @@ def is_form_value_string(value: UploadFile | str | None) -> TypeGuard[str]:
     return value is not None and isinstance(value, str)
 
 
+def format_loc_for_user(loc: tuple[int | str, ...]) -> str:
+    """
+    Format a Pydantic error 'loc' tuple into a user-friendly string.
+
+    :param loc: The loc tuple to format.
+    :return: A formatted loc.
+    """
+    # Skip the first part (e.g., 'body', 'query', 'path')
+    path = loc[1:]
+
+    if not path:
+        return "Unknown"
+
+    output_parts: list[str] = []
+    for item in path:
+        if isinstance(item, int):
+            if output_parts:
+                output_parts.append(" at ")
+            else:
+                output_parts.append("At ")
+            output_parts.append(f"[{item}]")
+        else:
+            if output_parts:
+                if "[" in output_parts[-1]:
+                    output_parts.append(": ")
+                else:
+                    output_parts.append(", ")
+            output_parts.append(f"{item.replace("_", " ").title()}")
+
+    return "".join(output_parts)
+
+
 def update_schema_name(app: FastAPI, function: Callable[..., Any], name: str) -> None:
     """
     Updates the Pydantic schema name for a FastAPI function that takes
