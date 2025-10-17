@@ -1,7 +1,7 @@
 from asyncio import gather
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from io import BytesIO
 import json
@@ -127,38 +127,58 @@ async def save_state(
     )
 
 
-@router.post("/load", response_class=RedirectResponse)
+@router.post("/load", response_class=Response)
 async def load_state(
     request: Request,
     json_file: UploadFile = File(...),
     admin: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_db)
-) -> RedirectResponse:
+) -> Response:
     """
     Wipes the current database state and loads a new state from an uploaded JSON file.
     """
-    contents = await json_file.read()
-    data = json.loads(contents)
-
-    # Removing users cascade deletes everything
-    await session.execute(delete(User))
+    try:
+        contents = await json_file.read()
+        data = json.loads(contents)
+    except Exception as e:
+        raise_http("Invalid JSON", status_code=422, exception=e)
     
+    # Read data
     users_data = data.get("users", [])
     twists_data = data.get("twists", [])
     paved_ratings_data = data.get("paved_ratings", [])
     unpaved_ratings_data = data.get("unpaved_ratings", [])
 
-    # Create model instances, converting types from string back to Python objects
-    users_to_create = [User(**user) for user in users_data]
-    twists_to_create = [
-        Twist(**{
-            **twist,
-            "waypoints": [Waypoint.model_validate(wp) for wp in twist.get("waypoints", [])],
-            "route_geometry": [Coordinate.model_validate(coord) for coord in twist.get("route_geometry", [])]
-        }) for twist in twists_data
-    ]
-    paved_ratings_to_create = [PavedRating(**rating) for rating in paved_ratings_data]
-    unpaved_ratings_to_create = [UnpavedRating(**rating) for rating in unpaved_ratings_data]
+    if not (users_data or twists_data or paved_ratings_data or unpaved_ratings_data):
+        raise_http("No data to load", status_code=422)
+
+    # Create model instances
+    try:
+        users_to_create = [User(**user) for user in users_data]
+    except Exception as e:
+        raise_http("Failed to parse users from JSON", status_code=422, exception=e)
+    try:
+        twists_to_create = [
+            Twist(**{
+                **twist,
+                "waypoints": [Waypoint.model_validate(wp) for wp in twist.get("waypoints", [])],
+                "route_geometry": [Coordinate.model_validate(coord) for coord in twist.get("route_geometry", [])]
+            }) for twist in twists_data
+        ]
+    except Exception as e:
+        raise_http("Failed to parse Twists from JSON", status_code=422, exception=e)
+    try:
+        paved_ratings_to_create = [PavedRating(**rating) for rating in paved_ratings_data]
+    except Exception as e:
+        raise_http("Failed to parse users from JSON", status_code=422, exception=e)
+    try:
+        unpaved_ratings_to_create = [UnpavedRating(**rating) for rating in unpaved_ratings_data]
+    except Exception as e:
+        raise_http("Failed to parse users from JSON", status_code=422, exception=e)
+
+    # Removing Twists cascade deletes all ratings
+    await session.execute(delete(Twist))
+    await session.execute(delete(User))
 
     # Add all new objects to the session for insertion
     session.add_all(users_to_create)
@@ -173,16 +193,16 @@ async def load_state(
     await reset_id_sequences_for(session, [Twist, PavedRating, UnpavedRating])
 
     request.session["flash"] = "Data loaded!"
-    return RedirectResponse(url="/", status_code=303)
+    return Response(headers={"HX-Redirect": "/"})
 
 
-@router.post("/seed-ratings", response_class=RedirectResponse)
+@router.post("/seed-ratings", response_class=Response)
 async def seed_ratings(
     request: Request,
     seed_data: Annotated[SeedRatingsForm, Form()],
     admin: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
+) -> Response:
     """
     Seed the database with procedurally generated rating data for debugging.
 
@@ -281,7 +301,7 @@ async def seed_ratings(
     await session.commit()
 
     request.session["flash"] = f"Database seeded with {len(ratings_to_add)} new ratings!"
-    return RedirectResponse(url="/", status_code=303)
+    return Response(headers={"HX-Redirect": "/"})
 
 
 @router.get("/templates/menu-button", tags=["Templates"], response_class=HTMLResponse)

@@ -30,7 +30,11 @@
         </p>
 
         <h2>Database State</h2>
-        <form class="modal-form" method="POST" action="/debug/load" enctype="multipart/form-data">
+        <form class="modal-form"
+            hx-post="/debug/load"
+            hx-swap="none"
+            hx-encoding='multipart/form-data'>
+
             <div class="form-group">
                 <input type="file" id="json-file" name="json_file" accept=".json,application/json" required>
             </div>
@@ -46,7 +50,10 @@
             </div>
         </form>
         <h2>Rating Data</h2>
-        <form class="modal-form" action="/debug/seed-ratings" method="post">
+        <form class="modal-form"
+            hx-post="/debug/seed-ratings"
+            hx-swap="none">
+
             <div class="form-group">
                 <label for="rating_count">General Rating Count</label>
                 <input type="number" id="rating_count" name="rating_count" value="100" required>

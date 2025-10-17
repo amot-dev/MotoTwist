@@ -94,8 +94,8 @@ class Twist(SerializationMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Parents
-    author_id: Mapped[UUID] = mapped_column(GUID, ForeignKey("users.id", ondelete="CASCADE"))
-    author: Mapped[User] = relationship("User", back_populates="twists")
+    author_id: Mapped[UUID | None] = mapped_column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    author: Mapped[User | None] = relationship("User", back_populates="twists")
 
     # Data
     name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
@@ -105,8 +105,8 @@ class Twist(SerializationMixin, Base):
     simplification_tolerance_m: Mapped[int] = mapped_column(SmallInteger)
 
     # Children
-    paved_ratings: Mapped[list["PavedRating"]] = relationship("PavedRating", back_populates="twist")
-    unpaved_ratings: Mapped[list["UnpavedRating"]] = relationship("UnpavedRating", back_populates="twist")
+    paved_ratings: Mapped[list["PavedRating"]] = relationship("PavedRating", back_populates="twist", cascade="all, delete-orphan")
+    unpaved_ratings: Mapped[list["UnpavedRating"]] = relationship("UnpavedRating", back_populates="twist", cascade="all, delete-orphan")
 
     def __repr__(self):
         paved = "Paved" if self.is_paved else "Unpaved"
@@ -119,8 +119,8 @@ class PavedRating(SerializationMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     # Parents
-    author_id: Mapped[UUID] = mapped_column(GUID, ForeignKey("users.id", ondelete="CASCADE"))
-    author: Mapped[User] = relationship("User", back_populates="paved_ratings")
+    author_id: Mapped[UUID | None] = mapped_column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    author: Mapped[User | None] = relationship("User", back_populates="paved_ratings")
 
     twist_id: Mapped[int] = mapped_column(Integer, ForeignKey("twists.id", ondelete="CASCADE"))
     twist: Mapped[Twist] = relationship("Twist", back_populates="paved_ratings")
@@ -145,8 +145,8 @@ class UnpavedRating(SerializationMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     # Parents
-    author_id: Mapped[UUID] = mapped_column(GUID, ForeignKey("users.id", ondelete="CASCADE"))
-    author: Mapped[User] = relationship("User", back_populates="unpaved_ratings")
+    author_id: Mapped[UUID | None] = mapped_column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    author: Mapped[User | None] = relationship("User", back_populates="unpaved_ratings")
 
     twist_id: Mapped[int] = mapped_column(Integer, ForeignKey("twists.id", ondelete="CASCADE"))
     twist: Mapped[Twist] = relationship("Twist", back_populates="unpaved_ratings")

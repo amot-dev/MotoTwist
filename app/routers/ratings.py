@@ -247,6 +247,8 @@ async def serve_view_modal(
         criteria_list = RATING_CRITERIA_UNPAVED
 
     # Sort ratings with most recent first
-    sorted_ratings = sorted(ratings, key=lambda r: r.rating_date, reverse=True) if ratings else []
+    sorted_ratings: list[PavedRating] | list[UnpavedRating] = sorted(
+        ratings, key=lambda r: r.rating_date, reverse=True
+    ) if ratings else []
 
     return await render_view_modal(request, user, twist, sorted_ratings, criteria_list)

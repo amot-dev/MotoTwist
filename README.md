@@ -57,6 +57,7 @@ Below is an overview of all available environment variables for MotoTwist.
 | `MOTOTWIST_ADMIN_EMAIL` | The email to use for creating the initial admin user. Only affects initial container setup. **This should be changed for production!** | `"admin@admin.com"` |
 | `MOTOTWIST_ADMIN_PASSWORD` | The password to assign to the initial admin user. Only affects initial container setup. Do not set to final wanted password. | `"password"` |
 | `ALLOW_USER_REGISTRATION` | Whether or not users are allowed to register for your instance. If `False`, users may only be created by an administrator. | `False` |
+| `DELETED_USER_NAME` | The name to use for resources created by a now deleted user. Prevents creating new users with this name. | `"Deleted User"` |
 
 #### Database Options
 

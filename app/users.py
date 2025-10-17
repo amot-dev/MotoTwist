@@ -1,7 +1,8 @@
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+from fastapi_users import BaseUserManager, FastAPIUsers, schemas, UUIDIDMixin
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport, RedisStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
+from fastapi_users.exceptions import FastAPIUsersException
 import redis.asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, AsyncGenerator
@@ -13,6 +14,9 @@ from app.models import User
 from app.schemas.users import UserCreate
 from app.settings import settings
 
+class InvalidUsernameException(FastAPIUsersException):
+    pass
+
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
     reset_password_token_secret = settings.MOTOTWIST_SECRET_KEY
@@ -22,10 +26,16 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
         super().__init__(*args, **kwargs)
         self.generated_token: str | None = None
 
-    async def create(self, user_create: UserCreate, safe: bool = False, request: Request | None = None) -> User: # pyright: ignore [reportIncompatibleMethodOverride]
-        # If a name isn't provided, create one from the email
-        if user_create.name is None:
-            user_create.name = user_create.email.partition("@")[0]
+    async def create(self, user_create: schemas.BaseUserCreate, safe: bool = False, request: Request | None = None) -> User:
+        if isinstance(user_create, UserCreate):
+
+            # If a name isn't provided, create one from the email
+            if user_create.name is None:
+                user_create.name = user_create.email.partition("@")[0]
+
+            # Prevent naming to deleted user name
+            if user_create.name == settings.DELETED_USER_NAME:
+                raise InvalidUsernameException
 
         # Call the original create method to finish the process
         created_user = await super().create(user_create, safe, request)

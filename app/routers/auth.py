@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Form, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from fastapi_users.authentication import RedisStrategy
@@ -99,12 +99,12 @@ async def render_register_page(request: Request) -> HTMLResponse:
     })
 
 
-@router.post("/reset-password", response_class=RedirectResponse)
+@router.post("/reset-password", response_class=Response)
 async def reset_password(
     request: Request,
     reset_form: Annotated[ResetPasswordForm, Form()],
     user_manager: UserManager = Depends(get_user_manager),
-) -> RedirectResponse:
+) -> Response:
     """
     Reset a user password by token, then redirect to the main page of MotoTwist.
     """
@@ -117,7 +117,7 @@ async def reset_password(
         raise_http("This link is invalid or has expired", status_code=400)
 
     request.session["flash"] = "Password updated!"
-    return RedirectResponse(url="/", status_code=303)
+    return Response(headers={"HX-Redirect": "/"})
 
 
 @router.get("/reset-password", tags=["Index", "Templates"], response_class=HTMLResponse)

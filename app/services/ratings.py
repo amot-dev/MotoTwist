@@ -11,6 +11,7 @@ from typing import cast, Literal
 from app.models import PavedRating, Twist, UnpavedRating, User
 from app.schemas.ratings import AverageRating, RatingCriterion, RatingListItem
 from app.schemas.twists import TwistBasic, TwistUltraBasic
+from app.settings import settings
 
 
 # Criteria columns
@@ -118,7 +119,7 @@ async def render_view_modal(
     request: Request,
     user: User | None,
     twist: Twist,
-    ratings: list[PavedRating],
+    ratings: list[PavedRating] | list[UnpavedRating],
     criteria_list: list[RatingCriterion]
 ) -> HTMLResponse:
     """
@@ -135,12 +136,15 @@ async def render_view_modal(
         ordinal_day = ordinal(rating.rating_date.day)
         formatted_date = rating.rating_date.strftime(f"%B {ordinal_day}, %Y")
 
+        # Set author name whether they exist or not
+        author_name = rating.author.name if rating.author else settings.DELETED_USER_NAME
+
         # Check if the user is allowed to delete the rating
         can_delete_rating = (user.is_superuser or user.id == rating.author_id) if user else False
 
         ratings_for_template.append(RatingListItem(
             id=rating.id,
-            author_name=rating.author.name,
+            author_name=author_name,
             can_delete_rating=can_delete_rating,
             formatted_date=formatted_date,
             ratings=ratings_dict

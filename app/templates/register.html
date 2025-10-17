@@ -6,7 +6,9 @@
         <h1>Create a new account</h1>
         <p>Please choose a new password for your account.</p>
 
-        <form class="modal-form" method="POST" action="/users">
+        <form class="modal-form"
+            hx-post="/users"
+            hx-swap="none">
 
             <div class="form-group">
                 <label for="name">Name</label>

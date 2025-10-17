@@ -16,7 +16,7 @@ from app.schemas.admin import UserCreateFormAdmin
 from app.schemas.users import UserCreate, UserUpdate
 from app.services.admin import is_last_active_admin
 from app.settings import settings
-from app.users import current_admin_user, get_user_manager, UserManager
+from app.users import current_admin_user, get_user_manager, InvalidUsernameException, UserManager
 from app.utility import raise_http
 
 
@@ -57,7 +57,10 @@ async def create_user(
         is_superuser=user_form.is_superuser,
         is_verified=True,
     )
-    user = await user_manager.create(user_data, request=request)
+    try:
+        user = await user_manager.create(user_data, request=request)
+    except InvalidUsernameException as e:
+        raise_http("Invalid username", status_code=422, exception=e)
 
     # Generate a password-reset token for the new user
     await user_manager.forgot_password(user)

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     MOTOTWIST_ADMIN_EMAIL: str = "admin@admin.com"
     MOTOTWIST_ADMIN_PASSWORD: str = "password"
     ALLOW_USER_REGISTRATION: bool = False
+    DELETED_USER_NAME: str = "Deleted User"
 
     # Database Options
     POSTGRES_HOST: str = "db"
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     # Developer Options
     LOG_LEVEL: str = "INFO"
     DEBUG_MODE: bool = False
+    UVICORN_RELOAD: bool = False
     MOTOTWIST_UPSTREAM: str = "amot-dev/mototwist"
 
     # Do not change unless you want to be rate-limited by the GitHub API during development

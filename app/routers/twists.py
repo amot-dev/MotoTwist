@@ -184,7 +184,7 @@ async def serve_dropdown(
     try:
         result = await session.execute(
             select(*TwistDropdown.fields)
-            .join(Twist.author)
+            .join(Twist.author, isouter=True)
             .where(Twist.id == twist_id)
         )
         twist = TwistDropdown.model_validate(result.one())

@@ -4,7 +4,8 @@
 <p>Are you sure you want to delete the twist "<strong>{{ twist.name }}</strong>"?</p>
 <p>This action cannot be undone.</p>
 
-<form hx-delete="/twists/{{ twist.id }}"
+<form class="modal-form"
+    hx-delete="/twists/{{ twist.id }}"
     hx-target=".twist-item[data-twist-id='{{ twist.id }}']"
     hx-swap="outerHTML swap:500ms">
 

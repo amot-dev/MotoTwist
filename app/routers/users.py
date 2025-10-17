@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas.users import UserCreate, UserCreateForm, UserUpdate, UserUpdateForm
 from app.services.admin import is_last_active_admin
-from app.users import current_active_user, get_user_manager, UserManager
+from app.users import current_active_user, get_user_manager, InvalidUsernameException, UserManager
 from app.utility import raise_http
 
 
@@ -21,13 +21,12 @@ router = APIRouter(
     tags=["Users"]
 )
 
-
-@router.post("", response_class=RedirectResponse)
+@router.post("", response_class=Response)
 async def create_user(
     request: Request,
     user_form: Annotated[UserCreateForm, Form()],
     user_manager: UserManager = Depends(get_user_manager)
-) -> RedirectResponse:
+) -> Response:
     """
     Create a new user. Self-serve.
     """
@@ -51,11 +50,13 @@ async def create_user(
 
     try:
         await user_manager.create(user_data, request=request)
+    except InvalidUsernameException as e:
+        raise_http("Invalid username", status_code=422, exception=e)
     except InvalidPasswordException as e:
         raise_http("Invalid password", status_code=422, exception=e)
 
     request.session["flash"] = "User created!"
-    return RedirectResponse(url="/", status_code=303)
+    return Response(headers={"HX-Redirect": "/"})
 
 
 @router.put("", response_class=HTMLResponse)
@@ -93,6 +94,8 @@ async def update_user(
     if user_updates.model_dump(exclude_unset=True):
         try:
             await user_manager.update(user_updates, user, request=request)
+        except InvalidUsernameException as e:
+            raise_http("Invalid username", status_code=422, exception=e)
         except InvalidPasswordException as e:
             raise_http("Invalid password", status_code=422, exception=e)
 
