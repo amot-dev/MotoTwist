@@ -351,9 +351,6 @@ function createPopupContent(marker) {
         if (event.key === 'Enter') {
             event.preventDefault();
             map.closePopup();
-
-            // Update icon
-            updateMarkerIcon(marker, waypoint, index, totalMarkers);
         }
     });
 
@@ -608,6 +605,11 @@ map.on('click', function(e) {
             waypoints[index].latlng = event.target.getLatLng();
             updateRoute();
         }
+    });
+
+    // Listen for the marker's popup being closed and update icons
+    marker.getPopup().on('remove', function() {
+        updateMarkerIcons();
     });
 
     // Update the route line with the new waypoint
