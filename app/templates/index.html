@@ -217,5 +217,6 @@
         crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script src="{{ url_for('static', path='/js/script.js') }}"></script>
+
+    <script type="module" src="{{ url_for('static', path='/js/main.js') }}" defer></script>
 {% endblock %}

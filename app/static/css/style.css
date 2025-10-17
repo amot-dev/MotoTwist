@@ -958,6 +958,8 @@ aside {
 #modal-rate-twist .modal-form {
     &[data-paved="false" i] {
         --accent: var(--accent-orange);
+        --accent-hover: var(--accent-orange-hover);
+        --accent-hover-light: var(--accent-orange-hover-light);
     }
     &input[type="range"] {
         accent-color: var(--accent);

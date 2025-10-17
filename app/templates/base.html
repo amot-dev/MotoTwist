@@ -38,7 +38,8 @@
     </script>
     <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
     <script src="https://unpkg.com/htmx-ext-json-enc@2.0.2/json-enc.js"></script>
-    <script src="{{ url_for('static', path='/js/utils.js') }}"></script>
+
+    <script type="module" src="{{ url_for('static', path='/js/site.js') }}" defer></script>
     {% endblock %}
 </body>
 </html>
