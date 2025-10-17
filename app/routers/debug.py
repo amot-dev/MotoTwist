@@ -15,6 +15,7 @@ from uuid import UUID
 from app.database import get_db
 from app.models import PavedRating, Twist, UnpavedRating, User
 from app.schemas.debug import SeedRatingsForm
+from app.schemas.types import Coordinate, Waypoint
 from app.services.debug import create_random_rating, generate_weights, reset_id_sequences_for
 from app.settings import settings
 from app.users import current_active_user_optional, current_admin_user
@@ -148,31 +149,16 @@ async def load_state(
     unpaved_ratings_data = data.get("unpaved_ratings", [])
 
     # Create model instances, converting types from string back to Python objects
-    users_to_create = [
-        User(**{
-            **user, "id": UUID(user["id"])
-        }) for user in users_data
-    ]
+    users_to_create = [User(**user) for user in users_data]
     twists_to_create = [
         Twist(**{
             **twist,
-            "author_id": UUID(twist["author_id"])
+            "waypoints": [Waypoint.model_validate(wp) for wp in twist.get("waypoints", [])],
+            "route_geometry": [Coordinate.model_validate(coord) for coord in twist.get("route_geometry", [])]
         }) for twist in twists_data
     ]
-    paved_ratings_to_create = [
-        PavedRating(**{
-            **rating,
-            "author_id": UUID(rating["author_id"]),
-            "rating_date": date.fromisoformat(rating["rating_date"])
-        }) for rating in paved_ratings_data
-    ]
-    unpaved_ratings_to_create = [
-        UnpavedRating(**{
-            **rating,
-            "author_id": UUID(rating["author_id"]),
-            "rating_date": date.fromisoformat(rating["rating_date"])
-        }) for rating in unpaved_ratings_data
-    ]
+    paved_ratings_to_create = [PavedRating(**rating) for rating in paved_ratings_data]
+    unpaved_ratings_to_create = [UnpavedRating(**rating) for rating in unpaved_ratings_data]
 
     # Add all new objects to the session for insertion
     session.add_all(users_to_create)

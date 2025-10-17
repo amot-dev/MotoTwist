@@ -49,7 +49,7 @@ async def calculate_average_rating(
     else:
         target_model = UnpavedRating
         criteria_list = RATING_CRITERIA_UNPAVED
-    criteria_columns = [getattr(target_model, criteria.name) for criteria in criteria_list]
+    criteria_columns = [getattr(target_model, criterion.name) for criterion in criteria_list]
 
     # Create a lookup dictionary for descriptions for easy access
     descriptions = {criteria.name: criteria.desc for criteria in criteria_list}
@@ -124,14 +124,12 @@ async def render_view_modal(
     """
     Build and return the TemplateResponse for the rate modal.
     """
-    criteria_names = {criteria.name for criteria in criteria_list}
-
     # Structure data for the template
     ratings_for_template: list[RatingListItem] = []
     for rating in ratings:
         ratings_dict = {
-            key: value for key, value in rating.__dict__.items()
-            if key in criteria_names and isinstance(value, int)
+            criterion.name: getattr(rating, criterion.name)
+            for criterion in criteria_list
         }
         # Pre-format the date for easier display in the template
         ordinal_day = ordinal(rating.rating_date.day)

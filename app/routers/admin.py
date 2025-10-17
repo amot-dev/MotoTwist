@@ -1,21 +1,20 @@
-
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import UserNotExists
 import json
 from secrets import choice
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped
 from string import ascii_letters, digits
-from typing import Annotated, cast
+from typing import Annotated
 from uuid import UUID
 
 from app.database import get_db
 from app.models import User
 from app.schemas.admin import UserCreateFormAdmin
 from app.schemas.users import UserCreate, UserUpdate
+from app.services.admin import is_last_active_admin
 from app.settings import settings
 from app.users import current_admin_user, get_user_manager, UserManager
 from app.utility import raise_http
@@ -97,24 +96,14 @@ async def delete_user(
         raise_http(f"User with id '{user_id}' not found", status_code=404)
 
     # Prevent last active admin from being deleted
-    if user.is_superuser and user.is_active:
-        result = await session.scalars(
-            select(func.count(
-                cast(Mapped[UUID], User.id)
-            )).where(
-                cast(Mapped[bool], User.is_active),
-                cast(Mapped[bool], User.is_superuser)
-            )
-        )
-        admin_count = result.one()
-
-        if admin_count <= 1:
-            raise_http("Cannot delete the last administrator", status_code=403)
+    if await is_last_active_admin(session, user):
+        raise_http("Cannot delete the last active administrator", status_code=403)
 
     await user_manager.delete(user, request=request)
 
     events = {
         "flashMessage": "User deleted!",
+        "authChange": ""
     }
     response = HTMLResponse(content="")
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
@@ -142,28 +131,22 @@ async def toggle_user_active(
         raise_http(f"User with id '{user_id}' not found", status_code=404)
 
     # Prevent last active admin from being disabled
-    if user.is_superuser and user.is_active:
-        result = await session.scalars(
-            select(func.count(
-                cast(Mapped[UUID], User.id)
-            )).where(
-                cast(Mapped[bool], User.is_active),
-                cast(Mapped[bool], User.is_superuser)
-            )
-        )
-        admin_count = result.one()
-
-        if admin_count <= 1:
-            raise_http("Cannot disable the last administrator", status_code=403)
+    if await is_last_active_admin(session, user):
+        raise_http("Cannot disable the last active administrator", status_code=403)
 
     user_updates = UserUpdate()
     user_updates.is_active = not user.is_active
     await user_manager.update(user_updates, user, request=request)
 
-    return templates.TemplateResponse("fragments/admin/settings_user.html", {
+    events = {
+        "authChange": ""
+    }
+    response = templates.TemplateResponse("fragments/admin/settings_user.html", {
         "request": request,
         "user": user
     })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
 
 
 @router.post("/users/{user_id}/toggle/admin", response_class=HTMLResponse)
@@ -187,28 +170,22 @@ async def toggle_user_admin(
         raise_http(f"User with id '{user_id}' not found", status_code=404)
 
     # Prevent last active admin from losing privileges
-    if user.is_superuser:
-        result = await session.scalars(
-            select(func.count(
-                cast(Mapped[UUID], User.id)
-            )).where(
-                cast(Mapped[bool], User.is_active),
-                cast(Mapped[bool], User.is_superuser)
-            )
-        )
-        admin_count = result.one()
-
-        if admin_count <= 1:
-            raise_http("Cannot remove privileges from the last administrator", status_code=403)
+    if await is_last_active_admin(session, user):
+        raise_http("Cannot remove privileges from the last active administrator", status_code=403)
 
     user_updates = UserUpdate()
     user_updates.is_superuser = not user.is_superuser
     await user_manager.update(user_updates, user, request=request)
 
-    return templates.TemplateResponse("fragments/admin/settings_user.html", {
+    events = {
+        "authChange": ""
+    }
+    response = templates.TemplateResponse("fragments/admin/settings_user.html", {
         "request": request,
         "user": user
     })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
 
 
 @router.get("/templates/settings-modal", tags=["Templates"], response_class=HTMLResponse)
@@ -225,7 +202,7 @@ async def render_settings_modal(
         raise_http("Unauthorized", status_code=401)
 
     result = await session.scalars(
-        select(User)
+        select(User).order_by(User.name)
     )
     users = result.all()
 

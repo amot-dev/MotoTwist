@@ -3,11 +3,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.exceptions import InvalidPasswordException, UserNotExists
 import json
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
 from app.config import logger
+from app.database import get_db
 from app.models import User
 from app.schemas.users import UserCreate, UserCreateForm, UserUpdate, UserUpdateForm
+from app.services.admin import is_last_active_admin
 from app.users import current_active_user, get_user_manager, UserManager
 from app.utility import raise_http
 
@@ -60,7 +63,7 @@ async def update_user(
     request: Request,
     user_form: Annotated[UserUpdateForm, Form()],
     user: User = Depends(current_active_user),
-    user_manager: UserManager = Depends(get_user_manager),
+    user_manager: UserManager = Depends(get_user_manager)
 ) -> HTMLResponse:
     """
     Update the current user. Self-serve.
@@ -105,19 +108,25 @@ async def update_user(
     return response
 
 
-@router.delete("/", response_class=HTMLResponse)
+@router.delete("", response_class=HTMLResponse)
 async def delete_user(
     request: Request,
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
+    session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Delete the current user. Self-serve.
     """
+    # Prevent last active admin from being deleted
+    if await is_last_active_admin(session, user):
+        raise_http("Cannot delete the last active administrator", status_code=403)
+
     await user_manager.delete(user, request=request)
 
     events = {
         "flashMessage": "Account deleted!",
+        "authChange": "",
         "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
@@ -133,14 +142,20 @@ async def deactivate_user(
     request: Request,
     user: User = Depends(current_active_user),
     user_manager: UserManager = Depends(get_user_manager),
+    session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Deactivate the current user. Self-serve.
     """
+    # Prevent last active admin from being disabled
+    if await is_last_active_admin(session, user):
+        raise_http("Cannot disable the last active administrator", status_code=403)
+
     await user_manager.update(UserUpdate(is_active=False), user, request=request)
 
     events = {
         "flashMessage": "Account deactivated!",
+        "authChange": "",
         "closeModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
