@@ -2,30 +2,34 @@
     {% if user %}
     <button class="button button-block auth-display">{{ user.name }}</button>
     <div class="auth-dropdown-menu">
-        <a href="#modal-profile"
+        <button class="button button-block" onclick="document.querySelector('#modal-profile').showModal()"
             hx-get="/users/templates/profile-modal"
             hx-target="#modal-profile"
             hx-swap="innerHTML">
 
             Profile
-        </a>
+        </button>
+
         {% if user.is_superuser %}
-        <a href="#modal-admin-settings"
+        <button class="button button-block" onclick="document.querySelector('#modal-admin-settings').showModal()"
             hx-get="/admin/templates/settings-modal"
             hx-target="#modal-admin-settings"
             hx-swap="innerHTML">
 
             Admin Settings
-        </a>
+        </button>
         {% endif %}
-        <a hx-post="/logout"
+        <button class="button button-block"
+            hx-post="/logout"
             hx-target="#auth-widget"
             hx-swap="outerHTML">
 
             Logout
-        </a>
+        </button>
     </div>
     {% else %}
-    <a href="#modal-login" class="button button-block button-login">Login</a>
+    <button class="button button-block auth-button" onclick="document.querySelector('#modal-login').showModal()">
+        Login
+    </button>
     {% endif %}
 </div>

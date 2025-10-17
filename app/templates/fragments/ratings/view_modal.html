@@ -5,17 +5,18 @@
     {% if ratings %}
     {% for rating_entry in ratings %}
     <div class="rating-card scroll-shut-on-delete">
-        <h3>{{ rating_entry.formatted_date }}<span class="author"> by {{ rating_entry.author_name }}</span></h3>
-        {% if rating_entry.can_delete_rating %}
-        <a href="#modal-view-twist-ratings" class="button button-link"
-            hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
-            hx-target="closest .rating-card"
-            hx-swap="outerHTML swap:500ms"
-            hx-on::after-request="htmx.trigger('.twist-dropdown', 'ratingDeleted-{{ twist.id }}')">
+        <header>
+            <h3>{{ rating_entry.formatted_date }}<span class="author"> by {{ rating_entry.author_name }}</span></h3>
+            {% if rating_entry.can_delete_rating %}
+            <button class="button button-link"
+                hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
+                hx-target="closest .rating-card"
+                hx-swap="outerHTML swap:500ms">
 
-            <i class="fa-solid fa-trash"></i>
-        </a>
-        {% endif %}
+                <i class="fa-solid fa-trash"></i>
+            </button>
+            {% endif %}
+        </header>
         <ul>
             {% for criteria, rating in rating_entry.ratings.items() %}
             {{ render_rating(criteria, rating) }}

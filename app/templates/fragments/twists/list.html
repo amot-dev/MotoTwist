@@ -1,6 +1,6 @@
 {% for twist in twists %}
 <li class="twist-item scroll-shut-on-delete" data-twist-id="{{ twist.id }}" data-paved="{{ twist.is_paved }}">
-    <div class="twist-header"
+    <header class="twist-header"
         hx-get="/twists/{{ twist.id }}/templates/dropdown"
         hx-target="next .twist-dropdown"
         hx-swap="innerHTML"
@@ -17,7 +17,7 @@
         <span class="visibility-toggle" title="Toggle visibility">
             <i class="far fa-eye"></i>
         </span>
-    </div>
+    </header>
     <div class="twist-dropdown"
         hx-ext="morph"
         hx-get="/twists/{{ twist.id }}/templates/dropdown"

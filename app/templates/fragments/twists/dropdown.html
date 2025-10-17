@@ -1,23 +1,21 @@
 <p class="author">Created by {{ twist_author_name }}</p>
 <header>
     <h4>Average Rating</h4>
-    <a id="modal-rate-twist-button"
-        href="#modal-rate-twist"
-        class="button button-very-small button-block"
+    <button class="button button-very-small button-block" onclick="document.querySelector('#modal-rate-twist').showModal()"
         hx-get="/twists/{{ twist_id }}/ratings/templates/rate-modal"
         hx-target="#modal-rate-twist"
         hx-swap="innerHTML">
 
         Rate
-    </a>
+    </button>
 </header>
 
-<form class="average-filters"
+<form class="filter-form"
     hx-get="/twists/{{ twist_id }}/ratings/templates/averages"
     hx-ext="morph"
     hx-target="next .averages-list"
     hx-swap="morph:innerHTML"
-    hx-trigger="change, refreshAverages from:body">
+    hx-trigger="change, refreshAverages[event.detail.value == '{{ twist_id }}'] from:body">
 
     <fieldset class="filter-fieldset">
         <div class="filter-group" title="Filter between all or your Twists">
@@ -35,26 +33,24 @@
 
 <footer>
     {% if average_ratings %}
-    <a class="view-twist-button button button-link"
-        href="#modal-view-twist-ratings"
+    <button class="button button-very-small button-link" onclick="document.querySelector('#modal-view-twist-ratings').showModal()"
         hx-get="/twists/{{ twist_id }}/ratings/templates/view-modal"
         hx-target="#modal-view-twist-ratings"
         hx-swap="innerHTML">
 
         See all
-    </a>
+    </button>
     {% else %}
     <p class="no-ratings">No ratings yet</p>
     {% endif %}
 
     {% if can_delete_twist %}
-    <a class="delete-twist-button button button-link"
-        href="#modal-delete-twist"
+    <button class="button button-very-small button-link" onclick="document.querySelector('#modal-delete-twist').showModal()"
         hx-get="/twists/{{ twist_id }}/templates/delete-modal"
         hx-target="#modal-delete-twist"
         hx-swap="innerHTML">
 
         <i class="fa-solid fa-trash"></i>
-    </a>
+    </button>
     {% endif %}
 </footer>

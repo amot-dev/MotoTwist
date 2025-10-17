@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="centered-container">
-    <div class="modal-content">
+    <div class="modal">
         <h1>Debug Menu</h1>
 
         <p>
@@ -30,7 +30,7 @@
         </p>
 
         <h2>Database State</h2>
-        <form method="POST" action="/debug/load" enctype="multipart/form-data">
+        <form class="modal-form" method="POST" action="/debug/load" enctype="multipart/form-data">
             <div class="form-group">
                 <input type="file" id="json-file" name="json_file" accept=".json,application/json" required>
             </div>
@@ -39,14 +39,14 @@
                 <button type="submit" class="button button-block">Load State</button>
             </div>
         </form>
-        <form method="POST" action="/debug/save">
+        <form class="modal-form" method="POST" action="/debug/save">
             <div class="button-group">
                 <span class="debug-label">Save the database state to a JSON file</span>
                 <button type="submit" class="button button-block">Save State</button>
             </div>
         </form>
         <h2>Rating Data</h2>
-        <form action="/debug/seed-ratings" method="post">
+        <form class="modal-form" action="/debug/seed-ratings" method="post">
             <div class="form-group">
                 <label for="rating_count">General Rating Count</label>
                 <input type="number" id="rating_count" name="rating_count" value="100" required>
@@ -68,7 +68,7 @@
                 <button type="submit" class="button button-block">Seed Data</button>
             </div>
         </form>
-        <form method="GET" action="/">
+        <form class="modal-form" method="GET" action="/">
             <div class="button-group">
                 <span class="debug-label">Return to MotoTwist</span>
                 <button type="submit" class="button button-block">Done</button>

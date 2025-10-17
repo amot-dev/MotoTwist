@@ -1,18 +1,23 @@
 {# Render modal content with a consistent header and close button #}
 {% macro render_modal_content(title) %}
-<div class="modal-content">
-    <a href="#" class="close">&times;</a>
-    <h1>{{ title }}</h1>
+<button class="button close" onclick="this.closest('dialog').close()">
+    &times;
+</button>
+<h1>{{ title }}</h1>
 
-    {{ caller() }}
-</div>
+{{ caller() }}
+
+
 {% endmacro %}
 
 
 {# Render a consistent form button group #}
 {% macro render_form_buttons(submit_text="Submit", submit_extra_classes="", submit_disabled=false) %}
 <div class="button-group">
-    <a href="#" class="button button-block button-cancel">Cancel</a>
+    <button class="button button-block button-cancel" type="button"
+        onclick="this.closest('dialog').close()">
+        Cancel
+    </button>
     <button class="button button-block {{ submit_extra_classes | trim }}" type="submit"
         {% if submit_disabled %}disabled{% endif %}>
 

@@ -3,9 +3,17 @@
     hx-swap="outerHTML">
 
     {% if user %}
-    <button id="start-new-twist" class="button create-twist-button" href="#">New Twist</button>
-    <a id="finalize-new-twist" class="button create-twist-button gone" href="#modal-create-twist">Finalize</a>
-    <button id="cancel-new-twist" class="button create-twist-button button-cancel gone">Cancel</button>
+    <button id="start-new-twist" class="button button-block twist-creation-button">
+        New Twist
+    </button>
+    <button id="finalize-new-twist" class="button button-block twist-creation-button gone"
+        onclick="document.querySelector('#modal-create-twist').showModal()">
+
+        Finalize
+    </button>
+    <button id="cancel-new-twist" class="button button-block button-cancel twist-creation-button gone">
+        Cancel
+    </button>
     {% else %}
     <h4>Register or Login to create Twists!</h4>
     {% endif %}

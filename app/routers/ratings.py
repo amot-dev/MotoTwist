@@ -93,7 +93,7 @@ async def create_rating(
     events = {
         "flashMessage": "Twist rated successfully!",
         "closeModal": "",
-        "refreshAverages": ""
+        "refreshAverages": f"{twist_id}"
     }
     response = HTMLResponse(content="")
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
@@ -158,7 +158,8 @@ async def delete_rating(
         response = HTMLResponse(content="<p>No ratings yet</p>")
 
     events = {
-        "flashMessage": "Rating removed successfully!"
+        "flashMessage": "Rating removed successfully!",
+        "refreshAverages": f"{twist_id}"
     }
     response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
     return response

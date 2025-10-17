@@ -81,14 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Listen for the custom event sent from the server when a form needs to be cleared
 document.body.addEventListener('resetForm', () => {
-    forms = document.querySelectorAll('form');
+    forms = document.querySelectorAll('.modal-form');
     forms.forEach(form => form.reset());
 });
 
 // Listen for the custom event sent from the server when a modal needs to be closed
 document.body.addEventListener('closeModal', () => {
-    location.hash='';
-    forms = document.querySelectorAll('form');
+    modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => modal.close());
+    forms = document.querySelectorAll('.modal-form');
     forms.forEach(form => form.reset());
     stopTwistCreation();
 });
@@ -96,7 +97,7 @@ document.body.addEventListener('closeModal', () => {
 // Copy button
 document.body.addEventListener('click', function(event) {
     // Find the button that was clicked
-    const copyButton = event.target.closest('.button-copy-input');
+    const copyButton = event.target.closest('.button-copy-link');
 
     // If a copy button wasn't clicked or it's already copied, do nothing
     if (!copyButton || copyButton.classList.contains('copied')) {

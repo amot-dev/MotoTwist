@@ -4,14 +4,14 @@
         <span class="user-email">{{ user.email }}</span>
         
         {% if reset_password_link %}
-        <div class="link-display-container">
+        <div class="copy-link-display">
             <input type="text"
-                class="password-link-input"
+                class="copy-link"
                 id="password-link-for-{{ user.id }}"
                 value="{{ reset_password_link }}"
                 readonly
                 title="Reset password link">
-            <button class="button-copy-input"
+            <button class="button-copy-link"
                 data-target-id="password-link-for-{{ user.id }}"
                 title="Copy to clipboard">
 

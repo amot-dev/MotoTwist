@@ -1,7 +1,7 @@
 {% from "fragments/_macros.html" import render_modal_content, render_form_buttons %}
 
 {% call render_modal_content("Rate " ~ twist.name) %}
-<form class="rate-form" data-paved="{{ twist.is_paved | lower }}"
+<form class="modal-form" data-paved="{{ twist.is_paved | lower }}"
     hx-post="/twists/{{ twist.id }}/ratings"
     hx-swap="none">
 
