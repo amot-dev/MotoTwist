@@ -18,12 +18,7 @@
             <i class="far fa-eye"></i>
         </span>
     </header>
-    <div class="twist-dropdown"
-        hx-ext="morph"
-        hx-get="/twists/{{ twist.id }}/templates/dropdown"
-        hx-trigger="ratingDeleted-{{ twist.id }} from:body"
-        hx-swap="morph:innerHTML">
-
+    <div class="twist-dropdown">
         <p class="loading">Loading...</p>
     </div>
 </li>

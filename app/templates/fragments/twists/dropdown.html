@@ -1,6 +1,7 @@
 <p class="author">Created by {{ twist_author_name }}</p>
 <header>
     <h4>Average Rating</h4>
+    {% if user %}
     <button class="button button-very-small button-block" onclick="document.querySelector('#modal-rate-twist').showModal()"
         hx-get="/twists/{{ twist_id }}/ratings/templates/rate-modal"
         hx-target="#modal-rate-twist"
@@ -8,6 +9,7 @@
 
         Rate
     </button>
+    {% endif %}
 </header>
 
 <form class="filter-form"
