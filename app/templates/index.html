@@ -169,7 +169,7 @@
 
 <dialog id="modal-create-twist" class="modal">
     {% call render_modal_content("New Twist") %}
-    <form class="modal-form"
+    <form class="modal-form manual-validation"
         hx-post="/twists"
         hx-target="#twist-list"
         hx-swap="afterbegin"
@@ -192,7 +192,7 @@
 
         <div id="route-status-indicator" class="gone"></div>
 
-        {{ render_form_buttons(submit_text="Create Twist", submit_disabled=true) }}
+        {{ render_form_buttons(submit_text="Create Twist") }}
     </form>
     {% endcall %}
 </dialog>

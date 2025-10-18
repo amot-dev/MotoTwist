@@ -55,13 +55,16 @@ function registerServerCommandListeners() {
         const profileForms = profileModal.querySelectorAll('.modal-form')
         profileForms.forEach(form => {
             const submitButton = form.querySelector('button[type="submit"]');
-            if (!(submitButton instanceof HTMLButtonElement)) throw new Error("Critical element button[type=\"submit\"] is missing from .modal-form or not a <button>!");
+            if (!(submitButton instanceof HTMLButtonElement)) return;
+
+            // Set initial disabled state
+            submitButton.disabled = true;
 
             // Disable submit button if form matches original data
             const originalFormData = getFormDataAsString(form);
             form.addEventListener('input', () => {
                 const currentFormData = getFormDataAsString(form);
-                submitButton.disabled = (originalFormData === currentFormData);
+                submitButton.disabled = (!form.checkValidity() || originalFormData === currentFormData);
             });
         });
     })

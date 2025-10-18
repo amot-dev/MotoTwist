@@ -117,3 +117,30 @@ export function getFormDataAsString(formElement) {
     const params = new URLSearchParams(entries);
     return params.toString();
 }
+
+
+/**
+ * The internal logic that finds and validates forms within a given element.
+ * @param {Document | Element} [scope=document] - The element to search within for new forms.
+ */
+export function validateFormsInScope(scope = document) {
+    /** @type {NodeListOf<HTMLFormElement>} */
+    // Select all forms in scope that haven't been processed
+    const forms = scope.querySelectorAll('form:not(.manual-validation):not(.validation-registered)');
+    forms.forEach(form => {
+        // Don't do anything if no submit button
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (!(submitButton instanceof HTMLButtonElement)) return;
+
+        // Add the marker class to prevent duplicate listeners
+        form.classList.add('validation-registered');
+
+        // Set the initial disabled state
+        submitButton.disabled = !form.checkValidity();
+
+        // Disable submit button if form is empty
+        form.addEventListener('input', () => {
+            submitButton.disabled = !form.checkValidity();
+        });
+    });
+}

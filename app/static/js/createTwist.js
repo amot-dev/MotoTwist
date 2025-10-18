@@ -224,6 +224,21 @@ function updateMarkerIcons() {
 
 
 /**
+ * Sets the enabled or disabled status of the submit button on the Twist Form.
+ * The check is based off of form and route validity.
+ */
+function updateTwistFormSubmitState() {
+    const assertedTwistForm = /** @type {HTMLFormElement} */ (twistForm);
+
+    /** @type {HTMLButtonElement | null} */
+    const submitButton = assertedTwistForm.querySelector('[type="submit"]');
+    if (!submitButton) throw new Error("Critical element [type=\"submit\"] is missing from .twist-form!")
+
+    submitButton.disabled = !assertedTwistForm.checkValidity() || assertedTwistForm.dataset.routeValid != 'true';
+}
+
+
+/**
  * Updates a container element with a new message paragraph.
  *
  * @param {HTMLElement} element The container element to update.
@@ -307,6 +322,10 @@ export function registerTwistCreationListeners(map) {
     const assertedMapContainer = /** @type {HTMLElement} */ (mapContainer);
     const assertedTwistForm = /** @type {HTMLFormElement} */ (twistForm);
 
+    // Add Twist Form validation listener and set initial state
+    assertedTwistForm.addEventListener('input', updateTwistFormSubmitState);
+    updateTwistFormSubmitState();
+
     // Begin recording route geometry
     createTwistButton?.addEventListener('click', () => {
         assertedMapContainer.classList.add('creating-twist');
@@ -331,18 +350,10 @@ export function registerTwistCreationListeners(map) {
         if (waypoints.length > 1 && newRouteLine) {
             // Check if first and last waypoints have names
             if (waypoints[0].name.length > 0 && waypoints[waypoints.length - 1].name.length > 0) {
-                const routeLatLngs = newRouteLine.getLatLngs();
-
-                // Enable submission of form
-                /** @type {HTMLButtonElement | null} */
-                const submitButton = assertedTwistForm.querySelector('[type="submit"]');
-                if (!submitButton) throw new Error("Critical element [type=\"submit\"] is missing from .twist-form!")
-                submitButton.disabled = false;
-
-                // Write success status
+                assertedTwistForm.dataset.routeValid = "true";
                 writeToStatus(
                     statusIndicator,
-                    `✅ Route captured with ${namedWaypoints.length} waypoints and ${routeLatLngs.length} geometry points.`
+                    `✅ Route captured with ${namedWaypoints.length} waypoints and ${newRouteLine.getLatLngs().length} geometry points.`
                 );
 
                 // Inform about shaping points on a new line
@@ -354,6 +365,7 @@ export function registerTwistCreationListeners(map) {
                 }
             } else {
                 // Handle case where user finalizes without naming start or end
+                assertedTwistForm.dataset.routeValid = "false";
                 writeToStatus(
                     statusIndicator,
                     '⚠️ Start/End waypoint(s) remain unnamed.'
@@ -361,11 +373,13 @@ export function registerTwistCreationListeners(map) {
             }
         } else {
             // Handle case where user finalizes without a valid route
+            assertedTwistForm.dataset.routeValid = "false";
             writeToStatus(
                 statusIndicator,
                 '⚠️ No valid route was created.'
             );
         }
+        updateTwistFormSubmitState()
         statusIndicator.classList.remove('gone');
     });
 
