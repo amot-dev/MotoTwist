@@ -291,7 +291,7 @@ export function registerTwistListeners(map) {
                 setLayerVisibility(map, twistId, visibility);
 
                 // If the Twist just became visible, show it
-                // if (visibility) showTwistOnMap(map, twistId)
+                if (visibility) showTwistOnMap(map, twistId)
 
             } else if (event.target.closest('.twist-header')) {
                 // Clicked on the Twist name

@@ -31,18 +31,18 @@ export const shapingPointIcon = new L.Icon({
  *
  * @param {L.Map} map The map to save the view from.
  */
-// function saveMapView(map) {
-//     try {
-//         const view = {
-//             center: map.getCenter(), // Gets a {lat, lng} object
-//             zoom: map.getZoom()
-//         };
-//         localStorage.setItem('mapView', JSON.stringify(view));
-//     } catch (e) {
-//         // Handle potential storage errors (e.g., private browsing, quota exceeded)
-//         console.error("Failed to save map view to localStorage:", e);
-//     }
-// }
+function saveMapView(map) {
+    try {
+        const view = {
+            center: map.getCenter(), // Gets a {lat, lng} object
+            zoom: map.getZoom()
+        };
+        localStorage.setItem('mapView', JSON.stringify(view));
+    } catch (e) {
+        // Handle potential storage errors (e.g., private browsing, quota exceeded)
+        console.error("Failed to save map view to localStorage:", e);
+    }
+}
 
 
 /**
@@ -70,43 +70,43 @@ export function initMap() {
     };
 
     let currentView = defaultView; // Start with the default view
-    // let viewLoadedFromStorage = false; // Flag to check if we loaded data
+    let viewLoadedFromStorage = false; // Flag to check if we loaded data
 
     // Try to load saved view from localStorage
-    // try {
-    //     const savedView = localStorage.getItem('mapView');
-    //     if (savedView) {
-    //         const parsedView = JSON.parse(savedView);
+    try {
+        const savedView = localStorage.getItem('mapView');
+        if (savedView) {
+            const parsedView = JSON.parse(savedView);
 
-    //         // Check if the loaded data has the correct structure
-    //         if (parsedView.center &&
-    //             typeof parsedView.center === 'object' &&
-    //             typeof parsedView.center.lat === 'number' &&
-    //             typeof parsedView.center.lng === 'number' &&
-    //             typeof parsedView.zoom === 'number') {
-    //             currentView = parsedView; // Overwrite default with the valid saved view
-    //             viewLoadedFromStorage = true;
-    //         } else {
-    //             console.warn("Saved map view was corrupted or in an old format. Using defaults.");
-    //         }
-    //     }
-    // } catch (e) {
-    //     console.error("Could not parse saved map view:", e);
-    // }
+            // Check if the loaded data has the correct structure
+            if (parsedView.center &&
+                typeof parsedView.center === 'object' &&
+                typeof parsedView.center.lat === 'number' &&
+                typeof parsedView.center.lng === 'number' &&
+                typeof parsedView.zoom === 'number') {
+                currentView = parsedView; // Overwrite default with the valid saved view
+                viewLoadedFromStorage = true;
+            } else {
+                console.warn("Saved map view was corrupted or in an old format. Using defaults.");
+            }
+        }
+    } catch (e) {
+        console.error("Could not parse saved map view:", e);
+    }
 
     // Initialize the map with the determined view (either default or loaded)
     const map = L.map(mapContainer).setView(currentView.center, currentView.zoom);
 
     // Try to locate the user ONLY if we didn't load a saved view
     document.addEventListener('DOMContentLoaded', () => {
-        // if (!viewLoadedFromStorage) {
+        if (!viewLoadedFromStorage) {
             // Only run this if the user is seeing the default view
             map.locate({ setView: true, maxZoom: defaultView.zoom });
-        // }
+        }
     });
 
-    // map.on('moveend', debounce(() => saveMapView(map), 500));
-    // map.on('zoomend', debounce(() => saveMapView(map), 500));
+    map.on('moveend', debounce(() => saveMapView(map), 500));
+    map.on('zoomend', debounce(() => saveMapView(map), 500));
 
     // Add a tile layer
     L.tileLayer(OSM_URL, {
