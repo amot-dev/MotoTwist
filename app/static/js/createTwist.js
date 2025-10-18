@@ -11,12 +11,12 @@ import { getRootProperty } from './utils.js';
 const accentBlueHoverLight = getRootProperty('--accent-blue-hover-light')
 const accentOrange = getRootProperty('--accent-orange');
 
-/** @type {HTMLButtonElement | null} */
-const createTwistButton = document.querySelector('#start-new-twist');
-/** @type {HTMLButtonElement | null} */
-const finalizeTwistButton = document.querySelector('#finalize-new-twist')
-/** @type {HTMLButtonElement | null} */
-const cancelTwistButton = document.querySelector('#cancel-new-twist')
+/** @returns {HTMLButtonElement | null} */
+const getStartTwistButton = () => document.querySelector('#start-new-twist');
+/** @returns {HTMLButtonElement | null} */
+const getFinalizeTwistButton = () => document.querySelector('#finalize-new-twist');
+/** @returns {HTMLButtonElement | null} */
+const getCancelTwistButton = () => document.querySelector('#cancel-new-twist');
 
 const mapContainer = document.querySelector('#map');
 if (!(mapContainer instanceof HTMLElement)) throw new Error("Critical element #map is missing!");
@@ -297,48 +297,35 @@ export function stopTwistCreation(map) {
     writeToStatus(statusIndicator, "");
 
     // Reset button visibility to the initial state
-    finalizeTwistButton?.classList.add('gone');
-    cancelTwistButton?.classList.add('gone');
-    createTwistButton?.classList.remove('gone');
+    getFinalizeTwistButton()?.classList.add('gone');
+    getCancelTwistButton()?.classList.add('gone');
+    getStartTwistButton()?.classList.remove('gone');
 }
 
 
 /**
- * Sets up all event listeners for creation of new Twists.
- *
- * This function attaches listeners for:
- * - The 'Start New Twist' button to enter creation mode.
- * - The 'Finalize Twist' button to validate and prepare route data.
- * - The 'Cancel Twist' button to stop creation mode.
- * - The main map 'click' event (only when in creation mode)
- * to add new waypoints.
- *
- * This should be called once on application startup.
+ * Sets up event listeners for conditional Twist creation buttons.
+ * These are reloaded by htmx after auth changes.
  *
  * @param {L.Map} map The main Leaflet map instance.
- * @returns {void}
  */
-export function registerTwistCreationListeners(map) {
+function registerTwistCreationButtonListeners(map) {
     const assertedMapContainer = /** @type {HTMLElement} */ (mapContainer);
     const assertedTwistForm = /** @type {HTMLFormElement} */ (twistForm);
 
-    // Add Twist Form validation listener and set initial state
-    assertedTwistForm.addEventListener('input', updateTwistFormSubmitState);
-    updateTwistFormSubmitState();
-
     // Begin recording route geometry
-    createTwistButton?.addEventListener('click', () => {
+    getStartTwistButton()?.addEventListener('click', () => {
         assertedMapContainer.classList.add('creating-twist');
         flash('Click on the map to create a Twist!', 5000);
 
         // Swap button visibility
-        createTwistButton.classList.add('gone');
-        finalizeTwistButton?.classList.remove('gone');
-        cancelTwistButton?.classList.remove('gone');
+        getStartTwistButton()?.classList.add('gone');
+        getFinalizeTwistButton()?.classList.remove('gone');
+        getCancelTwistButton()?.classList.remove('gone');
     });
 
     // Handle saving of route geometry
-    finalizeTwistButton?.addEventListener('click', () => {
+    getFinalizeTwistButton()?.addEventListener('click', () => {
         const statusIndicator = document.querySelector('#route-status-indicator');
         if (!statusIndicator || !(statusIndicator instanceof HTMLElement)) {
             throw new Error("Critical element #route-status-indicator is missing!");
@@ -384,11 +371,42 @@ export function registerTwistCreationListeners(map) {
     });
 
     // Handle cancellation of route geometry recording
-    if (cancelTwistButton) {
-        cancelTwistButton.addEventListener('click', () => {
-            stopTwistCreation(map);
-        });
-    }
+    getCancelTwistButton()?.addEventListener('click', () => {
+        stopTwistCreation(map);
+    });
+}
+
+
+/**
+ * Sets up all event listeners for creation of new Twists.
+ *
+ * This function attaches listeners for:
+ * - The 'Start New Twist' button to enter creation mode.
+ * - The 'Finalize Twist' button to validate and prepare route data.
+ * - The 'Cancel Twist' button to stop creation mode.
+ * - The main map 'click' event (only when in creation mode)
+ * to add new waypoints.
+ *
+ * This should be called once on application startup.
+ *
+ * @param {L.Map} map The main Leaflet map instance.
+ */
+export function registerTwistCreationListeners(map) {
+    const assertedMapContainer = /** @type {HTMLElement} */ (mapContainer);
+    const assertedTwistForm = /** @type {HTMLFormElement} */ (twistForm);
+
+    // Add Twist Form validation listener and set initial state
+    assertedTwistForm.addEventListener('input', updateTwistFormSubmitState);
+    updateTwistFormSubmitState();
+
+    // Register Twist creation button listeners both on initial load and after htmx swap
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        const customEvent = /** @type {CustomEvent<{elt: Element}>} */ (event);
+        if (customEvent.detail.elt.id === 'twist-creation-buttons') {
+            registerTwistCreationButtonListeners(map);
+        }
+    });
+    registerTwistCreationButtonListeners(map);
 
     // Listen for map clicks when recording route geometry
     map.on('click',
