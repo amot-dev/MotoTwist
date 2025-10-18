@@ -91,3 +91,29 @@ export function registerCopyButtonListener() {
         });
     });
 }
+
+
+/**
+ * Serializes all of a form's data into a URL-encoded string.
+ * This creates a lightweight "snapshot" of the form's current state,
+ * ideal for comparing against an original state to detect changes.
+ *
+ * @param {HTMLFormElement} formElement The <form> element to serialize.
+ * @returns {string} A URL-encoded string of the form's data (e.g., "name=Test&email=test%40example.com").
+ */
+export function getFormDataAsString(formElement) {
+    const formData = new FormData(formElement);
+
+    /** @type {string[][]} */
+    const entries = [];
+
+    formData.forEach((value, key) => {
+        // This ignores any File objects if they exist
+        if (typeof value === 'string') {
+            entries.push([key, value]);
+        }
+    });
+
+    const params = new URLSearchParams(entries);
+    return params.toString();
+}

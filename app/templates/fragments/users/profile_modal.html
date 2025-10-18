@@ -28,8 +28,9 @@
         <input type="password" id="password_confirmation" name="password_confirmation" class="form-control">
     </div>
 
-    {{ render_form_buttons(submit_text="Save") }}
-
+    {{ render_form_buttons(submit_text="Save", submit_disabled=true) }}
+</form>
+<form class="modal-form">
     <div class="danger-zone">
         <h3>Danger Zone!</h3>
 

@@ -84,9 +84,10 @@ async def update_user(
             logger.debug(f"Changing email for {user.id} from {user.email} to {user_form.email.lower()}")
             user_updates.email = user_form.email.lower()
 
+    if user_form.password != user_form.password_confirmation:
+        raise_http("Passwords do not match", status_code=422)
+
     if user_form.password:
-        if user_form.password != user_form.password_confirmation:
-            raise_http("Passwords do not match", status_code=422)
         logger.debug(f"Changing password for {user.id}")
         user_updates.password = user_form.password
 
@@ -94,13 +95,16 @@ async def update_user(
     if user_updates.model_dump(exclude_unset=True):
         try:
             await user_manager.update(user_updates, user, request=request)
+            flash_message = "Profile updated!"
         except InvalidUsernameException as e:
             raise_http("Invalid username", status_code=422, exception=e)
         except InvalidPasswordException as e:
             raise_http("Invalid password", status_code=422, exception=e)
+    else:
+        flash_message = "No changes made"
 
     events = {
-        "flashMessage": "Profile updated!",
+        "flashMessage": flash_message,
         "updateProfileModal": ""
     }
     response = templates.TemplateResponse("fragments/auth/widget.html", {
@@ -178,7 +182,12 @@ async def render_profile_modal(
     Serve an HTML fragment containing the current user's profile modal.
     """
 
-    return templates.TemplateResponse("fragments/users/profile_modal.html", {
+    events = {
+        "profileLoaded": ""
+    }
+    response = templates.TemplateResponse("fragments/users/profile_modal.html", {
         "request": request,
         "user": user
     })
+    response.headers["HX-Trigger-After-Swap"] = json.dumps(events)
+    return response
