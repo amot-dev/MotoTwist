@@ -2,7 +2,7 @@
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
-COPY ./app/requirements.txt .
+COPY ./requirements.txt .
 
 RUN pip install --no-cache-dir --prefix="/install" -r requirements.txt
 
