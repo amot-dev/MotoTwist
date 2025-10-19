@@ -2,7 +2,7 @@ from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.generics import GUID
 from pydantic import BaseModel
-from sqlalchemy import Boolean, Date, ForeignKey, inspect, Integer, SmallInteger, String
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, SmallInteger, String, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -79,8 +79,12 @@ class PydanticJSONB(TypeDecorator[list[BaseModel]]):
 class User(SQLAlchemyBaseUserTableUUID, SerializationMixin, Base):
     __tablename__ = "users"
 
+    # Constraints
+    NAME_MAX_LENGTH = 255
+    EMAIL_MAX_LENGTH = 320  # Hardcoded in SQLAlchemyBaseUserTable
+
     # Data
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), nullable=False)
 
     # Children
     twists: Mapped[list["Twist"]] = relationship("Twist", back_populates="author")
@@ -91,6 +95,9 @@ class User(SQLAlchemyBaseUserTableUUID, SerializationMixin, Base):
 class Twist(SerializationMixin, Base):
     __tablename__ = "twists"
 
+    # Constraints
+    NAME_MAX_LENGTH = 255
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # Parents
@@ -98,7 +105,7 @@ class Twist(SerializationMixin, Base):
     author: Mapped[User | None] = relationship("User", back_populates="twists")
 
     # Data
-    name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), index=True, nullable=False)
     is_paved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJSONB(Waypoint), nullable=False)
     route_geometry: Mapped[list[Coordinate]] = mapped_column(PydanticJSONB(Coordinate), nullable=False)
@@ -111,6 +118,11 @@ class Twist(SerializationMixin, Base):
     def __repr__(self):
         paved = "Paved" if self.is_paved else "Unpaved"
         return f"[{self.id}] {self.name} ({paved})"
+
+
+class Rating:
+    CRITERION_MIN_VALUE = 0
+    CRITERION_MAX_VALUE = 10
 
 
 class PavedRating(SerializationMixin, Base):

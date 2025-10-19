@@ -10,7 +10,7 @@ from app.settings import settings
 
 
 class TwistCreateForm(BaseModel):
-    name: str
+    name: str = Field(..., max_length=Twist.NAME_MAX_LENGTH)
     is_paved: bool
     waypoints: list[Waypoint] = Field(..., min_length=2)
     route_geometry: list[Coordinate] = Field(..., min_length=2)
