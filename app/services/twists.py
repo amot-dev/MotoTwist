@@ -200,7 +200,7 @@ async def render_twist_dropdown(
         "twist_id": twist.id,
         "twist_author_name": twist.author_name,
         "can_delete_twist": can_delete_twist,
-        "average_ratings": await calculate_average_rating(session, user, twist_basic, "all", round_to=1)
+        "average_rating_criteria": await calculate_average_rating(session, user, twist_basic, "all", round_to=1)
     })
 
 

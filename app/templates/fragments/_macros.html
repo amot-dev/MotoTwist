@@ -25,15 +25,15 @@
 {% endmacro %}
 
 {# Renders a slider to be animated with only CSS #}
-{% macro render_rating(criterion, rating, criterion_desc="") %}
+{% macro render_rating(criterion_name, rating, criterion_desc="") %}
 <li class="rating-slider-container">
     <div class="rating-slider" style="--value: {{ rating }};" title="{{ criterion_desc }}">
         <div class="rating-slider-fill">
-            <span>&nbsp; {{ criterion.replace('_', ' ') | title }}</span>
+            <span>&nbsp; {{ criterion_name.replace('_', ' ') | title }}</span>
             <span>{{ rating }}/10 &nbsp;</span>
         </div>
 
-        <span>&nbsp; {{ criterion.replace('_', ' ') | title }}</span>
+        <span>&nbsp; {{ criterion_name.replace('_', ' ') | title }}</span>
         <span>{{ rating }}/10 &nbsp;</span>
     </div>
 </li>

@@ -2,14 +2,14 @@
 
 {% call render_modal_content(twist.name) %}
 <div id="rating-list" data-paved="{{ twist.is_paved | lower }}">
-    {% if ratings %}
-    {% for rating_entry in ratings %}
+    {% if rating_list.items %}
+    {% for rating in rating_list.items %}
     <div class="rating-card scroll-shut-on-delete">
         <header>
-            <h3>{{ rating_entry.formatted_date }}<span class="author"> by {{ rating_entry.author_name }}</span></h3>
-            {% if rating_entry.can_delete_rating %}
+            <h3>{{ rating.formatted_date }}<span class="author"> by {{ rating.author_name }}</span></h3>
+            {% if rating.can_delete_rating %}
             <button class="button button-link"
-                hx-delete="/twists/{{ twist.id }}/ratings/{{ rating_entry.id }}"
+                hx-delete="/twists/{{ twist.id }}/ratings/{{ rating.id }}"
                 hx-target="closest .rating-card"
                 hx-swap="outerHTML swap:500ms">
 
@@ -18,8 +18,12 @@
             {% endif %}
         </header>
         <ul>
-            {% for criteria, rating in rating_entry.ratings.items() %}
-            {{ render_rating(criteria, rating) }}
+            {% for criterion_name, rating_value in rating.criteria.items() %}
+            {{ render_rating(
+                criterion_name,
+                rating_value,
+                rating_list.criteria_descriptions[criterion_name]
+            ) }}
             {% endfor %}
         </ul>
     </div>

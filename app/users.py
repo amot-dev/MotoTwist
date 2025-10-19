@@ -1,8 +1,9 @@
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, schemas, UUIDIDMixin
+from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport, RedisStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.exceptions import FastAPIUsersException
+from fastapi_users.schemas import BaseUserCreate
 import redis.asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, AsyncGenerator
@@ -26,7 +27,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
         super().__init__(*args, **kwargs)
         self.generated_token: str | None = None
 
-    async def create(self, user_create: schemas.BaseUserCreate, safe: bool = False, request: Request | None = None) -> User:
+    async def create(self, user_create: BaseUserCreate, safe: bool = False, request: Request | None = None) -> User:
         if isinstance(user_create, UserCreate):
 
             # If a name isn't provided, create one from the email

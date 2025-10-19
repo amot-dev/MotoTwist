@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.openapi.utils import get_openapi
-from starlette.datastructures import UploadFile
 from starlette.routing import Route
-from typing import Any, Callable, NoReturn, TypeGuard
+from typing import Any, Callable, NoReturn
 
 from app.config import logger
 
@@ -22,17 +21,6 @@ def raise_http(detail: str, status_code: int = 500, exception: Exception | None 
     else:
         logger.error(detail)
         raise HTTPException(status_code=status_code, detail=detail)
-
-
-def is_form_value_string(value: UploadFile | str | None) -> TypeGuard[str]:
-    """
-    Type Guard to validate form values as strings.
-
-    :param value: The form value to validate.
-    :return: True if the value is a string, False otherwise.
-    """
-    """Returns True if the form value is a string, acting as a type guard."""
-    return value is not None and isinstance(value, str)
 
 
 def format_loc_for_user(loc: tuple[int | str, ...]) -> str:

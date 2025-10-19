@@ -34,7 +34,6 @@
 </ul>
 
 <footer>
-    {% if average_ratings %}
     <button class="button button-very-small button-link" onclick="document.querySelector('#modal-view-twist-ratings').showModal()"
         hx-get="/twists/{{ twist_id }}/ratings/templates/view-modal"
         hx-target="#modal-view-twist-ratings"
@@ -42,9 +41,6 @@
 
         See all
     </button>
-    {% else %}
-    <p class="no-ratings">No ratings yet</p>
-    {% endif %}
 
     {% if can_delete_twist %}
     <button class="button button-very-small button-link" onclick="document.querySelector('#modal-delete-twist').showModal()"

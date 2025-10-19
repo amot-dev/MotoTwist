@@ -3,29 +3,17 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from humanize import ordinal
-from sqlalchemy import false, func, inspect, select
+from sqlalchemy import false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapper
 from typing import cast, Literal
 
 from app.models import PavedRating, Twist, UnpavedRating, User
-from app.schemas.ratings import AverageRating, RatingCriterion, RatingListItem
+from app.schemas.ratings import (
+    CRITERIA_NAMES_PAVED, CRITERIA_NAMES_UNPAVED, RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED,
+    AverageRating, RatingList, RatingListItem
+)
 from app.schemas.twists import TwistBasic, TwistUltraBasic
 from app.settings import settings
-
-
-# Criteria columns
-RATING_EXCLUDED_COLUMNS = {"id", "author_id", "twist_id", "rating_date"}
-RATING_CRITERIA_PAVED: list[RatingCriterion] = [
-    RatingCriterion(name=col.name, desc=col.doc)
-    for col in cast(Mapper[PavedRating], inspect(PavedRating)).columns
-    if col.name not in RATING_EXCLUDED_COLUMNS
-]
-RATING_CRITERIA_UNPAVED: list[RatingCriterion] = [
-    RatingCriterion(name=col.name, desc=col.doc)
-    for col in cast(Mapper[UnpavedRating], inspect(UnpavedRating)).columns
-    if col.name not in RATING_EXCLUDED_COLUMNS
-]
 
 
 async def calculate_average_rating(
@@ -52,9 +40,6 @@ async def calculate_average_rating(
         criteria_list = RATING_CRITERIA_UNPAVED
     criteria_columns = [getattr(target_model, criterion.name) for criterion in criteria_list]
 
-    # Create a lookup dictionary for descriptions for easy access
-    descriptions = {criteria.name: criteria.desc for criteria in criteria_list}
-
     # Query averages for target ratings columns for this twist
     statement = select(*[func.avg(col).label(col.key) for col in criteria_columns]).where(target_model.twist_id == twist.id)
 
@@ -67,6 +52,12 @@ async def calculate_average_rating(
     )
     averages = result.first()
 
+    if not averages:
+        return {}
+
+    # Create a lookup dictionary for descriptions for easy access
+    descriptions = {criteria.name: criteria.desc for criteria in criteria_list}
+
     return {
         key: cast(AverageRating, {
             "rating": round(value, round_to),
@@ -74,7 +65,7 @@ async def calculate_average_rating(
         })
         for key, value in averages._asdict().items()  # pyright: ignore [reportPrivateUsage]
         if value is not None
-    } if averages else {}
+    }
 
 
 templates = Jinja2Templates(directory="templates")
@@ -92,7 +83,7 @@ async def render_averages(
     """
     return templates.TemplateResponse("fragments/ratings/averages.html", {
         "request": request,
-        "average_ratings": await calculate_average_rating(session, user, twist, ownership, round_to=1)
+        "average_rating_criteria": await calculate_average_rating(session, user, twist, ownership, round_to=1)
     })
 
 
@@ -119,19 +110,13 @@ async def render_view_modal(
     request: Request,
     user: User | None,
     twist: Twist,
-    ratings: list[PavedRating] | list[UnpavedRating],
-    criteria_list: list[RatingCriterion]
+    ratings: list[PavedRating] | list[UnpavedRating]
 ) -> HTMLResponse:
     """
     Build and return the TemplateResponse for the rate modal.
     """
-    # Structure data for the template
-    ratings_for_template: list[RatingListItem] = []
+    rating_list_items: list[RatingListItem] = []
     for rating in ratings:
-        ratings_dict = {
-            criterion.name: getattr(rating, criterion.name)
-            for criterion in criteria_list
-        }
         # Pre-format the date for easier display in the template
         ordinal_day = ordinal(rating.rating_date.day)
         formatted_date = rating.rating_date.strftime(f"%B {ordinal_day}, %Y")
@@ -142,16 +127,28 @@ async def render_view_modal(
         # Check if the user is allowed to delete the rating
         can_delete_rating = (user.is_superuser or user.id == rating.author_id) if user else False
 
-        ratings_for_template.append(RatingListItem(
+        rating_list_items.append(RatingListItem(
             id=rating.id,
             author_name=author_name,
             can_delete_rating=can_delete_rating,
             formatted_date=formatted_date,
-            ratings=ratings_dict
+            criteria={
+                criterion_name: getattr(rating, criterion_name)
+                for criterion_name in (CRITERIA_NAMES_PAVED if twist.is_paved else CRITERIA_NAMES_UNPAVED)
+            }
         ))
+
+    rating_list = RatingList(
+        criteria_descriptions={
+            criteria.name: criteria.desc or ""
+            for criteria in (RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED)
+        },
+        items=rating_list_items
+    )
+    print(rating_list)
 
     return templates.TemplateResponse("fragments/ratings/view_modal.html", {
         "request": request,
         "twist": twist,
-        "ratings": ratings_for_template
+        "rating_list": rating_list
     })

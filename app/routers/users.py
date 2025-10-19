@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas.users import UserCreate, UserCreateForm, UserUpdate, UserUpdateForm
 from app.services.admin import is_last_active_admin
-from app.users import current_active_user, get_user_manager, InvalidUsernameException, UserManager
+from app.users import InvalidUsernameException, UserManager, current_active_user, get_user_manager
 from app.utility import raise_http
 
 

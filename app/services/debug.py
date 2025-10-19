@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Type
 
 from app.models import PavedRating, Twist, UnpavedRating, User
-from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED
+from app.schemas.ratings import CRITERIA_NAMES_PAVED, CRITERIA_NAMES_UNPAVED
 
 
 async def reset_id_sequences_for(
@@ -54,21 +54,18 @@ def create_random_rating(
     # Determine the correct Rating class and criteria list based on the twist's surface
     if twist.is_paved:
         Rating = PavedRating
-        criteria_list = RATING_CRITERIA_PAVED
+        criteria_names = CRITERIA_NAMES_PAVED
     else:
         Rating = UnpavedRating
-        criteria_list = RATING_CRITERIA_UNPAVED
+        criteria_names = CRITERIA_NAMES_UNPAVED
 
-    # Build the dictionary for the new rating object
-    rating_data: dict[str, User | Twist | date | int] = {
+    # Build the dictionary for the new rating object, adding random ratings for each criterion
+    rating_data: dict[str, User | Twist | date | int] = {name: randint(0, 10) for name in criteria_names}
+    rating_data.update({
         "author": author,
         "twist": twist,
-        "rating_date": rating_date,
-    }
-
-    # Dynamically add random ratings for each criterion
-    for criterion in criteria_list:
-        rating_data[criterion.name] = randint(0, 10)
+        "rating_date": rating_date
+    })
 
     return Rating(**rating_data)
 

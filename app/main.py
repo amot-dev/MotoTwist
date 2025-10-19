@@ -20,7 +20,7 @@ from app.models import User
 from app.routers import admin, auth, debug, ratings, twists, users
 from app.schemas.users import UserCreate
 from app.settings import Settings, settings
-from app.users import current_active_user_optional, get_user_db, UserManager
+from app.users import UserManager, current_active_user_optional, get_user_db
 from app.utility import format_loc_for_user, raise_http, sort_schema_names, update_schema_name
 
 

@@ -1,20 +1,21 @@
 from datetime import date
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
 import json
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
-from typing import Literal
+from typing import Annotated, Literal
 
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, PavedRating, UnpavedRating, User
+from app.schemas.ratings import CRITERIA_NAMES_PAVED, CRITERIA_NAMES_UNPAVED, TwistRateForm
 from app.schemas.twists import TwistBasic, TwistUltraBasic
-from app.services.ratings import RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED, render_averages, render_rate_modal, render_view_modal
+from app.services.ratings import render_averages, render_rate_modal, render_view_modal
 from app.users import current_active_user, current_active_user_optional
-from app.utility import is_form_value_string, raise_http
+from app.utility import raise_http
 
 
 router = APIRouter(
@@ -27,13 +28,13 @@ router = APIRouter(
 async def create_rating(
     request: Request,
     twist_id: int,
+    rating_form: Annotated[TwistRateForm, Form()],
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db)
 ) -> HTMLResponse:
     """
     Create a new rating for the given Twist.
     """
-    # TODO: make this use a Pydantic Model for the form
     try:
         result = await session.scalars(
             select(Twist.is_paved).where(Twist.id == twist_id)
@@ -45,47 +46,20 @@ async def create_rating(
         raise_http(f"Multiple twists found for id '{twist_id}'", status_code=500)
 
     logger.debug(f"Attempting to rate Twist with id '{twist_id}'")
-    form_data = await request.form()
 
     if twist_is_paved:
         Rating = PavedRating
-        criteria_list = RATING_CRITERIA_PAVED
+        rating_data = rating_form.model_dump(include=CRITERIA_NAMES_PAVED.union({"rating_date"}))
     else:
         Rating = UnpavedRating
-        criteria_list = RATING_CRITERIA_UNPAVED
-    valid_criteria = {criteria.name for criteria in criteria_list}
-
-    # Build the dictionary for the new rating object
-    new_rating_data: dict[str, int | date | User] = {}
-    for key, value in form_data.items():
-        if not is_form_value_string(value):
-            raise_http(f"Invalid value for '{key.replace("_", " ").title()}' criterion", status_code=422)
-
-        # If the key from the form is a valid rating name, add it to the dict
-        if key in valid_criteria:
-            try:
-                new_rating_data[key] = int(value)
-            except (ValueError, TypeError) as e:
-                # Handle cases where a rating value isn't a valid number
-                raise_http(f"Invalid value for '{key.replace("_", " ").title()}' criterion", status_code=422, exception=e)
-
-        # Handle the rating date separately
-        if key == "rating_date":
-            try:
-                new_rating_data["rating_date"] = date.fromisoformat(value)
-            except ValueError as e:
-                raise_http("Invalid date format", status_code=422, exception=e)
-
-    # Check if we actually collected any ratings
-    if not any(key in valid_criteria for key in new_rating_data):
-        raise_http("No valid rating data submitted", status_code=422)
+        rating_data = rating_form.model_dump(include=CRITERIA_NAMES_UNPAVED.union({"rating_date"}))
 
     # Create the new rating instance, linking it to the Twist
-    new_rating_data.update({
+    rating_data.update({
         "author": user,
         "twist_id": twist_id
     })
-    new_rating = Rating(**new_rating_data)
+    new_rating = Rating(**rating_data)
     session.add(new_rating)
     await session.commit()
     logger.debug(f"Created rating '{new_rating}'")
@@ -241,14 +215,12 @@ async def serve_view_modal(
 
     if twist.is_paved:
         ratings = twist.paved_ratings
-        criteria_list = RATING_CRITERIA_PAVED
     else:
         ratings = twist.unpaved_ratings
-        criteria_list = RATING_CRITERIA_UNPAVED
 
     # Sort ratings with most recent first
     sorted_ratings: list[PavedRating] | list[UnpavedRating] = sorted(
         ratings, key=lambda r: r.rating_date, reverse=True
     ) if ratings else []
 
-    return await render_view_modal(request, user, twist, sorted_ratings, criteria_list)
+    return await render_view_modal(request, user, twist, sorted_ratings)

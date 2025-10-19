@@ -10,7 +10,7 @@ from uuid import UUID
 
 from app.models import User
 from app.schemas.auth import ResetPasswordForm
-from app.users import auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy, UserManager
+from app.users import UserManager, auth_backend, current_active_user_optional, get_user_manager, get_redis_strategy
 from app.utility import raise_http
 
 templates = Jinja2Templates(directory="templates")
