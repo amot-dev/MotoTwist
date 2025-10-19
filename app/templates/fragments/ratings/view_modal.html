@@ -22,7 +22,8 @@
             {{ render_rating(
                 criterion_name,
                 rating_value,
-                rating_list.criteria_descriptions[criterion_name]
+                rating_list.criteria_descriptions[criterion_name],
+                criterion_max_value
             ) }}
             {% endfor %}
         </ul>

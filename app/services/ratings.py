@@ -7,7 +7,7 @@ from sqlalchemy import false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import cast, Literal
 
-from app.models import PavedRating, Twist, UnpavedRating, User
+from app.models import Rating, PavedRating, Twist, UnpavedRating, User
 from app.schemas.ratings import (
     CRITERIA_NAMES_PAVED, CRITERIA_NAMES_UNPAVED, RATING_CRITERIA_PAVED, RATING_CRITERIA_UNPAVED,
     AverageRating, RatingList, RatingListItem
@@ -83,7 +83,8 @@ async def render_averages(
     """
     return templates.TemplateResponse("fragments/ratings/averages.html", {
         "request": request,
-        "average_rating_criteria": await calculate_average_rating(session, user, twist, ownership, round_to=1)
+        "average_rating_criteria": await calculate_average_rating(session, user, twist, ownership, round_to=1),
+        "criterion_max_value": Rating.CRITERION_MAX_VALUE
     })
 
 
@@ -96,13 +97,17 @@ async def render_rate_modal(
     Build and return the TemplateResponse for the rate modal.
     """
     tomorrow = today + timedelta(days=1)
+    criterion_initial_value = int((Rating.CRITERION_MIN_VALUE + Rating.CRITERION_MAX_VALUE) / 2)
 
     return templates.TemplateResponse("fragments/ratings/rate_modal.html", {
         "request": request,
         "twist": twist,
         "today": today,
         "tomorrow": tomorrow,
-        "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED
+        "criteria_list": RATING_CRITERIA_PAVED if twist.is_paved else RATING_CRITERIA_UNPAVED,
+        "criterion_min_value": Rating.CRITERION_MIN_VALUE,
+        "criterion_max_value": Rating.CRITERION_MAX_VALUE,
+        "criterion_initial_value": criterion_initial_value
     })
 
 
@@ -150,5 +155,6 @@ async def render_view_modal(
     return templates.TemplateResponse("fragments/ratings/view_modal.html", {
         "request": request,
         "twist": twist,
-        "rating_list": rating_list
+        "rating_list": rating_list,
+        "criterion_max_value": Rating.CRITERION_MAX_VALUE
     })

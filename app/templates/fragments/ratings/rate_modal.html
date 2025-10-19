@@ -16,7 +16,9 @@
         <input type="range"
             id="{{ criteria.name }}"
             name="{{ criteria.name }}"
-            min="0" max="10" value="5"
+            min="{{ criterion_min_value }}"
+            max="{{ criterion_max_value }}"
+            value="{{ criterion_initial_value }}"
             oninput="this.nextElementSibling.value = this.value">
         <output for="{{ criteria.name }}">5</output>
     </div>

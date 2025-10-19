@@ -9,7 +9,7 @@ from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import logger
-from app.models import PavedRating, Twist, UnpavedRating, User
+from app.models import Rating, PavedRating, Twist, UnpavedRating, User
 from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistFilterParams, TwistListItem, TwistUltraBasic, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
@@ -200,7 +200,8 @@ async def render_twist_dropdown(
         "twist_id": twist.id,
         "twist_author_name": twist.author_name,
         "can_delete_twist": can_delete_twist,
-        "average_rating_criteria": await calculate_average_rating(session, user, twist_basic, "all", round_to=1)
+        "average_rating_criteria": await calculate_average_rating(session, user, twist_basic, "all", round_to=1),
+        "criterion_max_value": Rating.CRITERION_MAX_VALUE
     })
 
 
