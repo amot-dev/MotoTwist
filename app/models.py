@@ -1,8 +1,12 @@
 from datetime import date
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.generics import GUID
+from geoalchemy2 import Geometry, WKBElement
+from geoalchemy2.shape import from_shape, to_shape  # type: ignore[reportUnknownVariableType]
 from pydantic import BaseModel
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, SmallInteger, String, inspect
+from shapely.geometry import LineString
+from shapely.geometry.base import BaseGeometry
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, SmallInteger, String, inspect, type_coerce
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -45,10 +49,10 @@ class SerializationMixin:
 
 class PydanticJSONB(TypeDecorator[list[BaseModel]]):
     """
-    A SQLAlchemy TypeDecorator to store lists of Pydantic models as JSONB.
+    Store a list[BaseModel] as JSONB.
 
     Usage:
-    waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJson(Waypoint))
+        waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJson(Waypoint))
     """
     impl = JSONB
     cache_ok = True
@@ -74,6 +78,56 @@ class PydanticJSONB(TypeDecorator[list[BaseModel]]):
         if value is None:
             return None
         return [self.pydantic_type.model_validate(item) for item in value]
+
+
+class PostGISLine(TypeDecorator[list[Coordinate]]):
+    """
+    Stores a list[Coordinate] as a native PostGIS LINESTRING.
+
+    Usage:
+        waypoints: Mapped[list[Coordinate]] = mapped_column(PostGISLine(Coordinate))
+    """
+    impl = Geometry(geometry_type='LINESTRING', srid=4326)  # Standard Spatial Reference Identifier for GPS Coordinates
+    cache_ok = True
+
+    def process_bind_param(self, value: list[Coordinate] | None, dialect: Any) -> WKBElement | None:
+        """
+        Called when sending data TO the database.
+        Converts a list[Coordinate] to a WKT LINESTRING.
+        """
+        # A Linestring requires at least 2 points
+        # If value is None, empty, or has only 1 point, store NULL
+        if value is None or len(value) < 2:
+            return None
+
+        line = LineString([(c.lng, c.lat) for c in value])
+        return from_shape(line, srid=4326)
+
+    def process_result_value(self, value: Any | None, dialect: Any) -> list[Coordinate] | None:
+        """
+        Called when receiving data FROM the database.
+        Converts a WKBElement (binary geometry) back to a list[Coordinate].
+        """
+        if value is None:
+            return None
+
+        shape: BaseGeometry = to_shape(value)
+
+        if not isinstance(shape, LineString):
+            # This should ideally never happen if the column type is correct
+            raise TypeError(f"Expected a LineString from database, but got {type(shape)}")
+
+        # Convert shapely's (lng, lat) tuples back to Pydantic models
+        return [Coordinate(lat=lat, lng=lng) for lng, lat in shape.coords]
+
+    def column_expression(self, column: Any) -> Any:
+        """
+        Intercept the column when used in a SELECT statement.
+
+        This wraps the raw column (col) in type_coerce(col, self), which forces SQLAlchemy to run 'process_result_value'
+        on the result. Not sure why it doesn't run that automatically, like it does with PydanticJSONB.
+        """
+        return type_coerce(column, self)
 
 
 class User(SQLAlchemyBaseUserTableUUID, SerializationMixin, Base):
@@ -108,7 +162,7 @@ class Twist(SerializationMixin, Base):
     name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), index=True, nullable=False)
     is_paved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     waypoints: Mapped[list[Waypoint]] = mapped_column(PydanticJSONB(Waypoint), nullable=False)
-    route_geometry: Mapped[list[Coordinate]] = mapped_column(PydanticJSONB(Coordinate), nullable=False)
+    route_geometry: Mapped[list[Coordinate]] = mapped_column(PostGISLine(Coordinate), nullable=False)  # Geometry object automatically creates an index
     simplification_tolerance_m: Mapped[int] = mapped_column(SmallInteger)
 
     # Children
