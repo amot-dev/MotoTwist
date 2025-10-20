@@ -272,71 +272,76 @@ export function registerTwistListeners(map) {
         }
     });
 
-    // Listen for clicks on Twists
     const twistList = document.getElementById('twist-list');
-    if (twistList) {
-        twistList.addEventListener('click', function(event) {
-            if (!(event.target instanceof Element)) return;
+    if (!twistList) throw new Error("Critical element .twist-list is missing!");
 
-            /** @type {HTMLElement | null} */
-            const twistItem = event.target.closest('.twist-item');
-            if (!twistItem) return;
+    /** @type {string | null} */
+    let activeTwistId = null;
 
-            const twistId = twistItem.dataset.twistId;
-            if (!twistId) throw new Error("Critical element .twist-item is missing twistId data!");
+    // Listen for clicks on Twists
+    twistList.addEventListener('click', function(event) {
+        if (!(event.target instanceof Element)) return;
 
-            if (event.target.closest('.visibility-toggle')) {
-                // Clicked on the eye icon
-                let visibility = toggleVisibilityInStorage(twistId);
-                setLayerVisibility(map, twistId, visibility);
+        /** @type {HTMLElement | null} */
+        const twistItem = event.target.closest('.twist-item');
+        if (!twistItem) return;
 
-                // If the Twist just became visible, show it
-                if (visibility) showTwistOnMap(map, twistId)
+        const twistId = twistItem.dataset.twistId;
+        if (!twistId) throw new Error("Critical element .twist-item is missing twistId data!");
 
-            } else if (event.target.closest('.twist-header')) {
-                // Clicked on the Twist name
-                const twistDropdown = twistItem.querySelector('.twist-dropdown');
-                if (!(twistDropdown instanceof HTMLElement)) throw new Error("Critical element .twist-dropdown is missing!");
-                const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
+        if (event.target.closest('.visibility-toggle')) {
+            // Clicked on the eye icon
+            let visibility = toggleVisibilityInStorage(twistId);
+            setLayerVisibility(map, twistId, visibility);
 
-                // Hide all Twist dropdowns
-                const twistList = twistItem.closest('#twist-list'); if (!twistList) throw new Error("Critical element .twist-list is missing!");
-                const alltwistDropdowns = twistList.querySelectorAll('.twist-dropdown');
-                alltwistDropdowns.forEach(container => {
-                    container.classList.remove('is-open');
-                });
+            // If the Twist just became visible, show it
+            if (visibility) showTwistOnMap(map, twistId)
 
-                // Show current Twist dropdown if it was hidden
-                if (!isCurrentlyOpen) {
-                    twistDropdown.classList.add('is-open');
+        } else if (event.target.closest('.twist-header')) {
+            activeTwistId = null;
 
-                    // Load content if needed
-                    if (twistDropdown.querySelector('.loading')) {
-                        const twistHeader = twistItem.querySelector('.twist-header')
-                        htmx.trigger(twistHeader, 'load-twist-dropdown');
-                    }
+            // Clicked on the Twist header
+            const twistDropdown = twistItem.querySelector('.twist-dropdown');
+            if (!(twistDropdown instanceof HTMLElement)) throw new Error("Critical element .twist-dropdown is missing!");
+            const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
+
+            // Hide all Twist dropdowns
+            const alltwistDropdowns = twistList.querySelectorAll('.twist-dropdown');
+            alltwistDropdowns.forEach(container => {
+                container.classList.remove('is-open');
+            });
+
+            // Show current Twist dropdown if it was hidden
+            if (!isCurrentlyOpen) {
+                twistDropdown.classList.add('is-open');
+                activeTwistId = twistItem.dataset.twistId ?? null;
+
+                // Load content if needed
+                if (twistDropdown.querySelector('.loading')) {
+                    const twistHeader = twistItem.querySelector('.twist-header')
+                    htmx.trigger(twistHeader, 'load-twist-dropdown');
                 }
-
-                // Show the Twist on the map after opening its dropdown
-                showTwistOnMap(map, twistId)
             }
-        });
-    }
+
+            // Show the Twist on the map after opening its dropdown
+            showTwistOnMap(map, twistId)
+        }
+    });
 
     // Include visibleIds in query params for Twist list requests
     document.body.addEventListener('htmx:configRequest', function(event) {
         const customEvent = /** @type {CustomEvent<{path: string, parameters: Record<string, any>}>} */ (event);
 
-        // Check if this is a request to our list endpoint
+        // Check if this is a request to the Twist list endpoint
         if (customEvent.detail.path === '/twists/templates/list') {
-            // Skip adding if no visibleIds
+            // Only add visibleIds if they exist or they will be needed
             const visibleIds = Array.from(getVisibleIdSet());
-            if (visibleIds.length === 0) return;
+            if (visibleIds.length > 0 && customEvent.detail.parameters['visibility'] != 'all') {
+                customEvent.detail.parameters['visible_ids'] = visibleIds;
+            }
 
-            // No need to add visibleIds if not used
-            if (customEvent.detail.parameters['visibility'] === 'all') return;
 
-            customEvent.detail.parameters['visible_ids'] = visibleIds;
+            if (activeTwistId) customEvent.detail.parameters['open_id'] = activeTwistId;
         }
     });
 }

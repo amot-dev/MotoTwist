@@ -143,6 +143,7 @@ async def serve_creation_buttons(
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
 async def serve_list(
     request: Request,
+    open_id: int | None = Query(None),
     search: str | None = Query(None),
     ownership: Literal["own", "all"] = Query("all"),
     rated: Literal["rated", "unrated", "all"] = Query("all"),
@@ -156,6 +157,7 @@ async def serve_list(
     """
     # Unfortunately, Pydantic doesn't play nicely with visible_ids being a list when used as a Dependency
     filter = TwistFilterParams(
+        open_id=open_id,
         search=search,
         ownership=ownership,
         rated=rated,

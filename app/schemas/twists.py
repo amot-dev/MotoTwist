@@ -17,6 +17,8 @@ class TwistCreateForm(BaseModel):
 
 
 class TwistFilterParams(BaseModel):
+    open_id: int | None = None
+
     search: str | None = None
     ownership: Literal["all", "own"] = "all"
     rated: Literal["all", "rated", "unrated"] = "all"

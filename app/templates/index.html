@@ -30,8 +30,9 @@
 
     <form class="filter-form"
         hx-get="/twists/templates/list"
+        hx-ext="morph"
         hx-target="#twist-list"
-        hx-swap="innerHTML"
+        hx-swap="morph:innerHTML"
         hx-trigger="change, keyup changed delay:500ms from:#twist-search-input, search from:#twist-search-input, authChange from:body"
         hx-indicator="#search-indicator">
 

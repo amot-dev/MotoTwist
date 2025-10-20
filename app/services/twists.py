@@ -7,6 +7,7 @@ from shapely.ops import nearest_points
 from sqlalchemy import and_, false, or_, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from app.config import logger
 from app.models import Rating, PavedRating, Twist, UnpavedRating, User
@@ -148,11 +149,37 @@ async def render_list(
             statement = statement.where(Twist.id.notin_(filter.visible_ids))
 
     results = await session.execute(statement.order_by(Twist.name))
+    twists = [TwistListItem.model_validate(result) for result in results.all()]
 
-    return templates.TemplateResponse("fragments/twists/list.html", {
+    # Prepare open Twist dropdown if needed
+    open_twist_id = None
+    dropdown_context = None
+    if filter.open_id:
+        # Check that the open Twist is still in the Twist list
+        if any(twist.id == filter.open_id for twist in twists):
+            result = await session.execute(
+                select(*TwistDropdown.fields)
+                .join(Twist.author, isouter=True)
+                .where(Twist.id == filter.open_id)
+            )
+            twist = result.one_or_none()
+            if twist:
+                twist_dropdown = TwistDropdown.model_validate(twist)
+                dropdown_context = await _build_twist_dropdown_context(session, user, twist_dropdown)
+                open_twist_id = twist_dropdown.id
+
+    # Build the base context
+    list_context: dict[str, Any] = {
         "request": request,
-        "twists": [TwistListItem.model_validate(result) for result in results.all()]
-    })
+        "twists": twists,
+        "open_twist_id": open_twist_id,
+    }
+
+    # If the dropdown context was generated, merge it into the main context
+    if dropdown_context:
+        list_context.update(dropdown_context)
+
+    return templates.TemplateResponse("fragments/twists/list.html", list_context)
 
 
 async def render_single_list_item(
@@ -180,6 +207,29 @@ async def render_single_list_item(
     })
 
 
+async def _build_twist_dropdown_context(
+    session: AsyncSession,
+    user: User | None,
+    twist: TwistDropdown
+) -> dict[str, Any]:
+    """
+    Build and return the template context for the Twist dropdown.
+    """
+    # Check if the user is allowed to delete the Twist
+    can_delete_twist = (user.is_superuser or user.id == twist.author_id) if user else False
+
+    twist_basic = TwistUltraBasic.model_validate(twist)
+
+    return {
+        "user": user,
+        "twist_id": twist.id,
+        "twist_author_name": twist.author_name,
+        "can_delete_twist": can_delete_twist,
+        "average_rating_criteria": await calculate_average_rating(session, user, twist_basic, "all", round_to=1),
+        "criterion_max_value": Rating.CRITERION_MAX_VALUE
+    }
+
+
 async def render_twist_dropdown(
     request: Request,
     session: AsyncSession,
@@ -189,20 +239,10 @@ async def render_twist_dropdown(
     """
     Build and return the TemplateResponse for the Twist dropdown.
     """
-    # Check if the user is allowed to delete the Twist
-    can_delete_twist = (user.is_superuser or user.id == twist.author_id) if user else False
+    context = await _build_twist_dropdown_context(session, user, twist)
+    context["request"] = request
 
-    twist_basic = TwistUltraBasic.model_validate(twist)
-
-    return templates.TemplateResponse("fragments/twists/dropdown.html", {
-        "request": request,
-        "user": user,
-        "twist_id": twist.id,
-        "twist_author_name": twist.author_name,
-        "can_delete_twist": can_delete_twist,
-        "average_rating_criteria": await calculate_average_rating(session, user, twist_basic, "all", round_to=1),
-        "criterion_max_value": Rating.CRITERION_MAX_VALUE
-    })
+    return templates.TemplateResponse("fragments/twists/dropdown.html", context)
 
 
 async def render_delete_modal(

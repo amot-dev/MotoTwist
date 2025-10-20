@@ -150,7 +150,6 @@ async def render_view_modal(
         },
         items=rating_list_items
     )
-    print(rating_list)
 
     return templates.TemplateResponse("fragments/ratings/view_modal.html", {
         "request": request,
