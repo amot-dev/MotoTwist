@@ -86,12 +86,34 @@ function removeVisibilityFromStorage(twistId) {
 
 
 /**
+ * Pans and zooms the map to fit the bounds of a specific Twist if it
+ * is loaded. Does not check visibility.
+ *
+ * @param {L.Map} map - The map to pan and zoom to the Twist on.
+ * @param {string} twistId - The ID of the Twist to show.
+ */
+function showTwistOnMap(map, twistId) {
+    // Pan and zoom the map
+    const layer = mapLayers[twistId];
+    if (layer) {
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds);
+        } else {
+            console.warn(`Cannot fit map to Twist '${twistId}' because its layer has no valid bounds.`);
+        }
+    }
+}
+
+
+/**
  * Loads a Twist's geometry data and adds it to the map as a new layer.
  *
  * @param {L.Map} map The map to load a Twist onto.
  * @param {string} twistId The ID of the Twist to load.
+ * @param {boolean} [show=false] If true, pan/zoom to the Twist after load.
  */
-async function loadTwistLayer(map, twistId) {
+async function loadTwistLayer(map, twistId, show = false) {
     // If layer already exists, don't re-load it
     if (mapLayers[twistId]) return;
 
@@ -133,6 +155,7 @@ async function loadTwistLayer(map, twistId) {
         // Store and add the complete layer to the map
         mapLayers[twistId] = twistLayer;
         twistLayer.addTo(map);
+        if (show) showTwistOnMap(map, twistId);
 
     } catch (error) {
         console.error(`Failed to load route for Twist '${twistId}':`, error);
@@ -150,35 +173,38 @@ async function loadTwistLayer(map, twistId) {
  * @param {L.Map} map The map to set the visibility of a Twist on.
  * @param {string} twistId The ID of the Twist to modify.
  * @param {boolean} makeVisible True to show the layer, false to hide it.
+ * @param {boolean} [show=false] If true and `makeVisible` is true, show Twist on map.
  */
-function setLayerVisibility(map, twistId, makeVisible) {
+async function setTwistVisibility(map, twistId, makeVisible, show = false) {
     const layer = mapLayers[twistId];
+
+    // Update eye icon
+    const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
+    if (twistItem) {
+        const icon = twistItem.querySelector('.visibility-toggle i');
+        if (!icon) throw new Error("Critical element .visibility-toggle icon is missing!");
+
+        twistItem.classList.toggle('is-visible', makeVisible);
+        icon.classList.toggle('fa-eye', makeVisible);
+        icon.classList.toggle('fa-eye-slash', !makeVisible);
+    }
 
     // Unload if hiding
     if (!makeVisible) {
         if (layer && map.hasLayer(layer)) {
             map.removeLayer(layer);
         }
+        return;
     }
 
     // Load layer if showing
-    if (makeVisible) {
-        if (layer) {
-            // Layer is already loaded, just add it back to the map
-            layer.addTo(map);
-        } else {
-            // First time showing this layer, load the Twist data
-            loadTwistLayer(map, twistId);
-        }
-    }
-
-    // Use the second argument of classList.toggle() to set the state explicitly
-    const twistItem = document.querySelector(`.twist-item[data-twist-id='${twistId}']`);
-    if (twistItem) {
-        const icon = twistItem.querySelector('.visibility-toggle i'); if (!icon) throw new Error("Critical element .visibility-toggle icon is missing!");
-        twistItem.classList.toggle('is-visible', makeVisible);
-        icon.classList.toggle('fa-eye', makeVisible);
-        icon.classList.toggle('fa-eye-slash', !makeVisible);
+    if (layer) {
+        // Layer is already loaded, just add it back to the map
+        layer.addTo(map);
+        if (show) showTwistOnMap(map, twistId);
+    } else {
+        // First time showing this layer, load the Twist data
+        await loadTwistLayer(map, twistId, show);
     }
 }
 
@@ -189,7 +215,7 @@ function setLayerVisibility(map, twistId, makeVisible) {
  *
  * @param {L.Map} map The map to set the visibility of Twists on.
  */
-function applyVisibilityFromStorage(map) {
+function applyTwistVisibilityFromStorage(map) {
     const visibleIdSet = getVisibleIdSet();
 
     /** @type {NodeListOf<HTMLElement>} */
@@ -199,32 +225,8 @@ function applyVisibilityFromStorage(map) {
         if (!twistId) throw new Error("Critical element .twist-item is missing twistId data!");
 
         const shouldBeVisible = visibleIdSet.has(twistId);
-        setLayerVisibility(map, twistId, shouldBeVisible);
+        setTwistVisibility(map, twistId, shouldBeVisible);
     });
-}
-
-
-/**
- * Pans and zooms the map to fit the bounds of a specific Twist if it
- * is loaded. Does not check visibility.
- *
- * @param {L.Map} map - The map to pan and zoom to the Twist on.
- * @param {string} twistId - The ID of the Twist to show.
- */
-function showTwistOnMap(map, twistId) {
-    // Pan and zoom the map
-    const layer = mapLayers[twistId];
-    if (layer) {
-        // If bounds are already available, use them. Otherwise, wait for the 'loaded' event
-        if (layer.getBounds().isValid()) {
-            map.fitBounds(layer.getBounds());
-        } else {
-            layer.on('loaded',
-                /** @param {{ target: L.FeatureGroup }} event */
-                (event) => map.fitBounds(event.target.getBounds())
-            );
-        }
-    }
 }
 
 
@@ -246,7 +248,7 @@ function showTwistOnMap(map, twistId) {
 export function registerTwistListeners(map) {
     // Listen for the custom event sent from the server after the Twist list is initially loaded
     document.body.addEventListener('twistsLoaded', () => {
-        applyVisibilityFromStorage(map);
+        applyTwistVisibilityFromStorage(map);
     });
 
     // Listen for the custom event sent from the server after a new Twist is created
@@ -257,7 +259,7 @@ export function registerTwistListeners(map) {
         if (newTwistId) {
             stopTwistCreation(map);
             addVisibilityToStorage(newTwistId);
-            setLayerVisibility(map, newTwistId, true);
+            setTwistVisibility(map, newTwistId, true, true);
         }
     });
 
@@ -268,7 +270,7 @@ export function registerTwistListeners(map) {
         const deletedTwistId = customEvent.detail.value;
         if (deletedTwistId) {
             removeVisibilityFromStorage(deletedTwistId);
-            setLayerVisibility(map, deletedTwistId, false);
+            setTwistVisibility(map, deletedTwistId, false);
         }
     });
 
@@ -292,11 +294,9 @@ export function registerTwistListeners(map) {
         if (event.target.closest('.visibility-toggle')) {
             // Clicked on the eye icon
             let visibility = toggleVisibilityInStorage(twistId);
-            setLayerVisibility(map, twistId, visibility);
 
             // If the Twist just became visible, show it
-            if (visibility) showTwistOnMap(map, twistId)
-
+            setTwistVisibility(map, twistId, visibility, true);
         } else if (event.target.closest('.twist-header')) {
             activeTwistId = null;
 
@@ -323,7 +323,7 @@ export function registerTwistListeners(map) {
                 }
             }
 
-            // Show the Twist on the map after opening its dropdown
+            // Show the Twist on the map after opening its dropdown (TODO: only if visible)
             showTwistOnMap(map, twistId)
         }
     });
