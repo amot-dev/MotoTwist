@@ -4,12 +4,11 @@ import json
 from sqlalchemy import delete, select
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal
 
 from app.config import logger
 from app.database import get_db
 from app.models import Twist, User
-from app.schemas.twists import TwistBasic, TwistCreateForm, TwistDropdown, TwistFilterParams, TwistGeometry
+from app.schemas.twists import TwistBasic, TwistCreateForm, TwistDropdown, TwistFilterParameters, TwistGeometry
 from app.services.twists import render_creation_buttons, render_delete_modal, render_list, render_single_list_item, render_twist_dropdown, simplify_route, snap_waypoints_to_route
 from app.settings import settings
 from app.users import current_active_user, current_active_user_optional
@@ -143,11 +142,7 @@ async def serve_creation_buttons(
 @router.get("/templates/list", tags=["Templates"], response_class=HTMLResponse)
 async def serve_list(
     request: Request,
-    open_id: int | None = Query(None),
-    search: str | None = Query(None),
-    ownership: Literal["own", "all"] = Query("all"),
-    rated: Literal["rated", "unrated", "all"] = Query("all"),
-    visibility: Literal["visible", "hidden", "all"] = Query("all"),
+    filter: TwistFilterParameters = Depends(),
     visible_ids: list[int] | None = Query(None),
     user: User | None = Depends(current_active_user_optional),
     session: AsyncSession = Depends(get_db)
@@ -156,14 +151,7 @@ async def serve_list(
     Serve an HTML fragment containing the sorted list of Twists.
     """
     # Unfortunately, Pydantic doesn't play nicely with visible_ids being a list when used as a Dependency
-    filter = TwistFilterParams(
-        open_id=open_id,
-        search=search,
-        ownership=ownership,
-        rated=rated,
-        visibility=visibility,
-        visible_ids=visible_ids
-    )
+    filter.visible_ids = visible_ids
 
     events = {
         "twistsLoaded": ""

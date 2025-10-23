@@ -87,7 +87,7 @@ class PostGISLine(TypeDecorator[list[Coordinate]]):
     Usage:
         waypoints: Mapped[list[Coordinate]] = mapped_column(PostGISLine(Coordinate))
     """
-    impl = Geometry(geometry_type='LINESTRING', srid=4326)  # Standard Spatial Reference Identifier for GPS Coordinates
+    impl = Geometry(geometry_type='LINESTRING', srid=Coordinate.SRID)
     cache_ok = True
 
     def process_bind_param(self, value: list[Coordinate] | None, dialect: Any) -> WKBElement | None:
@@ -100,8 +100,9 @@ class PostGISLine(TypeDecorator[list[Coordinate]]):
         if value is None or len(value) < 2:
             return None
 
+        # Shapely uses lng, lat
         line = LineString([(c.lng, c.lat) for c in value])
-        return from_shape(line, srid=4326)
+        return from_shape(line, srid=Coordinate.SRID)
 
     def process_result_value(self, value: Any | None, dialect: Any) -> list[Coordinate] | None:
         """
