@@ -57,7 +57,7 @@
 
             <div class="filter-panel">
                 <fieldset class="filter-fieldset">
-                    <div class="filter-group" title="Filter between all or your Twists">
+                    <div class="filter-group" title="Filter Twists by ownership">
                         <input type="radio" id="own_all_twists" name="ownership" value="all" checked>
                         <label for="own_all_twists">All</label>
                         <input type="radio" id="own_own_twists" name="ownership" value="own">
@@ -66,16 +66,25 @@
                         <label for="own_notown_twists">Not Mine</label>
                     </div>
 
-                    <div class="filter-group" title="Filter between all Twists or those you haven't rated">
-                        <input type="radio" id="rated_all_twists" name="rated" value="all" checked>
-                        <label for="rated_all_twists">All</label>
-                        <input type="radio" id="rated_rated_twists" name="rated" value="rated">
-                        <label for="rated_rated_twists">Rated</label>
-                        <input type="radio" id="rated_unrated_twists" name="rated" value="unrated">
-                        <label for="rated_unrated_twists">Unrated</label>
+                    <div class="filter-group" title="Filter Twists by pavement type">
+                        <input type="radio" id="pavement_all_twists" name="pavement" value="all" checked>
+                        <label for="pavement_all_twists">All</label>
+                        <input type="radio" id="pavement_paved_twists" name="pavement" value="paved">
+                        <label for="pavement_paved_twists">Paved</label>
+                        <input type="radio" id="pavement_unpaved_twists" name="pavement" value="unpaved">
+                        <label for="pavement_unpaved_twists">Unpaved</label>
                     </div>
 
-                    <div class="filter-group" title="Filter between all, visible, or hidden Twists">
+                    <div class="filter-group" title="Filter Twists by rating status">
+                        <input type="radio" id="ratings_all_twists" name="ratings" value="all" checked>
+                        <label for="ratings_all_twists">All</label>
+                        <input type="radio" id="ratings_rated_twists" name="ratings" value="rated">
+                        <label for="ratings_rated_twists">Rated</label>
+                        <input type="radio" id="ratings_unrated_twists" name="ratings" value="unrated">
+                        <label for="ratings_unrated_twists">Unrated</label>
+                    </div>
+
+                    <div class="filter-group" title="Filter Twists by visibility on the map">
                         <input type="radio" id="vis_all_twists" name="visibility" value="all" checked>
                         <label for="vis_all_twists">All</label>
                         <input type="radio" id="vis_visible_twists" name="visibility" value="visible">

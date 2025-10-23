@@ -1,7 +1,8 @@
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import Label, literal
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from typing import ClassVar, Literal
+from typing import ClassVar
 from uuid import UUID
 
 from app.models import Twist, User
@@ -16,15 +17,37 @@ class TwistCreateForm(BaseModel):
     route_geometry: list[Coordinate] = Field(..., min_length=2)
 
 
+class FilterOwnership(str, Enum):
+    ALL = "all"
+    OWN = "own"
+    NOT_OWN = "notown"
+
+class FilterPavement(str, Enum):
+    ALL = "all"
+    PAVED = "paved"
+    UNPAVED = "unpaved"
+
+class FilterRatings(str, Enum):
+    ALL = "all"
+    RATED = "rated"
+    UNRATED = "unrated"
+
+class FilterVisibility(str, Enum):
+    ALL = "all"
+    VISIBLE = "visible"
+    HIDDEN = "hidden"
+
+
 class TwistFilterParameters(BaseModel):
     # Display
     open_id: int | None = None
 
     # Filtering
     search: str | None = None
-    ownership: Literal["all", "own", "notown"] = "all"
-    rated: Literal["all", "rated", "unrated"] = "all"
-    visibility: Literal["all", "visible", "hidden"] = "all"
+    ownership: FilterOwnership = FilterOwnership.ALL
+    pavement: FilterPavement = FilterPavement.ALL
+    ratings: FilterRatings = FilterRatings.ALL
+    visibility: FilterVisibility = FilterVisibility.ALL
     visible_ids: list[int] | None = None
 
     # Ordering

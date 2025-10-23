@@ -318,9 +318,7 @@ export function registerTwistListeners(map) {
         if (event.target.closest('.visibility-toggle')) {
             // Clicked on the eye icon
             let visibility = toggleVisibilityInStorage(twistId);
-
-            // If the Twist just became visible, show it
-            setTwistVisibility(map, twistId, visibility, true);
+            setTwistVisibility(map, twistId, visibility);
         } else if (event.target.closest('.twist-header')) {
             activeTwistId = null;
 

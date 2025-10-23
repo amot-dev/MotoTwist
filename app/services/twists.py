@@ -13,7 +13,10 @@ from typing import Any
 
 from app.config import logger
 from app.models import Rating, PavedRating, Twist, UnpavedRating, User
-from app.schemas.twists import TwistBasic, TwistDropdown, TwistFilterParameters, TwistListItem, TwistUltraBasic
+from app.schemas.twists import (
+    FilterOwnership, FilterPavement, FilterRatings, FilterVisibility,
+    TwistBasic, TwistDropdown, TwistFilterParameters, TwistListItem, TwistUltraBasic
+)
 from app.schemas.types import Coordinate, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
@@ -121,13 +124,17 @@ async def render_list(
     if filter.search:
         statement = statement.where(Twist.name.icontains(filter.search))
 
-    if filter.ownership == "own":
+    if filter.ownership == FilterOwnership.OWN:
         statement = statement.where(Twist.author_id == user.id) if user else statement.where(false())
-    elif user and filter.ownership == "notown":
-        print("notown")
+    elif user and filter.ownership == FilterOwnership.NOT_OWN:
         statement = statement.where(Twist.author_id != user.id)
 
-    if user and filter.rated != "all":
+    if filter.pavement == FilterPavement.PAVED:
+        statement = statement.where(Twist.is_paved == True)
+    elif filter.pavement == FilterPavement.UNPAVED:
+        statement = statement.where(Twist.is_paved == False)
+
+    if user and filter.ratings != FilterRatings.ALL:
         paved_rating_exists = select(PavedRating.id).where(
             PavedRating.twist_id == Twist.id,
             PavedRating.author_id == user.id
@@ -137,22 +144,22 @@ async def render_list(
             UnpavedRating.author_id == user.id
         ).exists()
 
-        if filter.rated == "rated":
+        if filter.ratings == FilterRatings.RATED:
             # Either exists
             statement = statement.where(or_(paved_rating_exists, unpaved_rating_exists))
 
-        elif filter.rated == "unrated":
+        elif filter.ratings == FilterRatings.UNRATED:
             # Neither exists
             statement = statement.where(and_(~paved_rating_exists, ~unpaved_rating_exists))
 
-    elif not user and filter.rated == "rated":
+    elif not user and filter.ratings == FilterRatings.RATED:
         # If user is not logged in, they can't have rated Twists
         statement = statement.where(false())
 
     if filter.visible_ids is not None:
-        if filter.visibility == "visible":
+        if filter.visibility == FilterVisibility.VISIBLE:
             statement = statement.where(Twist.id.in_(filter.visible_ids))
-        elif filter.visibility == "hidden":
+        elif filter.visibility == FilterVisibility.HIDDEN:
             statement = statement.where(Twist.id.notin_(filter.visible_ids))
 
     # Ordering
