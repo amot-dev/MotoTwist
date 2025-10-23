@@ -231,6 +231,30 @@ function applyTwistVisibilityFromStorage(map) {
 
 
 /**
+ * Gets the geographic coordinates (Lat/Lng) at the center of the viewport,
+ * accounting for map offsets (such as the sidebar).
+ *
+ * @param {L.Map} map - The active Leaflet map instance.
+ * @returns {L.LatLng} The coordinates at the visual center of the screen.
+ */
+function getVisualMapCenter(map) {
+    // Get the pixel center of the entire window
+    const visualCenterX = window.innerWidth / 2;
+    const visualCenterY = window.innerHeight / 2;
+
+    // Get the map div's position and size
+    const mapRect = map.getContainer().getBoundingClientRect();
+
+    // Calculate the center point relative to the map's div
+    const relativeX = visualCenterX - mapRect.left;
+    const relativeY = visualCenterY - mapRect.top;
+
+    // Convert this relative pixel coordinate to a Lat/Lng and return it
+    return map.containerPointToLatLng(L.point(relativeX, relativeY));
+}
+
+
+/**
  * Sets up all event listeners related to managing and interacting
  * with the list of Twists.
  *
@@ -319,7 +343,7 @@ export function registerTwistListeners(map) {
                 // Load content if needed
                 if (twistDropdown.querySelector('.loading')) {
                     const twistHeader = twistItem.querySelector('.twist-header')
-                    htmx.trigger(twistHeader, 'load-twist-dropdown');
+                    htmx.trigger(twistHeader, 'loadDropdown');
                 }
             }
 
@@ -328,7 +352,12 @@ export function registerTwistListeners(map) {
         }
     });
 
-    // Include visibleIds in query params for Twist list requests
+    // Order Twist list on map move ending (debounced on htmx listen side)
+    map.on('moveend', function() {
+        htmx.trigger(document.body, 'mapCenterChange')
+    });
+
+    // Include additional parameters for Twist list requests
     document.body.addEventListener('htmx:configRequest', function(event) {
         const customEvent = /** @type {CustomEvent<{path: string, parameters: Record<string, any>}>} */ (event);
 
@@ -340,8 +369,12 @@ export function registerTwistListeners(map) {
                 customEvent.detail.parameters['visible_ids'] = visibleIds;
             }
 
-
             if (activeTwistId) customEvent.detail.parameters['open_id'] = activeTwistId;
+
+            /** @type {L.LatLng} */
+            const mapCenter = getVisualMapCenter(map);
+            customEvent.detail.parameters['map_center_lat'] = mapCenter.lat;
+            customEvent.detail.parameters['map_center_lng'] = mapCenter.lng;
         }
     });
 }

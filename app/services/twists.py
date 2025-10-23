@@ -2,16 +2,19 @@ from copy import deepcopy
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from geoalchemy2 import Geometry
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from sqlalchemy import and_, false, or_, select
+from sqlalchemy import and_, false, or_, select, type_coerce
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.expression import ColumnExpressionArgument
 from typing import Any
 
 from app.config import logger
 from app.models import Rating, PavedRating, Twist, UnpavedRating, User
-from app.schemas.twists import Coordinate, TwistBasic, TwistDropdown, TwistFilterParams, TwistListItem, TwistUltraBasic, Waypoint
+from app.schemas.twists import TwistBasic, TwistDropdown, TwistFilterParameters, TwistListItem, TwistUltraBasic
+from app.schemas.types import Coordinate, Waypoint
 from app.services.ratings import calculate_average_rating
 from app.settings import settings
 from app.utility import raise_http
@@ -107,11 +110,12 @@ async def render_list(
     request: Request,
     session: AsyncSession,
     user: User | None,
-    filter: TwistFilterParams
+    filter: TwistFilterParameters
 ) -> HTMLResponse:
     """
      Build and return the TemplateResponse for the Twist list.
     """
+    # Filtering
     statement = select(*TwistListItem.get_fields(user))
 
     if filter.search:
@@ -119,6 +123,9 @@ async def render_list(
 
     if filter.ownership == "own":
         statement = statement.where(Twist.author_id == user.id) if user else statement.where(false())
+    elif user and filter.ownership == "notown":
+        print("notown")
+        statement = statement.where(Twist.author_id != user.id)
 
     if user and filter.rated != "all":
         paved_rating_exists = select(PavedRating.id).where(
@@ -148,7 +155,19 @@ async def render_list(
         elif filter.visibility == "hidden":
             statement = statement.where(Twist.id.notin_(filter.visible_ids))
 
-    results = await session.execute(statement.order_by(Twist.name))
+    # Ordering
+    order_criteria: list[ColumnExpressionArgument[Any]] = []
+
+    if filter.map_center:
+        distance: ColumnExpressionArgument[float] = Twist.route_geometry.distance_centroid(
+            type_coerce(filter.map_center.to_spatial(), Geometry)
+        )
+        order_criteria.append(distance)
+
+    order_criteria.append(Twist.name)
+
+    # Querying
+    results = await session.execute(statement.order_by(*order_criteria))
     twists = [TwistListItem.model_validate(result) for result in results.all()]
 
     # Prepare open Twist dropdown if needed

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import Label, literal
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from typing import ClassVar, Literal
@@ -16,15 +16,36 @@ class TwistCreateForm(BaseModel):
     route_geometry: list[Coordinate] = Field(..., min_length=2)
 
 
-class TwistFilterParams(BaseModel):
+class TwistFilterParameters(BaseModel):
+    # Display
     open_id: int | None = None
 
+    # Filtering
     search: str | None = None
-    ownership: Literal["all", "own"] = "all"
+    ownership: Literal["all", "own", "notown"] = "all"
     rated: Literal["all", "rated", "unrated"] = "all"
     visibility: Literal["all", "visible", "hidden"] = "all"
-
     visible_ids: list[int] | None = None
+
+    # Ordering
+    map_center: Coordinate | None = None
+    map_center_lat: float | None = Field(None, exclude=True)  # For query only
+    map_center_lng: float | None = Field(None, exclude=True)  # For query only
+
+
+    @model_validator(mode="after")
+    def assemble_map_center(self) -> "TwistFilterParameters":
+        """
+        If map_center isn't set, but lat/lng are, create it.
+        """
+        # Only run if map_center isn't already populated
+        if self.map_center is None:
+            if self.map_center_lat is not None and self.map_center_lng is not None:
+                self.map_center = Coordinate(
+                    lat=self.map_center_lat,
+                    lng=self.map_center_lng
+                )
+        return self
 
 
 class TwistUltraBasic(BaseModel):

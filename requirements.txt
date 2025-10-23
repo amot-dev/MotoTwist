@@ -2,6 +2,7 @@ alembic
 asyncpg
 fastapi
 fastapi-users[sqlalchemy]
+GeoAlchemy2
 httpx
 humanize
 itsdangerous
@@ -12,7 +13,3 @@ redis[hiredis]
 shapely
 sqlalchemy
 uvicorn
-
-
-passlib[bcrypt]
-python-jose[cryptography]

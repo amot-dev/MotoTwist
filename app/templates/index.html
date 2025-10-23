@@ -33,7 +33,11 @@
         hx-ext="morph"
         hx-target="#twist-list"
         hx-swap="morph:innerHTML"
-        hx-trigger="change, keyup changed delay:500ms from:#twist-search-input, search from:#twist-search-input, authChange from:body"
+        hx-trigger="change,
+            keyup changed delay:500ms from:#twist-search-input,
+            search from:#twist-search-input,
+            mapCenterChange delay:500ms from:body,
+            authChange from:body"
         hx-indicator="#search-indicator">
 
         <div class="search-container">
@@ -55,9 +59,11 @@
                 <fieldset class="filter-fieldset">
                     <div class="filter-group" title="Filter between all or your Twists">
                         <input type="radio" id="own_all_twists" name="ownership" value="all" checked>
-                        <label for="own_all_twists">All Twists</label>
+                        <label for="own_all_twists">All</label>
                         <input type="radio" id="own_own_twists" name="ownership" value="own">
-                        <label for="own_own_twists">My Twists</label>
+                        <label for="own_own_twists">Mine</label>
+                        <input type="radio" id="own_notown_twists" name="ownership" value="notown">
+                        <label for="own_notown_twists">Not Mine</label>
                     </div>
 
                     <div class="filter-group" title="Filter between all Twists or those you haven't rated">
@@ -171,10 +177,10 @@
 <dialog id="modal-create-twist" class="modal">
     {% call render_modal_content("New Twist") %}
     <form class="modal-form manual-validation"
+        hx-ext="json-enc"
         hx-post="/twists"
         hx-target="#twist-list"
-        hx-swap="afterbegin"
-        hx-ext="json-enc">
+        hx-swap="afterbegin">
 
         <div class="form-group">
             <label for="modal-name">Twist Name</label>
