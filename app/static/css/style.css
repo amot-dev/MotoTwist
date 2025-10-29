@@ -607,6 +607,13 @@ aside {
         padding: var(--padding-md);
         cursor: pointer;
 
+        /* Prevent selection appearing */
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -ms-user-select: none;
+
         transition: background-color var(--transition-fast);
 
         &:hover {
@@ -626,7 +633,6 @@ aside {
             &:hover {
                 color: var(--text-offwhite);
             }
-
         }
     }
 

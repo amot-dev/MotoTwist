@@ -5,7 +5,7 @@ import {
     endIcon,
     waypointIcon
 } from './map.js';
-import { getRootProperty } from './utils.js';
+import { doubleClickTimeout, getRootProperty } from './utils.js';
 
 
 // Object to store the map layers
@@ -305,6 +305,8 @@ export function registerTwistListeners(map) {
     let activeTwistId = null;
 
     // Listen for clicks on Twists
+    let twistListClickCount = 0
+    let twistListClickTimer = 0;
     twistList.addEventListener('click', function(event) {
         if (!(event.target instanceof Element)) return;
 
@@ -315,38 +317,54 @@ export function registerTwistListeners(map) {
         const twistId = twistItem.dataset.twistId;
         if (!twistId) throw new Error("Critical element .twist-item is missing twistId data!");
 
-        if (event.target.closest('.visibility-toggle')) {
-            // Clicked on the eye icon
-            let visibility = toggleVisibilityInStorage(twistId);
-            setTwistVisibility(map, twistId, visibility);
-        } else if (event.target.closest('.twist-header')) {
-            activeTwistId = null;
+        twistListClickCount++;
+        if (twistListClickCount === 1) {
+            twistListClickTimer = setTimeout(function() {
+                twistListClickCount = 0;
+                if (!(event.target instanceof Element)) return;
 
-            // Clicked on the Twist header
-            const twistDropdown = twistItem.querySelector('.twist-dropdown');
-            if (!(twistDropdown instanceof HTMLElement)) throw new Error("Critical element .twist-dropdown is missing!");
-            const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
+                // Toggle visibility or dropdown on single click
+                if (event.target.closest('.visibility-toggle')) {
+                    // Clicked on the eye icon
+                    let visibility = toggleVisibilityInStorage(twistId);
+                    setTwistVisibility(map, twistId, visibility);
+                } else if (event.target.closest('.twist-header')) {
+                    activeTwistId = null;
 
-            // Hide all Twist dropdowns
-            const alltwistDropdowns = twistList.querySelectorAll('.twist-dropdown');
-            alltwistDropdowns.forEach(container => {
-                container.classList.remove('is-open');
-            });
+                    // Clicked on the Twist header
+                    const twistDropdown = twistItem.querySelector('.twist-dropdown');
+                    if (!(twistDropdown instanceof HTMLElement)) throw new Error("Critical element .twist-dropdown is missing!");
+                    const isCurrentlyOpen = twistDropdown.classList.contains('is-open');
 
-            // Show current Twist dropdown if it was hidden
-            if (!isCurrentlyOpen) {
-                twistDropdown.classList.add('is-open');
-                activeTwistId = twistItem.dataset.twistId ?? null;
+                    // Hide all Twist dropdowns
+                    const alltwistDropdowns = twistList.querySelectorAll('.twist-dropdown');
+                    alltwistDropdowns.forEach(container => {
+                        container.classList.remove('is-open');
+                    });
 
-                // Load content if needed
-                if (twistDropdown.querySelector('.loading')) {
-                    const twistHeader = twistItem.querySelector('.twist-header')
-                    htmx.trigger(twistHeader, 'loadDropdown');
+                    // Show current Twist dropdown if it was hidden
+                    if (!isCurrentlyOpen) {
+                        twistDropdown.classList.add('is-open');
+                        activeTwistId = twistItem.dataset.twistId ?? null;
+
+                        // Load content if needed
+                        if (twistDropdown.querySelector('.loading')) {
+                            const twistHeader = twistItem.querySelector('.twist-header')
+                            htmx.trigger(twistHeader, 'loadDropdown');
+                        }
+                    }
                 }
-            }
+            }, doubleClickTimeout);
+        } else if (twistListClickCount === 2) {
+            clearTimeout(twistListClickTimer);
+            twistListClickCount = 0;
 
-            // Show the Twist on the map after opening its dropdown (TODO: only if visible)
+            // Show the Twist on the map on double click
             showTwistOnMap(map, twistId)
+
+            // Clear text selection
+            const selection = document.getSelection();
+            if(selection) selection.empty();
         }
     });
 
