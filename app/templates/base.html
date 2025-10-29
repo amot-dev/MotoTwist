@@ -26,7 +26,7 @@
     {% endblock %}
 </head>
 <body {% block body_attributes %}{% endblock %}>
-    <ul class="flash-container" {% if flash_message %}data-initial-flash-message="{{ flash_message }}"{% endif %}></ul>
+    <ul popover="manual" class="flash-container" {% if flash_message %}data-initial-flash-message="{{ flash_message }}"{% endif %}></ul>
 
     {% block content %}{% endblock %}
 

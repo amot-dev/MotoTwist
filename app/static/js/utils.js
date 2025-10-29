@@ -38,6 +38,30 @@ export function getRootProperty(propName) {
 
 
 /**
+ * Converts a CSS duration string (e.g., "0.5s" or "500ms")
+ * into a number of milliseconds.
+ *
+ * @param {string} durationStr
+ * @returns {number} The duration in milliseconds.
+ */
+export function parseDuration(durationStr) {
+    const value = parseFloat(durationStr);
+
+    if (durationStr.endsWith('ms')) {
+        // Already in ms
+        return value;
+    }
+    if (durationStr.endsWith('s')) {
+        // Convert seconds to ms
+        return value * 1000;
+    }
+
+    // If no unit, assume ms
+    return value;
+}
+
+
+/**
  * Sets up a global click listener to handle copy-to-clipboard
  *  functionality for any element with the `.button-copy-link` class.
  *

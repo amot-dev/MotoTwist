@@ -1,7 +1,13 @@
+import { getRootProperty, parseDuration } from './utils.js';
+
 /** @type {HTMLUListElement | null} */
 let flashContainer = document.querySelector('.flash-container');
 if (!(flashContainer instanceof HTMLUListElement)) throw new Error("Critical element .flash-container is missing or not a <ul>!");
 
+// Get the fade duraction by splitting the transition property
+const fadeTransition = getRootProperty('--transition-fade');
+const fadeDuration = parseDuration(fadeTransition.split(' ')[0]);
+const staticDuration = 10  // Time that flash message should exist without transitioning
 
 /**
  * Displays a flash message by creating and appending a new element.
@@ -24,11 +30,14 @@ export function flash(message, options = {}) {
     flashElement.classList.add(`flash-item--${type}`); // e.g., flash-item--error
     flashElement.innerHTML = message;
 
-
+    // Force show the flash container popover over existing elements
+    assertedFlashContainer.hidePopover();
+    assertedFlashContainer.showPopover();
     assertedFlashContainer.appendChild(flashElement);
 
-    // Force reflow, then trigger fade-in animation
-    // This ensures the transition from opacity 0 -> 1 always plays.
+    // Force reflow to ensure the transition from opacity 0 -> 1 always plays
+    // Track start time for persistent elements to ensure they exist for at least 500ms ()
+    const startTime = Date.now();
     void flashElement.offsetWidth;
     flashElement.classList.add('flash-item--visible');
 
@@ -44,8 +53,21 @@ export function flash(message, options = {}) {
         setTimeout(remove, duration);
         return null;
     } else {
-        // Return the remover function to the caller
-        return remove;
+        // Return a "smart" remover function for manual calls
+        const manualRemove = () => {
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = fadeDuration + staticDuration - elapsedTime;
+
+            if (remainingTime > 0) {
+                // Not enough time has passed, wait for the remainder
+                setTimeout(remove, remainingTime);
+            } else {
+                // Minimum time has passed, remove immediately
+                remove();
+            }
+        };
+
+        return manualRemove;
     }
 }
 
@@ -68,7 +90,6 @@ export function flash(message, options = {}) {
  */
 export function registerFlashListeners() {
     // Listen for the flashMessage event from the server
-
     document.body.addEventListener('flashMessage', (event) => {
         const customEvent = /** @type {CustomEvent<{value: string}>} */ (event);
 
