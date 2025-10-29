@@ -9,7 +9,6 @@ import { getRootProperty } from './utils.js';
 
 
 const accentBlueHoverLight = getRootProperty('--accent-blue-hover-light')
-const accentOrange = getRootProperty('--accent-orange');
 
 /** @returns {HTMLButtonElement | null} */
 const getStartTwistButton = () => document.querySelector('#start-new-twist');
@@ -35,6 +34,9 @@ let waypoints = [];
 /** @type {L.Marker[]} */
 let waypointMarkers = [];
 
+/** @type {(() => void) | null} */
+let hideLoadingFlash = null;
+
 /** @type {AbortController | null} */
 let routeRequestController;
 
@@ -57,9 +59,14 @@ async function updateRoute(map) {
     if (routeRequestController) {
         routeRequestController.abort();
     }
+
     // Create a new AbortController for the new request
     routeRequestController = new AbortController();
     const signal = routeRequestController.signal;
+
+    // Create a new loading flash if one doesn't already exist
+    if (!hideLoadingFlash)
+        hideLoadingFlash = flash("Finding route", { duration: 0, type: 'loading' });
 
     // Format coordinates and call the OSRM API
     const coordinates = waypoints.map(waypoint => `${waypoint.latlng.lng},${waypoint.latlng.lat}`).join(';');
@@ -86,8 +93,14 @@ async function updateRoute(map) {
             return;
         } else {
             console.error("Error fetching route:", error);
-            flash("Error drawing route", 5000, accentOrange);
+            flash("Error drawing route", { duration: 5000, type: 'error' });
         }
+    }
+
+    // Hide loading flash (and clear it) only at the very end. If AbortError, we leave it as loading is still "in progress" from a new request
+    if (hideLoadingFlash) {
+        hideLoadingFlash();
+        hideLoadingFlash = null;
     }
 }
 
@@ -316,7 +329,7 @@ function registerTwistCreationButtonListeners(map) {
     // Begin recording route geometry
     getStartTwistButton()?.addEventListener('click', () => {
         assertedMapContainer.classList.add('creating-twist');
-        flash('Click on the map to create a Twist!', 5000);
+        flash('Click on the map to create a Twist!', { duration: 5000 });
 
         // Swap button visibility
         getStartTwistButton()?.classList.add('gone');
@@ -407,6 +420,11 @@ export function registerTwistCreationListeners(map) {
         }
     });
     registerTwistCreationButtonListeners(map);
+
+    // Listen for the custom event sent from the server after an auth change
+    document.body.addEventListener('authChange', () => {
+        stopTwistCreation(map);
+    });
 
     // Listen for map clicks when recording route geometry
     map.on('click',

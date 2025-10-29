@@ -159,7 +159,7 @@ async function loadTwistLayer(map, twistId, show = false) {
 
     } catch (error) {
         console.error(`Failed to load route for Twist '${twistId}':`, error);
-        flash(`Failed to load route for Twist '${twistId}'`, 5000, accentOrange)
+        flash(`Failed to load route for Twist '${twistId}'`, { duration: 5000, type: 'error' })
 
         // Ensure a failed layer doesn't stick around
         delete mapLayers[twistId];

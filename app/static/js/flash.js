@@ -1,46 +1,52 @@
-import { getRootProperty } from './utils.js';
-
-
-const accentOrange = getRootProperty('--accent-orange');
+/** @type {HTMLUListElement | null} */
+let flashContainer = document.querySelector('.flash-container');
+if (!(flashContainer instanceof HTMLUListElement)) throw new Error("Critical element .flash-container is missing or not a <ul>!");
 
 
 /**
- * Displays a message in the flash message element for a set duration.
- * The function makes the flash element visible, sets its content,
- * and then fades it out after the specified duration.
+ * Displays a flash message by creating and appending a new element.
  *
  * @param {string} message The message string to display. Can include HTML.
- * @param {number} duration How long to display the message in ms before fading.
- * @param {string} [backgroundColor=""] Optional background and border color for the flash message.
- * @param {string} [color=""] Optional text color for the flash message.
+ * @param {object} [options] Configuration options.
+ * @param {number} [options.duration=3000] How long to display in ms. 0 = persistent.
+ * @param {'info'|'error'|'loading'} [options.type='info'] Message type for styling.
+ * @returns {(() => void) | null} A remove function if persistent, else null.
  */
-export function flash(message, duration, backgroundColor="", color="") {
-    // Exit early if the message is null, undefined, or empty
-    if (!message) return;
+export function flash(message, options = {}) {
+    if (!message) return null;
+    const { duration = 3000, type = 'info' } = options;
 
-    // Find the flash element
-    const flashElement = document.querySelector('.flash-message');
-    if (!flashElement || !(flashElement instanceof HTMLElement)) throw new Error("Critical element .flash-message is missing!");
+    const assertedFlashContainer = /** @type {HTMLElement} */ (flashContainer);
 
+    // Create the new element
+    const flashElement = document.createElement('li');
+    flashElement.className = 'flash-item';
+    flashElement.classList.add(`flash-item--${type}`); // e.g., flash-item--error
     flashElement.innerHTML = message;
-    flashElement.style.opacity = '1';
-    flashElement.style.backgroundColor = backgroundColor;
-    flashElement.style.borderColor = backgroundColor;
-    flashElement.style.color = color;
-    flashElement.style.pointerEvents = "auto";
 
-    // Set a timer to hide the message after the specified duration
-    setTimeout(() => {
-        flashElement.style.opacity = "";
 
-        // Only change non-opacity values after the transition is complete
+    assertedFlashContainer.appendChild(flashElement);
+
+    // Force reflow, then trigger fade-in animation
+    // This ensures the transition from opacity 0 -> 1 always plays.
+    void flashElement.offsetWidth;
+    flashElement.classList.add('flash-item--visible');
+
+    const remove = () => {
+        flashElement.classList.remove('flash-item--visible');
         flashElement.addEventListener('transitionend', () => {
-            flashElement.style.backgroundColor = "";
-            flashElement.style.borderColor = "";
-            flashElement.style.color = "";
-            flashElement.style.pointerEvents = "";
+            flashElement.remove();
         }, { once: true });
-    }, duration);
+    };
+
+    if (duration > 0) {
+        // Auto-remove after duration
+        setTimeout(remove, duration);
+        return null;
+    } else {
+        // Return the remover function to the caller
+        return remove;
+    }
 }
 
 
@@ -66,7 +72,7 @@ export function registerFlashListeners() {
     document.body.addEventListener('flashMessage', (event) => {
         const customEvent = /** @type {CustomEvent<{value: string}>} */ (event);
 
-        flash(customEvent.detail.value, 3000);
+        flash(customEvent.detail.value, { duration: 3000 });
     });
 
     // Listen for the response error event from the server
@@ -85,23 +91,23 @@ export function registerFlashListeners() {
             }
         } catch (e) {}
 
-        // Display the flash with an orange accent
-        flash(errorMessage, 5000, accentOrange);
+        // Display the flash as error type
+        flash(errorMessage, { duration: 5000, type: 'error' });
     });
 
     // Check if the server loaded the page with a flash message to display
     document.addEventListener('DOMContentLoaded', () => {
-        // Find the flash element
-        const flashElement = document.querySelector('.flash-message');
-        if (!flashElement || !(flashElement instanceof HTMLElement)) throw new Error("Critical element .flash-message is missing!");
+        // Find the flash container
+        const flashContainer = document.querySelector('.flash-container');
+        if (!(flashContainer instanceof HTMLElement)) throw new Error("Critical element .flash-container is missing!");
 
         // Check if the data attribute exists
-        const message = flashElement.dataset.flashMessage;
+        const message = flashContainer.dataset.flashMessage;
         if (message) {
-            flash(message, 3000);
+            flash(message, { duration: 3000 });
 
             // Cleanup dataset
-            delete flashElement.dataset.flashMessage;
+            delete flashContainer.dataset.flashMessage;
         }
     });
 }
