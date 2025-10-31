@@ -40,6 +40,7 @@ class FilterVisibility(str, Enum):
 
 class TwistFilterParameters(BaseModel):
     # Display
+    page: int = Field(1, gt=0)
     open_id: int | None = None
 
     # Filtering

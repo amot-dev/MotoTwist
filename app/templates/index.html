@@ -20,7 +20,7 @@
     {% include "fragments/debug/menu_button.html" %}
     {% include "fragments/auth/widget.html" %}
     <button class="button about-button" onclick="document.querySelector('#modal-about').showModal()">
-        <img src="{{ url_for('static', path='/images/favicon.ico') }}">
+        <img src="static/images/favicon.ico">
     </button>
 </div>
 
@@ -234,5 +234,5 @@
         referrerpolicy="no-referrer">
     </script>
 
-    <script type="module" src="{{ url_for('static', path='/js/main.js') }}" defer></script>
+    <script type="module" src="static/js/main.js" defer></script>
 {% endblock %}

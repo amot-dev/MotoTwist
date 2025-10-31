@@ -3,9 +3,10 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from geoalchemy2 import Geometry
+from math import ceil
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from sqlalchemy import and_, false, or_, select, type_coerce
+from sqlalchemy import and_, false, func, or_, select, type_coerce
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import ColumnExpressionArgument
@@ -162,6 +163,18 @@ async def render_list(
         elif filter.visibility == FilterVisibility.HIDDEN:
             statement = statement.where(Twist.id.notin_(filter.visible_ids))
 
+    # Pagination
+    print(settings.DEFAULT_TWISTS_PER_PAGE)
+    matched_twists = await session.scalar(
+        select(func.count()).select_from(statement.subquery())
+    )
+    total_pages = ceil(matched_twists / settings.DEFAULT_TWISTS_PER_PAGE) if matched_twists else 1
+
+    page = filter.page
+    if page > total_pages:
+        page = total_pages
+    offset = (page - 1) * settings.DEFAULT_TWISTS_PER_PAGE
+
     # Ordering
     order_criteria: list[ColumnExpressionArgument[Any]] = []
 
@@ -174,7 +187,9 @@ async def render_list(
     order_criteria.append(Twist.name)
 
     # Querying
-    results = await session.execute(statement.order_by(*order_criteria))
+    results = await session.execute(
+        statement.order_by(*order_criteria).limit(settings.DEFAULT_TWISTS_PER_PAGE).offset(offset)
+    )
     twists = [TwistListItem.model_validate(result) for result in results.all()]
 
     # Prepare open Twist dropdown if needed
@@ -199,13 +214,15 @@ async def render_list(
         "request": request,
         "twists": twists,
         "open_twist_id": open_twist_id,
+        "current_page": page,
+        "total_pages": total_pages,
     }
 
     # If the dropdown context was generated, merge it into the main context
     if dropdown_context:
         list_context.update(dropdown_context)
 
-    return templates.TemplateResponse("fragments/twists/list.html", list_context)
+    return templates.TemplateResponse("fragments/twists/paginated_list.html", list_context)
 
 
 async def render_single_list_item(

@@ -299,7 +299,7 @@ export function registerTwistListeners(map) {
     });
 
     const twistList = document.getElementById('twist-list');
-    if (!twistList) throw new Error("Critical element .twist-list is missing!");
+    if (!twistList) throw new Error("Critical element #twist-list is missing!");
 
     /** @type {string | null} */
     let activeTwistId = null;
@@ -375,17 +375,29 @@ export function registerTwistListeners(map) {
 
     // Include additional parameters for Twist list requests
     document.body.addEventListener('htmx:configRequest', function(event) {
-        const customEvent = /** @type {CustomEvent<{path: string, parameters: Record<string, any>}>} */ (event);
+        const customEvent = /** @type {CustomEvent<{path: string, parameters: Record<string, any>, triggeringEvent: Event | null}>} */ (event);
 
         // Check if this is a request to the Twist list endpoint
         if (customEvent.detail.path === '/twists/templates/list') {
+            // Maintain current page on mapCenterChange and authChange
+            const trigger = customEvent.detail.triggeringEvent;
+            if (trigger) {
+                if (['mapCenterChange', 'authChange'].includes(trigger.type)) {
+                    const twistListPagination = document.getElementById('twist-list-pagination');
+                    if (!twistListPagination) throw new Error("Critical element #twist-list-pagination is missing!");
+
+                    // Set page to current or 1 if current doesn't exist
+                    customEvent.detail.parameters['page'] = twistListPagination.dataset.currentPage ?? 1;
+                }
+            }
+
+            if (activeTwistId) customEvent.detail.parameters['open_id'] = activeTwistId;
+
             // Only add visibleIds if they exist or they will be needed
             const visibleIds = Array.from(getVisibleIdSet());
             if (visibleIds.length > 0 && customEvent.detail.parameters['visibility'] != 'all') {
                 customEvent.detail.parameters['visible_ids'] = visibleIds;
             }
-
-            if (activeTwistId) customEvent.detail.parameters['open_id'] = activeTwistId;
 
             /** @type {L.LatLng} */
             const mapCenter = getVisualMapCenter(map);
