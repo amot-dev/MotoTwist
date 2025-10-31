@@ -596,6 +596,9 @@ aside {
     display: flex;
     flex-direction: column;
 }
+#twist-list::-webkit-scrollbar {
+    display: none;  /* Temporary fix to get rid of Chrome's disgusting scrollbar */
+}
 
 .twist-item {
     flex-shrink: 0;
