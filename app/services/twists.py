@@ -222,7 +222,7 @@ async def render_list(
     if dropdown_context:
         list_context.update(dropdown_context)
 
-    return templates.TemplateResponse("fragments/twists/list.html", list_context)
+    return templates.TemplateResponse("fragments/twists/paginated_list.html", list_context)
 
 
 async def render_single_list_item(
